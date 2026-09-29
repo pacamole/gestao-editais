@@ -1,0 +1,94 @@
+/*
+  Tokens do design — Gestor de Editais I9+.
+  Toda cor, fonte, espaçamento e raio usado na interface sai daqui.
+  Não use hexadecimais soltos nos componentes: crie ou reutilize um token.
+*/
+
+:root {
+  /* Tipografia */
+  --fonte-texto: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fonte-titulo: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --fonte-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+
+  --texto-xs: 12px;
+  --texto-sm: 13px;
+  --texto-md: 14px;
+  --texto-lg: 16px;
+  --texto-xl: 20px;
+  --texto-2xl: 26px;
+  --texto-3xl: 34px;
+
+  /* Superfícies e texto */
+  --cor-fundo: #f6f4ef;
+  --cor-superficie: #ffffff;
+  --cor-superficie-2: #fbfaf7;
+  --cor-linha: #e2ded5;
+  --cor-linha-forte: #cdc7ba;
+  --cor-texto: #1b1e23;
+  --cor-texto-2: #50555d;
+  --cor-texto-3: #676b73;
+
+  /* Marca */
+  --cor-primaria: #1f4f78;
+  --cor-primaria-hover: #163c5c;
+  --cor-primaria-suave: #e7eef5;
+  --cor-foco: #2f6fa8;
+
+  /* Menu lateral */
+  --cor-menu: #151d27;
+  --cor-menu-texto: #c3ccd6;
+  --cor-menu-texto-ativo: #ffffff;
+  --cor-menu-ativo: #24303d;
+  --cor-menu-rotulo: #8793a0;
+
+  /*
+    Cores semânticas (§8 da especificação — faixas de classificação).
+    Cada uma tem texto (sobre o fundo claro), fundo (tinta clara) e sólido (barras, pontos).
+  */
+  --verde-texto: #1d6737;
+  --verde-fundo: #e2f0e6;
+  --verde-solido: #2e8b4f;
+
+  --amarelo-texto: #6f5100;
+  --amarelo-fundo: #f9edc4;
+  --amarelo-solido: #d4a012;
+
+  --cinza-texto: #494e56;
+  --cinza-fundo: #eceae5;
+  --cinza-solido: #9a9ea5;
+
+  --vermelho-texto: #9e2820;
+  --vermelho-fundo: #fbe2de;
+  --vermelho-solido: #c8382d;
+
+  --laranja-texto: #8c4300;
+  --laranja-fundo: #fde5cf;
+  --laranja-solido: #e07b1a;
+
+  --azul-texto: #1f4f78;
+  --azul-fundo: #e7eef5;
+  --azul-solido: #3b76ad;
+
+  /* Espaçamento (múltiplos de 4) */
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 16px;
+  --esp-5: 20px;
+  --esp-6: 24px;
+  --esp-8: 32px;
+  --esp-10: 40px;
+  --esp-12: 48px;
+
+  /* Raios e sombras */
+  --raio-1: 4px;
+  --raio-2: 8px;
+  --raio-3: 12px;
+  --raio-pilula: 999px;
+  --sombra-1: 0 1px 2px rgba(21, 29, 39, 0.06);
+  --sombra-2: 0 4px 16px rgba(21, 29, 39, 0.08);
+
+  /* Layout */
+  --largura-menu: 240px;
+  --largura-conteudo: 1280px;
+}

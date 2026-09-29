@@ -1,0 +1,4 @@
+/* Ponto de entrada dos estilos. Importado uma vez em main.tsx. */
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
