@@ -127,3 +127,21 @@ src/server/            servidor Express
   base/                exportação e importação da base
 src/shared/            tipos e rótulos usados pelos dois lados
 ```
+
+## Implementação — tarefas 9, 10 e 11 (Bhrendon)
+
+Esta versão inclui a implementação da parte de Bhrendon na Etapa 5:
+
+- **Tarefa 9 — Login:** autenticação real por e-mail/senha, cookie de sessão, mensagens de erro e proteção das páginas internas.
+- **Tarefa 10 — Detalhe do edital:** veredito de elegibilidade, nota de fit, critérios, dados extraídos e evidências.
+- **Tarefa 11 — Revisão e chat:** Aprovar, Descartar (comentário obrigatório), Marcar como Inscrito, Registrar Resultado, histórico e chat local baseado nos dados extraídos do edital.
+
+### Como testar
+
+1. Copie `.env.example` para `.env` e defina `GESTOR_EMAIL` e `GESTOR_SENHA`.
+2. Execute `npm install`.
+3. Execute `npm run db:reset` para criar o banco e o usuário gestor.
+4. Execute `npm run dev`.
+5. Abra `http://localhost:3000/login` e entre com as credenciais definidas no `.env`.
+
+> O chat desta entrega é um MVP local para demonstrar a interface e o fluxo. Ele responde a perguntas de prazo, valor e contrapartida usando somente os dados já extraídos. A estrutura de conversa/mensagens fica pronta para uma integração futura com LLM.
