@@ -1,16 +1,32 @@
-import { useParams } from 'react-router'
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router'
 
+type Registro = Record<string, unknown>
+type Detalhes = {edital: Registro; avaliacao: Registro|null; evidencias: Registro[]; revisoes: Registro[]; mensagens: Registro[]; perguntasRestantes: number}
+const sugestoes = ['Quais são os requisitos eliminatórios?', 'Qual é o prazo de inscrição?', 'Quais documentos são exigidos?']
+const mostrar = (valor: unknown) => valor === null || valor === undefined || valor === '' ? 'Não localizado no documento' : String(valor)
+function itens(valor: unknown): string[] { if (!valor) return []; try { const obj=JSON.parse(String(valor)); return Array.isArray(obj)?obj.map(String):[JSON.stringify(obj)] } catch { return [String(valor)] } }
+
+// Tarefas 10 e 11 — leitura de dados reais e revisão persistida.
 export function EditalDetalhePage() {
-  const { id } = useParams()
-  return (
-    <section>
-      <header className="pagina-cabecalho">
-        <div>
-          <h1>Detalhe do edital</h1>
-          <p>P04 — Análise completa e revisão.</p>
-        </div>
-      </header>
-      <p>Edital: {id}</p>
-    </section>
-  )
+ const {id} = useParams(); const [dados,setDados]=useState<Detalhes|null>(null); const [erro,setErro]=useState(''); const [comentario,setComentario]=useState(''); const [nota,setNota]=useState(''); const [mensagem,setMensagem]=useState(''); const [ocupado,setOcupado]=useState(false)
+ async function atualizar() { const r=await fetch(`/api/bhrendon/editais/${encodeURIComponent(id||'')}`); if(!r.ok) throw new Error((await r.json()).erro||'Erro ao carregar edital'); setDados(await r.json()) }
+ useEffect(()=>{atualizar().catch(e=>setErro(e.message))},[id])
+ async function acao(tipo:string) { if(tipo==='DESCARTOU'&&!comentario.trim()){setErro('Informe o motivo do descarte.');return} setOcupado(true);setErro('');try{const r=await fetch(`/api/bhrendon/editais/${encodeURIComponent(id||'')}/revisoes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:tipo,comentario,nota:nota===''?null:Number(nota)})});if(!r.ok)throw new Error((await r.json()).erro);setComentario('');await atualizar()}catch(e){setErro(String(e))}finally{setOcupado(false)} }
+ async function enviar(texto=mensagem) {if(!texto.trim())return;setOcupado(true);setErro('');try{const r=await fetch(`/api/bhrendon/editais/${encodeURIComponent(id||'')}/mensagens`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mensagem:texto})});if(!r.ok)throw new Error((await r.json()).erro);setMensagem('');await atualizar()}catch(e){setErro(String(e))}finally{setOcupado(false)}}
+ async function limpar(){if(!window.confirm('Limpar histórico desta conversa?'))return;await fetch(`/api/bhrendon/editais/${encodeURIComponent(id||'')}/mensagens`,{method:'DELETE'});await atualizar()}
+ if(erro&&!dados)return <p role="alert">{erro} <Link to="/editais">Voltar</Link></p>
+ if(!dados)return <p>Carregando edital...</p>
+ const e=dados.edital,a=dados.avaliacao; const prazo=e.prazo_inscricao?Math.ceil((new Date(String(e.prazo_inscricao)).getTime()-Date.now())/86400000):null
+ return <section style={{display:'grid',gap:24}}>
+  <header className="pagina-cabecalho"><div><Link to="/editais">← Editais</Link><h1>{mostrar(e.titulo)}</h1><p>{mostrar(e.orgao_financiador)} · {mostrar(e.modalidade)} · {mostrar(e.status)}</p><p>Prazo: {mostrar(e.prazo_inscricao)} {prazo!==null&&!Number.isNaN(prazo)?`(${prazo>=0?`${prazo} dias restantes`:'Prazo encerrado'})`:''}</p>{e.url_documento||e.url_original?<a href={String(e.url_documento||e.url_original)} target="_blank" rel="noreferrer">Documento original ↗</a>:null}</div></header>
+  {erro&&<p role="alert" style={{color:'crimson'}}>{erro}</p>}
+  <section><h2>Veredito de elegibilidade</h2><strong style={{color:a?.status_elegibilidade==='ELEGIVEL'?'green':a?.status_elegibilidade==='INELEGIVEL'?'crimson':'#a56b00'}}>{mostrar(a?.status_elegibilidade||'INDETERMINADO')}</strong><p>Nota de fit: {mostrar(a?.nota_ajustada_manual??a?.nota_fit)}</p>
+  {a?.status_elegibilidade==='INELEGIVEL'&&<><h3>Critérios violados</h3><ul>{itens(a.criterios_violados).map((v,i)=><li key={i}>{v}</li>)}</ul></>}
+  {a?.status_elegibilidade==='INDETERMINADO'&&<><h3>Cláusulas pendentes</h3><ul>{itens(a.criterios_indeterminados).map((v,i)=><li key={i}>{v}</li>)}</ul></>}
+  {a?.status_elegibilidade==='ELEGIVEL'&&<><h3>Contribuição por critério</h3><pre style={{whiteSpace:'pre-wrap'}}>{itens(a.detalhamento_pontuacao).join('\n')||'Não localizado no documento'}</pre></>}</section>
+  <section><h2>Dados extraídos e evidências</h2><div style={{overflowX:'auto'}}><table><tbody>{Object.entries(e).filter(([k])=>!['texto_extraido','hash_documento'].includes(k)).map(([chave,valor])=>{const ev=dados.evidencias.filter(x=>x.campo===chave);return <tr key={chave}><th style={{textAlign:'left',padding:8}}>{chave.replaceAll('_',' ')}</th><td style={{padding:8}}>{mostrar(valor)}</td><td>{ev.map((v,i)=><details key={i}><summary>Trecho e página</summary><p>{mostrar(v.trecho_literal)} (página {mostrar(v.pagina)})</p></details>)}</td></tr>})}</tbody></table></div></section>
+  <section><h2>Revisão do edital</h2><label>Comentário / justificativa <textarea value={comentario} onChange={x=>setComentario(x.target.value)}/></label><label> Nota ajustada (0 a 100) <input type="number" min="0" max="100" value={nota} onChange={x=>setNota(x.target.value)}/></label><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{[['APROVOU','Aprovar'],['DESCARTOU','Descartar'],['MARCOU_INSCRITO','Marcar como inscrito'],['REGISTROU_RESULTADO','Registrar resultado'],['AJUSTOU_NOTA','Salvar nota ajustada']].map(([tipo,rotulo])=><button key={tipo} disabled={ocupado} onClick={()=>acao(tipo)}>{rotulo}</button>)}</div><h3>Linha do tempo</h3><ul>{dados.revisoes.map((r,i)=><li key={i}>{mostrar(r.criado_em)} — {mostrar(r.acao)} — {mostrar(r.comentario)}</li>)}</ul></section>
+  <section><h2>Chat sobre o edital</h2><p>Perguntas restantes hoje: {dados.perguntasRestantes}</p>{dados.mensagens.length===0&&sugestoes.map(s=><button key={s} onClick={()=>enviar(s)} disabled={ocupado}>{s}</button>)}<ul>{dados.mensagens.map((m,i)=><li key={i}><strong>{mostrar(m.papel)}:</strong> {mostrar(m.conteudo)}</li>)}</ul><form onSubmit={ev=>{ev.preventDefault();void enviar()}}><input value={mensagem} onChange={ev=>setMensagem(ev.target.value)} placeholder="Pergunte sobre o edital" aria-label="Mensagem"/><button disabled={ocupado||dados.perguntasRestantes<=0}>Enviar</button><button type="button" onClick={limpar}>Limpar conversa</button></form><p><small>Respostas automáticas dependem da integração com IA. Sem ela, as perguntas ficam registradas para análise.</small></p></section>
+ </section>
 }

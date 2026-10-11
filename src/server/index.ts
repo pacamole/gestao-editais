@@ -7,6 +7,7 @@ import { bancoVazio } from './db/index.js'
 import { tarefasNotificacao } from './notificacao/index.js'
 import { root } from './paths.js'
 import { rotasBase } from './rotas/base.js'
+import { rotas as rotasBhrendon } from './rotas/bhrendon.js'
 
 const isProd = process.env.NODE_ENV === 'production'
 const port = Number(process.env.PORT ?? 3000)
@@ -26,6 +27,7 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/base', rotasBase)
+app.use('/api/bhrendon', rotasBhrendon)
 
 const tratarErro: ErrorRequestHandler = (erro, _req, res, _next) => {
   console.error(erro)
