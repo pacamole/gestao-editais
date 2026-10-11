@@ -7,6 +7,8 @@ import { bancoVazio } from './db/index.js'
 import { tarefasNotificacao } from './notificacao/index.js'
 import { root } from './paths.js'
 import { rotasBase } from './rotas/base.js'
+import { rotasEditais } from './rotas/editais.js'
+import { semearEditaisExemplo } from './db/seedEditais.js'
 
 const isProd = process.env.NODE_ENV === 'production'
 const port = Number(process.env.PORT ?? 3000)
@@ -16,8 +18,11 @@ if (bancoVazio()) {
   process.exit(1)
 }
 
+// Garante que a base tenha editais iniciais para demonstração e testes
+semearEditaisExemplo()
+
 const app = express()
-app.use(express.json())
+app.use(express.json({ limit: '35mb' }))
 
 // ---- API ----
 app.get('/api/health', (_req, res) => {
@@ -25,6 +30,7 @@ app.get('/api/health', (_req, res) => {
   res.json(body)
 })
 
+app.use('/api', rotasEditais)
 app.use('/api/base', rotasBase)
 
 const tratarErro: ErrorRequestHandler = (erro, _req, res, _next) => {

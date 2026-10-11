@@ -145,3 +145,49 @@ Esta versão inclui a implementação da parte de Bhrendon na Etapa 5:
 5. Abra `http://localhost:3000/login` e entre com as credenciais definidas no `.env`.
 
 > O chat desta entrega é um MVP local para demonstrar a interface e o fluxo. Ele responde a perguntas de prazo, valor e contrapartida usando somente os dados já extraídos. A estrutura de conversa/mensagens fica pronta para uma integração futura com LLM.
+
+## Implementação — tarefas 12, 13 e 14 (Miguel)
+
+Esta versão inclui a implementação completa das tarefas atribuídas a Miguel na Etapa 5:
+
+- **Tarefa 12 — Tela de Lista de Editais (`/editais` - P03):**
+  - Tabela paginada com colunas: Título, Órgão financiador, Modalidade (badge), Prazo (com contagem regressiva de dias e destaque em vermelho para prazos de até 7 dias), Valor máximo formatado em R$, Selo de Elegibilidade colorido, Nota de Fit comercial com barra proporcional e badge do ciclo de vida/status.
+  - Busca textual livre por título, órgão e número da chamada.
+  - Filtros combinados e simultâneos por status, elegibilidade, faixa de nota de fit (Alto, Médio, Baixo), modalidade, fonte monitorada, intervalo de prazo (data início e fim) e atalho para somente editais com prazo aberto.
+  - Ordenação padrão da especificação: 1º por elegibilidade (Elegível > Indeterminado > Inelegível), 2º por nota de fit decrescente e 3º por prazo restante mais próximo.
+  - Exportação da visão filtrada em formato de planilha CSV (`\uFEFF` UTF-8 compatível com Excel).
+  - Ações em lote: seleção múltipla por checkboxes com barra de controle para Aprovar ou Descartar múltiplos editais simultaneamente (com exigência de justificativa no descarte e registro na linha do tempo de revisão).
+
+- **Tarefa 13 — Tela de Nova Entrada (`/editais/novo` - P05):**
+  - Três vias completas de entrada via abas dedicadas:
+    1. **Upload de PDF:** área de arrastar e soltar (drag & drop) com limite de tamanho estrito de **20 MB**, validação de tipo de arquivo e deduplicação automática por hash SHA-256.
+    2. **Colar URL:** campo de endereço web com validação de formato e criação imediata do edital.
+    3. **Cadastro manual:** formulário estruturado com todos os ~30 campos da especificação (§6), incluindo prazos, valores, contrapartida, áreas temáticas, CNAEs, portes e requisitos técnicos.
+  - Seleção da fonte de origem cadastrada.
+  - Indicador visual animado de processamento durante a submissão para feedback do usuário.
+  - Redirecionamento automático para a tela de detalhe do edital criado (`/editais/:id`).
+
+- **Tarefa 14 — Tela de Dashboard (`/` - P02):**
+  - Quatro cartões de contagem em destaque no topo:
+    1. Novos esta semana (editais cadastrados nos últimos 7 dias)
+    2. Aguardando revisão (status Analisado ou Em revisão)
+    3. Aprovados sem inscrição (status Aprovado)
+    4. Prazo em até 7 dias (destacado em alerta visual quando houver)
+  - **Navegação interativa dos cartões:** clicar em qualquer um dos 4 cartões redireciona para a Lista de Editais (`/editais`) com o filtro pré-selecionado correspondente.
+  - Listas priorizadas:
+    - 5 editais mais urgentes (menor prazo restante com status ativo).
+    - 5 editais de maior nota de fit comercial (elegíveis ainda não decididos).
+  - Distribuição visual por classificação de fit (Alto fit ≥ 70, Médio fit 40–69, Baixo fit < 40).
+  - Painel de saúde da coleta monitorando a última execução de cada fonte com indicador verde/amarelo/vermelho (Sucesso, Parcial, Falha).
+
+### Como executar os testes
+
+```bash
+npm test          # Executa a suíte automatizada de testes das tarefas 12 a 14 (tests/miguel.test.ts)
+npm run typecheck # Valida 100% dos tipos TypeScript sem erros
+```
+
+### Limitações da entrega
+
+1. **Processamento assíncrono de LLM na contingência de upload:** O envio de PDF na contingência cria o edital em status `COLETADO` com avaliação preliminar e hash calculado; a extração profunda de entidades complexas por IA depende da integração dos módulos de LLM das tarefas subsequentes da equipe.
+2. **Download direto via scraper na colagem de URL:** A via de URL armazena o link original e cadastra a oportunidade para posterior ciclo do coletor, validando e normalizando os dados cadastrais da fonte.
