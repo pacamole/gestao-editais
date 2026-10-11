@@ -3,6 +3,7 @@ import express, { type ErrorRequestHandler } from 'express'
 import path from 'node:path'
 import type { ErroApi, HealthResponse } from '../shared/api.js'
 import { Agendador } from './agendador.js'
+import { registroRotinas, tarefasColeta } from './coleta/rotinas.js'
 import { bancoVazio } from './db/index.js'
 import { tarefasNotificacao } from './notificacao/index.js'
 import { root } from './paths.js'
@@ -47,5 +48,5 @@ if (isProd) {
 
 app.listen(port, () => {
   console.log(`http://localhost:${port}`)
-  new Agendador(tarefasNotificacao).iniciar()
+  new Agendador([...tarefasColeta(), ...tarefasNotificacao], 60_000, registroRotinas).iniciar()
 })

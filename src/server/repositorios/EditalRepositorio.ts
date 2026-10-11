@@ -58,6 +58,10 @@ export class EditalRepositorio extends Repositorio<
   }
 
   /** §9 Deduplicação: mesmo hash, ou mesma URL do documento, ou mesmo número + órgão. */
+  buscarPorOrigem(url: string): Edital | undefined {
+    return this.consultarUm('SELECT * FROM edital WHERE url_original = ? LIMIT 1', url)
+  }
+
   buscarDuplicado(chaves: ChavesDeduplicacao): Edital | undefined {
     return this.consultarUm(
       `SELECT * FROM edital

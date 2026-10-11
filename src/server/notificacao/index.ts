@@ -13,6 +13,7 @@ export const gatilhosNotificacao = new GatilhosNotificacao(notificacaoServico, r
 export const tarefasNotificacao: Tarefa[] = [
   {
     nome: 'E02 alerta de prazo',
+    recuperarAtrasada: true,
     deveRodar: (agora) => agora.hora >= HORA_VERIFICACAO_PRAZOS,
     executar: () => gatilhosNotificacao.verificarPrazos(),
   },
