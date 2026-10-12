@@ -191,3 +191,35 @@ npm run typecheck # Valida 100% dos tipos TypeScript sem erros
 
 1. **Processamento assíncrono de LLM na contingência de upload:** O envio de PDF na contingência cria o edital em status `COLETADO` com avaliação preliminar e hash calculado; a extração profunda de entidades complexas por IA depende da integração dos módulos de LLM das tarefas subsequentes da equipe.
 2. **Download direto via scraper na colagem de URL:** A via de URL armazena o link original e cadastra a oportunidade para posterior ciclo do coletor, validando e normalizando os dados cadastrais da fonte.
+
+## Implementação — tarefas 19–22 (Gabriel)
+
+- **19:** `coleta/pdf.ts` recebe bytes de um PDF e retorna texto por página física, texto combinado com marcadores `[Página N]` e `requerLeituraManual`. Páginas sem texto (inclusive documentos mistos) recebem aviso em `erro_processamento`. Não executa OCR. PDF.js foi escolhido pelo acesso explícito às páginas e às quebras de linha; extração de tabelas/colunas depende da ordem interna do PDF.
+- **20:** coleta sequencial da FINEP, download do PDF principal, SHA-256 e deduplicação por conteúdo, URL do PDF, página original ou número + órgão. PDFs ficam em `data/documentos/<hash>.pdf` (ou ao lado do banco configurado). Novos registros entram em `COLETADO`.
+- **21:** coletores de CNPq e Embrapii; versões anteriores em `edital_versao`, flag `retificado` e retorno a `COLETADO` após nova extração textual. As cinco fontes manuais nomeadas na documentação são cadastradas. As duas fontes sem nome permanecem pendentes, conforme orientação de não inventar os dados faltantes. Upload/URL manual são vias de entrada, não duas fontes adicionais do parceiro.
+- **22:** coleta diária às 06:00 (Brasília), alerta de prazo existente às 07:00 e expiração diária. O horário de coleta aceita `minuto hora * * *` em `frequencia_cron`. Histórico das últimas 30 execuções e último sucesso persistem em `config`, nas chaves `rotina:*`; detalhes da coleta persistem em `coleta_execucao`. Na abertura, rotinas diárias atrasadas executam uma vez com os dados atuais, sem reproduzir cada dia perdido. Falhas são repetidas após uma hora. O sistema precisa estar aberto.
+
+### Executar e testar
+
+```bash
+npm install
+npm run test:coleta
+npm run typecheck
+npm run build
+npm run coleta -- FINEP     # banco já criado; pode usar CNPq ou Embrapii
+npm run coleta             # todas as fontes automáticas ativas
+```
+
+O banco novo já recebe as fontes. Na abertura ou na CLI, bases existentes recebem as novas fontes; os placeholders antigos sem URL, cron ou histórico são configurados, sem resetar a base. Fontes já configuradas mantêm suas preferências. `data/documentos` não vai para o Git. A exportação de base existente exporta o SQLite, não os arquivos PDF; textos e versões continuam no banco.
+
+### Validação e limites
+
+Em 11/10/2026, em banco isolado, foram coletados **2 PDFs da FINEP, 4 do CNPq e 13 da Embrapii**. Uma segunda execução registrou zero itens novos e manteve os mesmos 19 registros, sem retificações artificiais. A Embrapii apresentou três páginas sem PDF principal identificável, registradas como coleta `PARCIAL`. A listagem da FINEP foi consultada no portal `legacy`, pois o endereço anterior redireciona para o site novo. A Embrapii publica também chamadas históricas; sua página não separa apenas as abertas. Nenhuma data de inscrição é inferida pelo coletor: essa extração pertence à etapa de análise.
+
+Os testes locais cobrem PDFs com duas páginas, página sem camada de texto, arquivo inválido, seleção de links, três chaves de deduplicação, retificação, falha parcial, reinício após dois dias, prevenção de execução simultânea, repetição após falha e expiração sem alterar inscritos/decisões terminais.
+
+Limitações de integração: o projeto ainda não possui o consumidor de análise estruturada/avaliação por IA das tarefas 23 em diante. `COLETADO` é a fila persistente para esse consumidor; esta entrega reextrai o texto, mas não calcula elegibilidade ou fit. O gatilho E05 existente deve ser chamado pelo consumidor após concluir a avaliação. O aviso de leitura manual fica disponível no registro; não foi criada outra interface ou notificação de e-mail. A base de 6–8 PDFs da equipe não estava no repositório, por isso os testes usam PDFs sintéticos e documentos dos portais.
+
+O coletor seleciona um PDF principal por chamada; não combina anexos ou erratas avulsas, nem interpreta alterações legais. Detecta substituição do PDF principal e mudanças de conteúdo, inclusive quando muda sua URL. Coletores dependem do HTML público: alterações de estrutura, paginação adicional e publicações sem PDF exigem ajuste/entrada manual. Downloads têm intervalo de 300 ms, timeout de 30 s e limite de 25 MB.
+
+Fontes consultadas: [FINEP](https://legacy.finep.gov.br/component/chamadas_publicas/chamadaspublicas), [CNPq](https://www.gov.br/cnpq/pt-br/chamadas/Busca_abertas), [Embrapii](https://embrapii.org.br/transparencia/#chamadas). O [robots.txt da FINEP](https://legacy.finep.gov.br/robots.txt) foi consultado e não proíbe as rotas usadas; isso não substitui licença ou termos de reutilização. Não foi localizada permissão específica de redistribuição automática dos documentos. A coleta usa páginas públicas e não contorna autenticação ou bloqueios.

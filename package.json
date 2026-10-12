@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "test:coleta": "tsx --test tests/coleta.test.ts",
+    "coleta": "tsx src/server/coleta/cli.ts",
     "dev": "tsx watch --disable-warning=ExperimentalWarning --ignore ./src/client src/server/index.ts",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "cross-env NODE_ENV=production node --disable-warning=ExperimentalWarning dist/server/index.js",
@@ -15,8 +17,10 @@
     "db:importar": "tsx --disable-warning=ExperimentalWarning src/server/base/cli-importar.ts"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "express": "^5.2.1",
     "nodemailer": "^10.0.12",
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0"

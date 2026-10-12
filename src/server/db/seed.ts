@@ -1,5 +1,5 @@
 import { gerarHashSenha } from '../auth/senha.js'
-import type { TipoFonte } from '../entidades.js'
+import { fontesIniciais } from '../coleta/fontes.js'
 import { PARAMETROS_PADRAO, TIPOS_NOTIFICACAO } from '../notificacao/parametros.js'
 import { repositorios } from '../repositorios/index.js'
 import { transacao } from './index.js'
@@ -18,18 +18,7 @@ export async function semear() {
     // Usuário Gestor inicial
     usuario.inserir({ nome: process.env.GESTOR_NOME ?? 'Gestor', email, senha_hash: senhaHash, papel: 'GESTOR' })
 
-    // Fontes: vias manuais (P05) + portais prioritários (PR04), inativos até existir coletor.
-    const fontes: [nome: string, tipo: TipoFonte, ativo: boolean][] = [
-      ['Upload manual', 'UPLOAD_MANUAL', true],
-      ['URL manual', 'URL_MANUAL', true],
-      ['BNDES', 'SCRAPER', false],
-      ['FINEP', 'SCRAPER', false],
-      ['Fundação Araucária', 'SCRAPER', false],
-      ['Fomento Paraná', 'SCRAPER', false],
-      ['Copel', 'SCRAPER', false],
-      ['Diário Oficial do PR', 'SCRAPER', false],
-    ]
-    for (const [nome, tipo, ativo] of fontes) fonte.inserir({ nome, tipo, ativo })
+    for (const dados of fontesIniciais) fonte.inserir(dados)
 
     // Perfil da empresa: valores provisórios até o parceiro responder (§14, perguntas 1 e 8-10).
     perfilEmpresa.inserir({
