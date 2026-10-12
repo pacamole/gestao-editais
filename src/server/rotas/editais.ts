@@ -1,9 +1,224 @@
 import { Router } from 'express'
 import { createHash, randomUUID } from 'node:crypto'
 import { db, novoId, transacao } from '../db/index.js'
+import { ColetaServico } from '../coleta/servico.js'
 import { repositorios } from '../repositorios/index.js'
 import type { Edital, StatusEdital, StatusElegibilidade, Modalidade, Classificacao } from '../entidades.js'
+import { PARAMETROS_PADRAO, TIPOS_NOTIFICACAO } from '../notificacao/parametros.js'
 import { ELEGIBILIDADE, MODALIDADES, STATUS_EDITAL } from '../../shared/rotulos.js'
+
+const CRITERIOS_PADRAO = [
+  { nome: 'Prazo ainda aberto', tipo: 'ELIMINATORIO', campo_edital: 'prazo_inscricao', campo_perfil: null, operador: 'MAIOR_QUE', valor_referencia: 'hoje', mensagem_reprovacao: 'O prazo de inscrição já expirou.', ativo: true, ordem: 0 },
+  { nome: 'Prazo suficiente para preparo', tipo: 'ELIMINATORIO', campo_edital: 'prazo_inscricao', campo_perfil: 'prazo_minimo_preparo_dias', operador: 'MAIOR_QUE', valor_referencia: null, mensagem_reprovacao: 'O edital não oferece prazo suficiente para preparar a proposta.', ativo: true, ordem: 1 },
+  { nome: 'CNAE aceito', tipo: 'ELIMINATORIO', campo_edital: 'cnaes_aceitos', campo_perfil: 'cnae_principal', operador: 'LISTA_VAZIA_OU_CONTEM', valor_referencia: null, mensagem_reprovacao: 'O CNAE principal da empresa não está habilitado pelo edital.', ativo: true, ordem: 2 },
+  { nome: 'Porte aceito', tipo: 'ELIMINATORIO', campo_edital: 'portes_aceitos', campo_perfil: 'porte', operador: 'LISTA_VAZIA_OU_CONTEM', valor_referencia: null, mensagem_reprovacao: 'O porte da empresa não atende à regra do edital.', ativo: true, ordem: 3 },
+  { nome: 'Natureza jurídica aceita', tipo: 'ELIMINATORIO', campo_edital: 'natureza_juridica_aceita', campo_perfil: 'natureza_juridica', operador: 'LISTA_VAZIA_OU_CONTEM', valor_referencia: null, mensagem_reprovacao: 'A natureza jurídica da empresa não é aceita no edital.', ativo: true, ordem: 4 },
+  { nome: 'Região elegível', tipo: 'ELIMINATORIO', campo_edital: 'abrangencia_geografica', campo_perfil: 'uf', operador: 'LISTA_VAZIA_OU_CONTEM', valor_referencia: null, mensagem_reprovacao: 'O estado da empresa não está coberto pela abrangência do edital.', ativo: true, ordem: 5 },
+  { nome: 'Tempo de fundação', tipo: 'ELIMINATORIO', campo_edital: 'tempo_minimo_fundacao_meses', campo_perfil: 'data_fundacao', operador: 'MENOR_QUE', valor_referencia: null, mensagem_reprovacao: 'A empresa não atende ao tempo mínimo de fundação.', ativo: true, ordem: 6 },
+  { nome: 'Faturamento dentro da faixa', tipo: 'ELIMINATORIO', campo_edital: 'faturamento_minimo', campo_perfil: 'faturamento_anual', operador: 'ENTRE', valor_referencia: 'faturamento_maximo', mensagem_reprovacao: 'O faturamento anual da empresa está fora da faixa aceitável pelo edital.', ativo: true, ordem: 7 },
+  { nome: 'Parceria com ICT', tipo: 'ELIMINATORIO', campo_edital: 'exige_ict_parceira', campo_perfil: 'possui_ict_parceira', operador: 'FALSO', valor_referencia: null, mensagem_reprovacao: 'O edital exige parceria com ICT e a empresa não atende a essa condição.', ativo: true, ordem: 8 },
+  { nome: 'Certidões disponíveis', tipo: 'ELIMINATORIO', campo_edital: 'certidoes_exigidas', campo_perfil: 'certidoes_disponiveis', operador: 'CONTIDO_EM', valor_referencia: null, mensagem_reprovacao: 'A empresa não possui as certidões exigidas pelo edital.', ativo: true, ordem: 9 },
+  { nome: 'Contrapartida suportável', tipo: 'ELIMINATORIO', campo_edital: 'percentual_contrapartida', campo_perfil: 'capacidade_contrapartida_percentual', operador: 'MENOR_QUE', valor_referencia: null, mensagem_reprovacao: 'A empresa não suporta o percentual mínimo de contrapartida exigido.', ativo: true, ordem: 10 },
+  { nome: 'Aderência temática', tipo: 'PONTUAVEL', campo_edital: 'areas_tematicas', campo_perfil: 'areas_atuacao', operador: 'INTERSECCAO', valor_referencia: null, peso: 10, mensagem_reprovacao: null, ativo: true, ordem: 0 },
+  { nome: 'Valor da oportunidade', tipo: 'PONTUAVEL', campo_edital: 'valor_maximo_por_projeto', campo_perfil: 'valor_minimo_interesse', operador: 'MAIOR_QUE', valor_referencia: null, peso: 8, mensagem_reprovacao: null, ativo: true, ordem: 1 },
+  { nome: 'Folga de prazo', tipo: 'PONTUAVEL', campo_edital: 'prazo_inscricao', campo_perfil: 'prazo_minimo_preparo_dias', operador: 'MAIOR_QUE', valor_referencia: null, peso: 6, mensagem_reprovacao: null, ativo: true, ordem: 2 },
+  { nome: 'Modalidade preferida', tipo: 'PONTUAVEL', campo_edital: 'modalidade', campo_perfil: null, operador: 'IGUAL', valor_referencia: 'SUBVENCAO', peso: 5, mensagem_reprovacao: null, ativo: true, ordem: 3 },
+  { nome: 'Ausência de contrapartida', tipo: 'PONTUAVEL', campo_edital: 'exige_contrapartida', campo_perfil: null, operador: 'FALSO', valor_referencia: null, peso: 4, mensagem_reprovacao: null, ativo: true, ordem: 4 },
+  { nome: 'Densidade de palavras-chave', tipo: 'PONTUAVEL', campo_edital: 'texto_extraido', campo_perfil: 'palavras_chave', operador: 'CONTEM', valor_referencia: null, peso: 3, mensagem_reprovacao: null, ativo: true, ordem: 5 },
+] as const
+
+function normalizarLista(valor: unknown): string[] {
+  if (Array.isArray(valor)) return valor.filter((v) => v != null).map((v) => String(v).trim()).filter(Boolean)
+  if (typeof valor === 'string') return valor.split(',').map((v) => v.trim()).filter(Boolean)
+  return []
+}
+
+function obterCampo(obj: Record<string, any> | null | undefined, campo: string | null | undefined) {
+  if (!campo || !obj) return undefined
+  if (campo === 'hoje') return new Date().toISOString().slice(0, 10)
+  return obj[campo]
+}
+
+function valorTexto(valor: unknown): string {
+  if (valor == null) return ''
+  if (typeof valor === 'string') return valor.trim()
+  if (typeof valor === 'number' || typeof valor === 'boolean') return String(valor)
+  return JSON.stringify(valor)
+}
+
+function garantirBootstraps() {
+  if (!repositorios.perfilEmpresa.obter()) {
+    repositorios.perfilEmpresa.inserir({
+      id: 1,
+      razao_social: 'I9+ Consultoria e Inovação',
+      nome_fantasia: 'I9+',
+      cnpj: '00.000.000/0000-00',
+      cnae_principal: '5821-1/00',
+      cnaes_secundarios: ['6201-5/00', '7210-0/00'],
+      porte: 'ME',
+      natureza_juridica: 'Sociedade Empresária Limitada',
+      data_fundacao: '2020-01-01',
+      faturamento_anual: 4200000,
+      uf: 'PR',
+      municipio: 'Curitiba',
+      areas_atuacao: ['ESG', 'Sustentabilidade', 'Inovação', 'Energia', 'Descarbonização'],
+      palavras_chave: ['ESG', 'sustentabilidade', 'inovação', 'energia', 'descarbonização', 'clima'],
+      possui_ict_parceira: false,
+      certidoes_disponiveis: ['CND', 'FGTS', 'CRLV'],
+      capacidade_contrapartida_percentual: 30,
+      valor_minimo_interesse: 500000,
+      prazo_minimo_preparo_dias: 30,
+      atualizado_em: new Date().toISOString(),
+    })
+  }
+
+  if (repositorios.criterio.contar() === 0) {
+    for (const item of CRITERIOS_PADRAO) {
+      repositorios.criterio.inserir({
+        ...item,
+        valor_referencia: item.valor_referencia ?? null,
+        campo_perfil: item.campo_perfil ?? null,
+        mensagem_reprovacao: item.mensagem_reprovacao ?? null,
+        peso: 'peso' in item ? item.peso ?? null : null,
+      })
+    }
+  }
+
+  for (const tipo of TIPOS_NOTIFICACAO) {
+    const jaExiste = repositorios.configAlerta.listar().some((config) => config.tipo === tipo)
+    if (!jaExiste) {
+      repositorios.configAlerta.inserir({ tipo, ativo: true, destinatarios: [], parametros: PARAMETROS_PADRAO[tipo] })
+    }
+  }
+
+  if (!repositorios.config.obter('chat_limite_diario')) {
+    repositorios.config.definir('chat_limite_diario', '20')
+  }
+}
+
+function executarOperador(criterio: any, edital: any, perfil: any): boolean {
+  const valorEd = obterCampo(edital, criterio.campo_edital)
+  const valorPerfil = criterio.campo_perfil ? obterCampo(perfil, criterio.campo_perfil) : criterio.valor_referencia
+
+  if (criterio.operador === 'VERDADEIRO') return Boolean(valorPerfil) && Boolean(valorEd)
+  if (criterio.operador === 'FALSO') return !Boolean(valorPerfil) && !Boolean(valorEd)
+  if (criterio.operador === 'IGUAL') return valorTexto(valorPerfil) === valorTexto(valorEd)
+  if (criterio.operador === 'DIFERENTE') return valorTexto(valorPerfil) !== valorTexto(valorEd)
+  if (criterio.operador === 'MAIOR_QUE') {
+    const a = Number(valorPerfil)
+    const b = Number(valorEd)
+    if (Number.isFinite(a) && Number.isFinite(b)) return a > b
+    if (valorPerfil != null && valorEd != null) return String(valorPerfil) > String(valorEd)
+    return Boolean(valorEd)
+  }
+  if (criterio.operador === 'MENOR_QUE') {
+    const a = Number(valorPerfil)
+    const b = Number(valorEd)
+    if (Number.isFinite(a) && Number.isFinite(b)) return a < b
+    return String(valorPerfil ?? '').length < String(valorEd ?? '').length
+  }
+  if (criterio.operador === 'ENTRE') {
+    const min = Number(valorEd)
+    const max = Number(criterio.valor_referencia ?? obterCampo(edital, 'faturamento_maximo'))
+    const atual = Number(valorPerfil)
+    return Number.isFinite(atual) && Number.isFinite(min) && Number.isFinite(max) ? atual >= min && atual <= max : true
+  }
+  const listaEd = normalizarLista(valorEd)
+  const listaPerfil = normalizarLista(valorPerfil)
+  if (criterio.operador === 'LISTA_VAZIA_OU_CONTEM') {
+    if (!listaEd.length) return true
+    return listaPerfil.some((item) => listaEd.includes(item))
+  }
+  if (criterio.operador === 'CONTEM') return listaPerfil.some((item) => String(valorEd ?? '').toLowerCase().includes(item.toLowerCase()))
+  if (criterio.operador === 'NAO_CONTEM') return !listaPerfil.some((item) => String(valorEd ?? '').toLowerCase().includes(item.toLowerCase()))
+  if (criterio.operador === 'INTERSECCAO') return listaPerfil.some((item) => listaEd.includes(item))
+  if (criterio.operador === 'CONTIDO_EM') return listaPerfil.every((item) => listaEd.includes(item))
+  if (criterio.operador === 'FALSO') return !Boolean(valorEd) || !Boolean(valorPerfil)
+  return true
+}
+
+function pontoCriterio(criterio: any, edital: any, perfil: any): number | null {
+  const valorEd = obterCampo(edital, criterio.campo_edital)
+  const valorPerfil = criterio.campo_perfil ? obterCampo(perfil, criterio.campo_perfil) : criterio.valor_referencia
+
+  if (criterio.nome === 'Aderência temática') {
+    const temaEd = normalizarLista(valorEd)
+    const temaPerfil = normalizarLista(valorPerfil)
+    if (!temaEd.length || !temaPerfil.length) return null
+    return Math.min(1, temaPerfil.filter((item) => temaEd.some((ed) => ed.toLowerCase() === item.toLowerCase())).length / Math.max(temaPerfil.length, 1))
+  }
+
+  if (criterio.nome === 'Valor da oportunidade') {
+    const valorOportunidade = Number(valorEd)
+    const valorMinimo = Number(valorPerfil)
+    if (!Number.isFinite(valorOportunidade) || !Number.isFinite(valorMinimo)) return null
+    return valorOportunidade >= valorMinimo ? 1 : 0
+  }
+
+  if (criterio.nome === 'Folga de prazo') {
+    if (!valorEd) return null
+    const hoje = new Date()
+    const prazo = new Date(String(valorEd))
+    const dias = Math.ceil((prazo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
+    if (!Number.isFinite(dias)) return null
+    return dias > 30 ? 1 : dias > 7 ? 0.6 : dias > 0 ? 0.3 : 0
+  }
+
+  if (criterio.nome === 'Modalidade preferida') {
+    return String(valorEd) === String(criterio.valor_referencia) ? 1 : 0
+  }
+
+  if (criterio.nome === 'Ausência de contrapartida') {
+    return Boolean(valorEd) ? 0 : 1
+  }
+
+  if (criterio.nome === 'Densidade de palavras-chave') {
+    const texto = String(valorEd ?? '').toLowerCase()
+    const palavras = normalizarLista(valorPerfil).map((item) => item.toLowerCase())
+    if (!texto || !palavras.length) return null
+    const ocorrencias = palavras.filter((palavra) => texto.includes(palavra)).length
+    return ocorrencias > 0 ? Math.min(1, ocorrencias / palavras.length) : 0
+  }
+
+  return null
+}
+
+function simularConfiguracao(editalId: string) {
+  const edital = repositorios.edital.buscarPorId(editalId)
+  if (!edital) throw new Error('Edital não encontrado.')
+  const perfil = repositorios.perfilEmpresa.obter()
+  const criterios = repositorios.criterio.listar().filter((criteria) => criteria.ativo)
+
+  const falhas: { nome: string; mensagem: string }[] = []
+  let nota = 0
+  let pesoTotal = 0
+
+  for (const criterio of criterios) {
+    if (criterio.tipo === 'ELIMINATORIO') {
+      const ok = executarOperador(criterio, edital, perfil ?? {})
+      if (!ok) {
+        falhas.push({ nome: criterio.nome, mensagem: criterio.mensagem_reprovacao ?? 'Critério não atendido.' })
+      }
+    } else {
+      const peso = Number(criterio.peso ?? 0)
+      if (!peso) continue
+      const score = pontoCriterio(criterio, edital, perfil ?? {})
+      if (score == null) continue
+      nota += peso * score
+      pesoTotal += peso
+    }
+  }
+
+  const notaFit = pesoTotal > 0 ? (nota / pesoTotal) * 100 : 100
+  const status = falhas.length > 0 ? 'INELEGIVEL' : notaFit >= 70 ? 'ELEGIVEL' : notaFit >= 40 ? 'INDETERMINADO' : 'INELEGIVEL'
+
+  return {
+    status,
+    nota_fit: Number(notaFit.toFixed(1)),
+    falhas,
+    resumo: falhas.length ? 'Com a configuração atual, o edital seria rejeitado pela regra eliminatória.' : 'Com a configuração atual, o edital continua compativel.',
+  }
+}
 
 export const rotasEditais = Router()
 
@@ -18,10 +233,186 @@ function obterUsuarioId(req: any): string {
   return gestor?.id ?? '00000000-0000-0000-0000-000000000001'
 }
 
+// ---- Perfil, critérios, fontes e alertas (P06–P09) ----
+rotasEditais.use((req, _res, next) => {
+  garantirBootstraps()
+  next()
+})
+
+rotasEditais.get('/perfil-empresa', (_req, res) => {
+  res.json({ perfil: repositorios.perfilEmpresa.obter() ?? null })
+})
+
+rotasEditais.post('/perfil-empresa', (req, res) => {
+  const payload = req.body ?? {}
+  const perfil = {
+    id: 1,
+    razao_social: String(payload.razao_social ?? '').trim() || 'I9+ Consultoria e Inovação',
+    nome_fantasia: payload.nome_fantasia ? String(payload.nome_fantasia).trim() : null,
+    cnpj: String(payload.cnpj ?? '').trim() || '00.000.000/0000-00',
+    cnae_principal: String(payload.cnae_principal ?? '').trim() || '0000-0/00',
+    cnaes_secundarios: normalizarLista(payload.cnaes_secundarios),
+    porte: String(payload.porte ?? 'ME'),
+    natureza_juridica: String(payload.natureza_juridica ?? '').trim() || 'Sociedade Empresária Limitada',
+    data_fundacao: String(payload.data_fundacao ?? '').trim() || '2020-01-01',
+    faturamento_anual: payload.faturamento_anual == null || payload.faturamento_anual === '' ? null : Number(payload.faturamento_anual),
+    uf: String(payload.uf ?? 'PR').trim().toUpperCase() || 'PR',
+    municipio: String(payload.municipio ?? '').trim() || 'Curitiba',
+    areas_atuacao: normalizarLista(payload.areas_atuacao),
+    palavras_chave: normalizarLista(payload.palavras_chave),
+    possui_ict_parceira: Boolean(payload.possui_ict_parceira),
+    certidoes_disponiveis: normalizarLista(payload.certidoes_disponiveis),
+    capacidade_contrapartida_percentual: payload.capacidade_contrapartida_percentual == null || payload.capacidade_contrapartida_percentual === '' ? null : Number(payload.capacidade_contrapartida_percentual),
+    valor_minimo_interesse: payload.valor_minimo_interesse == null || payload.valor_minimo_interesse === '' ? null : Number(payload.valor_minimo_interesse),
+    prazo_minimo_preparo_dias: payload.prazo_minimo_preparo_dias == null || payload.prazo_minimo_preparo_dias === '' ? null : Number(payload.prazo_minimo_preparo_dias),
+  }
+
+  const existente = repositorios.perfilEmpresa.obter()
+  const salvo = existente ? repositorios.perfilEmpresa.salvar(perfil) : repositorios.perfilEmpresa.inserir(perfil)
+
+  res.json({
+    ok: true,
+    perfil: salvo,
+    reavaliacaoSolicitada: Boolean(payload.reavaliar),
+  })
+})
+
+rotasEditais.get('/criterios', (_req, res) => {
+  const eliminatorios = repositorios.criterio.listarPorTipo('ELIMINATORIO')
+  const pontuaveis = repositorios.criterio.listarPorTipo('PONTUAVEL')
+  res.json({ eliminatorios, pontuaveis })
+})
+
+rotasEditais.post('/criterios', (req, res) => {
+  const item = req.body ?? {}
+  const dados = {
+    id: item.id ?? novoId(),
+    nome: String(item.nome ?? '').trim(),
+    tipo: item.tipo === 'PONTUAVEL' ? 'PONTUAVEL' : 'ELIMINATORIO',
+    campo_edital: String(item.campo_edital ?? '').trim(),
+    campo_perfil: item.campo_perfil ? String(item.campo_perfil).trim() : null,
+    operador: String(item.operador ?? 'CONTEM'),
+    valor_referencia: item.valor_referencia == null || item.valor_referencia === '' ? null : String(item.valor_referencia),
+    peso: item.peso == null || item.peso === '' ? null : Number(item.peso),
+    mensagem_reprovacao: item.mensagem_reprovacao == null || item.mensagem_reprovacao === '' ? null : String(item.mensagem_reprovacao),
+    ativo: item.ativo !== false,
+    ordem: Number(item.ordem ?? 0),
+  }
+
+  if (!dados.nome || !dados.campo_edital || !dados.operador) {
+    return res.status(400).json({ erro: 'Nome, campo e operador são obrigatórios.' })
+  }
+
+  const existente = repositorios.criterio.buscarPorId(dados.id)
+  const salvo = existente ? repositorios.criterio.atualizar(dados.id, dados) : repositorios.criterio.inserir(dados)
+  res.json({ ok: true, criterio: salvo })
+})
+
+rotasEditais.delete('/criterios/:id', (req, res) => {
+  const removido = repositorios.criterio.excluir(req.params.id)
+  res.json({ ok: true, removido })
+})
+
+rotasEditais.patch('/criterios/:id/ativo', (req, res) => {
+  const criterio = repositorios.criterio.buscarPorId(req.params.id)
+  if (!criterio) return res.status(404).json({ erro: 'Critério não encontrado.' })
+  const atualizado = repositorios.criterio.atualizar(criterio.id, { ativo: !criterio.ativo })
+  res.json({ ok: true, criterio: atualizado })
+})
+
+rotasEditais.post('/criterios/reordenar', (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id: unknown) => typeof id === 'string') : []
+  if (!ids.length) return res.status(400).json({ erro: 'Nenhum critério para reordenar.' })
+  repositorios.criterio.reordenar(ids)
+  res.json({ ok: true })
+})
+
+rotasEditais.post('/criterios/simular', (req, res) => {
+  const { edital_id } = req.body ?? {}
+  if (!edital_id) return res.status(400).json({ erro: 'Selecione um edital para simular.' })
+  try {
+    const simulacao = simularConfiguracao(String(edital_id))
+    res.json({ ok: true, simulacao })
+  } catch (erro: any) {
+    res.status(400).json({ erro: erro.message ?? 'Não foi possível simular.' })
+  }
+})
+
+rotasEditais.get('/alertas', (_req, res) => {
+  const configuracoes = TIPOS_NOTIFICACAO.map((tipo) => repositorios.configAlerta.obter(tipo))
+  const logs = repositorios.notificacaoLog.listar().slice(0, 20)
+  res.json({ configuracoes, logs })
+})
+
+rotasEditais.post('/alertas', (req, res) => {
+  const { tipo, ativo, destinatarios, parametros } = req.body ?? {}
+  if (!tipo || !TIPOS_NOTIFICACAO.includes(tipo)) {
+    return res.status(400).json({ erro: 'Tipo de notificação inválido.' })
+  }
+
+  const existente = repositorios.configAlerta.obter(tipo)
+  const dados = {
+    tipo,
+    ativo: Boolean(ativo),
+    destinatarios: Array.isArray(destinatarios) ? destinatarios.map((item: any) => String(item).trim()).filter(Boolean) : existente.destinatarios,
+    parametros: { ...existente.parametros, ...(parametros ?? {}) },
+  }
+
+  const salvo = repositorios.configAlerta.buscarPorId(tipo)
+    ? repositorios.configAlerta.atualizar(tipo, dados)
+    : repositorios.configAlerta.inserir(dados)
+
+  res.json({ ok: true, configuracao: salvo })
+})
+
+rotasEditais.get('/alertas/logs', (_req, res) => {
+  res.json({ logs: repositorios.notificacaoLog.listar().slice(0, 30) })
+})
+
 // ---- Fontes ----
 rotasEditais.get('/fontes', (_req, res) => {
-  const fontes = repositorios.fonte.listar()
+  const fontes = repositorios.fonte.listar().map((fonte) => {
+    const ultimasExecucoes = db.prepare('SELECT * FROM coleta_execucao WHERE fonte_id = ? ORDER BY iniciada_em DESC LIMIT 10').all(fonte.id) as any[]
+    return { ...fonte, execucoes: ultimasExecucoes }
+  })
   res.json({ fontes })
+})
+
+rotasEditais.post('/fontes', (req, res) => {
+  const dados = req.body ?? {}
+  const payload = {
+    id: dados.id ?? novoId(),
+    nome: String(dados.nome ?? '').trim(),
+    url_base: dados.url_base == null || dados.url_base === '' ? null : String(dados.url_base),
+    tipo: String(dados.tipo ?? 'URL_MANUAL'),
+    frequencia_cron: dados.frequencia_cron == null || dados.frequencia_cron === '' ? null : String(dados.frequencia_cron),
+    ativo: dados.ativo !== false,
+  }
+
+  if (!payload.nome) return res.status(400).json({ erro: 'Nome da fonte é obrigatório.' })
+
+  const existente = repositorios.fonte.buscarPorId(payload.id)
+  const salvo = existente ? repositorios.fonte.atualizar(payload.id, payload) : repositorios.fonte.inserir(payload)
+  res.json({ ok: true, fonte: salvo })
+})
+
+rotasEditais.patch('/fontes/:id/ativo', (req, res) => {
+  const fonte = repositorios.fonte.buscarPorId(req.params.id)
+  if (!fonte) return res.status(404).json({ erro: 'Fonte não encontrada.' })
+  const atualizado = repositorios.fonte.atualizar(fonte.id, { ativo: !fonte.ativo })
+  res.json({ ok: true, fonte: atualizado })
+})
+
+rotasEditais.post('/fontes/:id/coletar', async (req, res) => {
+  const fonte = repositorios.fonte.buscarPorId(req.params.id)
+  if (!fonte) return res.status(404).json({ erro: 'Fonte não encontrada.' })
+
+  try {
+    await new ColetaServico(repositorios).coletar(fonte)
+    res.json({ ok: true, fonte: repositorios.fonte.buscarPorId(fonte.id) })
+  } catch (erro: any) {
+    res.status(400).json({ erro: erro.message ?? 'Falha ao disparar a coleta.' })
+  }
 })
 
 // ---- Dashboard (P02 - Tarefa 14) ----
