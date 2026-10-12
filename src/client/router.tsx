@@ -11,12 +11,33 @@ import { FontesPage } from './pages/FontesPage'
 import { LoginPage } from './pages/LoginPage'
 import { NovaEntradaPage } from './pages/NovaEntradaPage'
 import { PerfilPage } from './pages/PerfilPage'
+import { useEffect, useState } from 'react'
+import { Navigate } from 'react-router'
+
+
+function Protegido() {
+  const [estado, setEstado] = useState<'carregando' | 'sim' | 'nao'>('carregando')
+
+  useEffect(() => {
+    fetch('/api/bhrendon/sessao', { credentials: 'include' })
+      .then(res => setEstado(res.ok ? 'sim' : 'nao'))
+      .catch(() => setEstado('nao'))
+  }, [])
+
+  if (estado === 'carregando') {
+    return <p>Verificando sessão...</p>
+  }
+
+  return estado === 'sim'
+    ? <AppLayout />
+    : <Navigate to="/login" replace />
+}
 
 // Mapa de páginas (§5 da especificação).
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> }, // P01 — público
   {
-    element: <AppLayout />,
+    element: <Protegido />,
     errorElement: <ErroPage />,
     children: [
       // Analista e Gestor
