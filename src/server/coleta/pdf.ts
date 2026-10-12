@@ -3,6 +3,10 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 export type PaginaPdf = { pagina: number; texto: string }
 export type TextoPdf = { paginas: PaginaPdf[]; texto: string; requerLeituraManual: boolean }
 
+export function ehMarcadorDeTextoPdf(texto: string | null): boolean {
+  return texto !== null && /^\[Texto extraído do documento PDF:[^\]\r\n]*\]$/.test(texto.trim())
+}
+
 // PDF.js mantém a referência física de página e as quebras indicadas pelo documento.
 // Sem OCR: páginas sem camada de texto são encaminhadas para leitura manual.
 export async function extrairPdf(arquivo: Uint8Array): Promise<TextoPdf> {

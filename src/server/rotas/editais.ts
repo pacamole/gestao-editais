@@ -3,9 +3,23 @@ import { createHash, randomUUID } from 'node:crypto'
 import { db, novoId, transacao } from '../db/index.js'
 import { repositorios } from '../repositorios/index.js'
 import type { Edital, StatusEdital, StatusElegibilidade, Modalidade, Classificacao } from '../entidades.js'
+import { ErroOllama, transmitirRespostaSobreEdital } from '../chat/ollama.js'
+import { buscarTrechosEdital } from '../chat/indiceEdital.js'
+import { ehMarcadorDeTextoPdf, extrairPdf } from '../coleta/pdf.js'
 import { ELEGIBILIDADE, MODALIDADES, STATUS_EDITAL } from '../../shared/rotulos.js'
 
 export const rotasEditais = Router()
+
+let filaPerguntas = Promise.resolve()
+
+function executarPerguntaSerialmente<T>(operacao: () => Promise<T>): Promise<T> {
+  const anterior = filaPerguntas
+  let liberar!: () => void
+  filaPerguntas = new Promise<void>((resolve) => {
+    liberar = resolve
+  })
+  return anterior.then(operacao).finally(liberar)
+}
 
 // Auxiliar para obter ID do usuário (ou gestor padrão se não houver cookie)
 function obterUsuarioId(req: any): string {
@@ -432,7 +446,7 @@ rotasEditais.post('/editais/lote', (req, res) => {
 })
 
 // ---- Nova Entrada (P05 - Tarefa 13) ----
-rotasEditais.post('/editais', (req, res) => {
+rotasEditais.post('/editais', async (req, res) => {
   const { tipo = 'MANUAL' } = req.body ?? {}
   const agoraIso = new Date().toISOString()
 
@@ -453,6 +467,19 @@ rotasEditais.post('/editais', (req, res) => {
       })
     }
 
+    let textoPdf
+    try {
+      textoPdf = await extrairPdf(buffer)
+    } catch {
+      return res.status(400).json({ erro: 'Não foi possível ler este PDF. Verifique se o arquivo está íntegro e tente novamente.' })
+    }
+
+    if (!textoPdf.paginas.some((pagina) => pagina.texto.trim())) {
+      return res.status(422).json({
+        erro: 'Este PDF não contém texto selecionável. Aplique OCR ao documento e envie novamente para habilitar o chat.',
+      })
+    }
+
     // Calcula hash SHA-256 do documento
     const hash = createHash('sha256').update(buffer).digest('hex')
 
@@ -465,6 +492,21 @@ rotasEditais.post('/editais', (req, res) => {
     })
 
     if (duplicado) {
+      if (!duplicado.texto_extraido?.trim() || ehMarcadorDeTextoPdf(duplicado.texto_extraido)) {
+        repositorios.edital.atualizar(duplicado.id, {
+          texto_extraido: textoPdf.texto,
+          erro_processamento: textoPdf.requerLeituraManual
+            ? 'Requer leitura manual: uma ou mais páginas não têm camada de texto.'
+            : null,
+        })
+        return res.json({
+          ok: true,
+          id: duplicado.id,
+          duplicado: true,
+          mensagem: 'O edital existente foi atualizado com o texto extraído do PDF.',
+        })
+      }
+
       return res.json({
         ok: true,
         id: duplicado.id,
@@ -486,7 +528,8 @@ rotasEditais.post('/editais', (req, res) => {
       fonte_id: fonteValida,
       hash_documento: hash,
       status: 'COLETADO',
-      texto_extraido: `[Texto extraído do documento PDF: ${nome_arquivo || 'edital.pdf'}]`,
+      texto_extraido: textoPdf.texto,
+      erro_processamento: textoPdf.requerLeituraManual ? 'Requer leitura manual: uma ou mais páginas não têm camada de texto.' : null,
       retificado: false,
     })
 
@@ -688,6 +731,151 @@ rotasEditais.get('/editais/:id', (req, res) => {
     evidencias,
     revisoes,
   })
+})
+
+// ---- Chat sobre o edital ----
+rotasEditais.get('/editais/:id/chat', (req, res) => {
+  const edital = repositorios.edital.buscarPorId(req.params.id)
+  if (!edital) return res.status(404).json({ erro: 'Edital não encontrado.' })
+
+  const usuarioId = obterUsuarioId(req)
+  const conversa = repositorios.conversa.buscarDoUsuario(edital.id, usuarioId)
+  const limite = repositorios.config.obterNumero('chat_limite_diario', 20)
+  const inicioDoDia = new Date()
+  inicioDoDia.setHours(0, 0, 0, 0)
+  const feitasHoje = repositorios.mensagem.contarPerguntasDoUsuarioDesde(usuarioId, inicioDoDia.toISOString())
+
+  res.json({
+    mensagens: conversa ? repositorios.mensagem.listarDaConversa(conversa.id) : [],
+    limite,
+    restantes: Math.max(0, limite - feitasHoje),
+  })
+})
+
+rotasEditais.post('/editais/:id/chat', async (req, res) => {
+  const edital = repositorios.edital.buscarPorId(req.params.id)
+  if (!edital) return res.status(404).json({ erro: 'Edital não encontrado.' })
+
+  const pergunta = req.body?.pergunta
+  const textoEdital = edital.texto_extraido
+  if (typeof pergunta !== 'string' || !pergunta.trim()) {
+    return res.status(400).json({ erro: 'Digite uma pergunta sobre o edital.' })
+  }
+  if (pergunta.trim().length > 2000) {
+    return res.status(400).json({ erro: 'A pergunta deve ter no máximo 2.000 caracteres.' })
+  }
+  if (!textoEdital?.trim()) {
+    return res.status(409).json({ erro: 'Este edital ainda não tem texto extraído para consultar.' })
+  }
+
+  return executarPerguntaSerialmente(async () => {
+    const usuarioId = obterUsuarioId(req)
+    const limite = repositorios.config.obterNumero('chat_limite_diario', 20)
+    const inicioDoDia = new Date()
+    inicioDoDia.setHours(0, 0, 0, 0)
+    const feitasHoje = repositorios.mensagem.contarPerguntasDoUsuarioDesde(usuarioId, inicioDoDia.toISOString())
+
+    if (feitasHoje >= limite) {
+      return res.status(429).json({
+        erro: 'Você atingiu o limite diário de perguntas do chat.',
+        limite,
+        restantes: 0,
+      })
+    }
+
+    const conversaExistente = repositorios.conversa.buscarDoUsuario(edital.id, usuarioId)
+    const historico = conversaExistente
+      ? repositorios.mensagem.ultimasDaConversa(conversaExistente.id, 6)
+      : []
+    const versaoEdital = `${edital.hash_documento ?? ''}:${edital.atualizado_em}:${textoEdital.length}`
+    const busca = buscarTrechosEdital(edital.id, textoEdital, pergunta.trim(), versaoEdital)
+
+    res.status(200)
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
+    res.setHeader('X-Accel-Buffering', 'no')
+    res.flushHeaders()
+    res.write(`${JSON.stringify({
+      tipo: 'status',
+      mensagem: busca.relevante
+        ? 'Trechos localizados. O Ollama está preparando a resposta…'
+        : 'Essa pergunta parece estar fora do conteúdo do edital.',
+    })}\n`)
+
+    const controlador = new AbortController()
+    res.on('close', () => {
+      if (!res.writableEnded) controlador.abort()
+    })
+
+    let conteudo = ''
+    try {
+      if (!busca.relevante) {
+        conteudo = 'Posso ajudar com perguntas sobre este edital. Perguntas de matemática ou sobre outros assuntos ficam fora do escopo deste chat.'
+        res.write(`${JSON.stringify({ tipo: 'trecho', conteudo })}\n`)
+      } else {
+        for await (const trecho of transmitirRespostaSobreEdital(
+          busca.trechos,
+          pergunta.trim(),
+          historico.map(({ papel, conteudo: texto }) => ({ papel, conteudo: texto })),
+          fetch,
+          controlador.signal,
+        )) {
+          conteudo += trecho
+          res.write(`${JSON.stringify({ tipo: 'trecho', conteudo: trecho })}\n`)
+        }
+      }
+    } catch (erro) {
+      if (res.destroyed) return
+      console.error('Falha ao gerar resposta do chat com Ollama:', erro)
+      const mensagem = erro instanceof ErroOllama
+        ? erro.message
+        : 'Não foi possível obter uma resposta do assistente.'
+      res.write(`${JSON.stringify({ tipo: 'erro', mensagem })}\n`)
+      return res.end()
+    }
+
+    const agoraIso = new Date().toISOString()
+    const conversa = transacao(() => {
+      const conversa = conversaExistente ?? repositorios.conversa.inserir({
+        id: novoId(),
+        edital_id: edital.id,
+        usuario_id: usuarioId,
+      })
+      repositorios.mensagem.inserir({
+        id: novoId(),
+        conversa_id: conversa.id,
+        papel: 'USUARIO',
+        conteudo: pergunta.trim(),
+      })
+      repositorios.mensagem.inserir({
+        id: novoId(),
+        conversa_id: conversa.id,
+        papel: 'ASSISTENTE',
+        conteudo,
+      })
+      repositorios.conversa.atualizar(conversa.id, { atualizada_em: agoraIso })
+      return conversa
+    })
+
+    const feitasDepois = feitasHoje + 1
+    res.write(`${JSON.stringify({
+      tipo: 'concluido',
+      mensagens: repositorios.mensagem.listarDaConversa(conversa.id),
+      limite,
+      restantes: Math.max(0, limite - feitasDepois),
+    })}\n`)
+    return res.end()
+  })
+})
+
+rotasEditais.delete('/editais/:id/chat', (req, res) => {
+  const edital = repositorios.edital.buscarPorId(req.params.id)
+  if (!edital) return res.status(404).json({ erro: 'Edital não encontrado.' })
+
+  const usuarioId = obterUsuarioId(req)
+  const conversa = repositorios.conversa.buscarDoUsuario(edital.id, usuarioId)
+  if (conversa) repositorios.mensagem.excluirDaConversa(conversa.id)
+  res.json({ ok: true })
 })
 
 // ---- Ação de revisão individual ----
