@@ -1,0 +1,514 @@
+
+/* ==========================================
+   AUTENTICAÇÃO - GESTÃO DE EDITAIS I9+
+   Estilos da tela de login e cadastro
+   ========================================== */
+
+/* Página principal */
+.auth-pagina {
+  min-height: 100vh;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f4f7fb;
+  font-family: 'Inter', Arial, sans-serif;
+}
+
+/* ==========================================
+   LADO ESQUERDO - APRESENTAÇÃO
+   ========================================== */
+
+.auth-apresentacao {
+  background: linear-gradient(
+    145deg,
+    #071b38 0%,
+    #103c68 55%,
+    #086d77 100%
+  );
+
+  color: #ffffff;
+  padding: 55px 65px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  position: relative;
+  overflow: hidden;
+}
+
+/* Detalhe decorativo */
+.auth-apresentacao::after {
+  content: "";
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: rgba(36, 211, 171, 0.08);
+  right: -180px;
+  bottom: -180px;
+  pointer-events: none;
+}
+
+/* Marca */
+.auth-marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.auth-marca span:last-child {
+  color: #47e0bc;
+}
+
+.auth-marca-icone {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 42px;
+  height: 42px;
+
+  background: #18a99d;
+  border-radius: 12px;
+  color: white;
+}
+
+/* Conteúdo */
+.auth-apresentacao-conteudo {
+  position: relative;
+  z-index: 1;
+  max-width: 540px;
+}
+
+.auth-etiqueta {
+  display: inline-block;
+  padding: 9px 15px;
+  border-radius: 30px;
+
+  background: rgba(255, 255, 255, 0.12);
+  color: #78f2d4;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.auth-apresentacao h1 {
+  margin-top: 25px;
+  font-size: clamp(32px, 3.5vw, 53px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -1.5px;
+}
+
+.auth-apresentacao p {
+  margin-top: 22px;
+  color: #c4d7e7;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+/* Benefícios */
+.auth-destaques {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 35px;
+}
+
+.auth-destaques span {
+  color: #e4f8f5;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.auth-apresentacao small {
+  color: #9db8cc;
+  font-size: 12px;
+}
+
+/* ==========================================
+   LADO DIREITO - FORMULÁRIO
+   ========================================== */
+
+.auth-formulario-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 25px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 35px;
+  background: #ffffff;
+  border-radius: 22px;
+  box-shadow: 0 15px 50px rgba(10, 40, 80, 0.08);
+}
+
+/* Ícone superior */
+.auth-icone {
+  width: 52px;
+  height: 52px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #e3f8f2;
+  color: #0a9885;
+
+  border-radius: 15px;
+  font-size: 27px;
+  margin-bottom: 24px;
+}
+
+.auth-etiqueta--escura {
+  background: #eaf8f4;
+  color: #0b907e;
+}
+
+/* Títulos */
+.auth-card h2 {
+  margin-top: 18px;
+  margin-bottom: 10px;
+
+  color: #132c46;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.auth-subtitulo {
+  color: #708195;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+/* ==========================================
+   CAMPOS DO FORMULÁRIO
+   ========================================== */
+
+.auth-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-formulario label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+
+  color: #263e56;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Inputs */
+.auth-formulario input {
+  width: 100%;
+  min-height: 48px;
+
+  padding: 13px 15px;
+
+  border: 1px solid #dce5ed;
+  border-radius: 11px;
+
+  background: #f9fbfd;
+  color: #19324b;
+
+  font-family: inherit;
+  font-size: 14px;
+
+  outline: none;
+  box-sizing: border-box;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.auth-formulario input::placeholder {
+  color: #9aaabc;
+}
+
+/* Input selecionado */
+.auth-formulario input:focus {
+  background: #ffffff;
+  border-color: #12a994;
+  box-shadow: 0 0 0 4px rgba(18, 169, 148, 0.12);
+}
+
+/* Campo de senha */
+.auth-senha {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.auth-senha input {
+  padding-right: 90px;
+}
+
+.auth-senha button {
+  position: absolute;
+  right: 10px;
+
+  padding: 8px;
+
+  border: none;
+  background: transparent;
+
+  color: #087e78;
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.auth-senha button:hover {
+  color: #0bb49e;
+}
+
+/* ==========================================
+   BOTÃO PRINCIPAL
+   ========================================== */
+
+.auth-enviar {
+  width: 100%;
+  min-height: 50px;
+
+  margin-top: 5px;
+  padding: 14px 20px;
+
+  border: none;
+  border-radius: 11px;
+
+  background: linear-gradient(
+    90deg,
+    #0b9189,
+    #12b99b
+  );
+
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.auth-enviar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(10, 160, 140, 0.25);
+}
+
+.auth-enviar:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-enviar:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ==========================================
+   MENSAGENS DE ERRO E SUCESSO
+   ========================================== */
+
+.auth-alerta {
+  padding: 13px 15px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.auth-alerta--erro {
+  background: #fff0f0;
+  border: 1px solid #f5b9b9;
+  color: #b42323;
+}
+
+.auth-alerta--sucesso {
+  background: #eafaf2;
+  border: 1px solid #a8e5c4;
+  color: #17774b;
+}
+
+/* ==========================================
+   ALTERNAR LOGIN / CADASTRO
+   ========================================== */
+
+.auth-troca {
+  margin-top: 28px;
+  text-align: center;
+
+  color: #718398;
+  font-size: 13px;
+}
+
+.auth-troca button {
+  border: none;
+  background: transparent;
+
+  color: #078d83;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.auth-troca button:hover {
+  color: #0bb9a3;
+  text-decoration: underline;
+}
+
+/* Rodapé */
+.auth-rodape {
+  margin-top: 30px;
+  text-align: center;
+  color: #a0adba;
+  font-size: 11px;
+}
+
+/* Acessibilidade */
+.auth-formulario button:focus-visible,
+.auth-troca button:focus-visible {
+  outline: 3px solid #12b99b;
+  outline-offset: 3px;
+}
+
+/* ==========================================
+   RESPONSIVIDADE - TABLETS
+   ========================================== */
+
+@media (max-width: 900px) {
+  .auth-pagina {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-apresentacao {
+    padding: 30px;
+    min-height: auto;
+    gap: 25px;
+  }
+
+  .auth-apresentacao h1 {
+    font-size: 30px;
+  }
+
+  .auth-apresentacao p {
+    font-size: 14px;
+  }
+
+  .auth-destaques {
+    display: none;
+  }
+
+  .auth-formulario-area {
+    padding: 40px 20px;
+  }
+}
+
+/* ==========================================
+   RESPONSIVIDADE - CELULARES
+   ========================================== */
+
+@media (max-width: 480px) {
+  .auth-apresentacao {
+    padding: 25px 20px;
+  }
+
+  .auth-apresentacao h1 {
+    font-size: 25px;
+    letter-spacing: -0.5px;
+  }
+
+  .auth-apresentacao p {
+    font-size: 13px;
+  }
+
+  .auth-formulario-area {
+    padding: 25px 15px;
+  }
+
+  .auth-card {
+    padding: 25px 20px;
+    border-radius: 16px;
+  }
+
+  .auth-card h2 {
+    font-size: 25px;
+  }
+
+  .auth-formulario {
+    gap: 17px;
+  }
+
+  .auth-marca {
+    font-size: 21px;
+  }
+}
+
+
+/* Área dos botões de login e cadastro */
+.auth-acoes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.auth-acoes p {
+  color: #718398;
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
+}
+
+/* Botão de criar conta */
+.auth-botao-cadastro {
+  width: 100%;
+  min-height: 50px;
+  padding: 14px 20px;
+
+  background: transparent;
+  border: 2px solid #0b9189;
+  border-radius: 11px;
+
+  color: #0b9189;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Efeito ao passar o mouse */
+.auth-botao-cadastro:hover {
+  background: #eaf8f4;
+  border-color: #12b99b;
+  color: #087e78;
+}
+
+/* Acessibilidade */
+.auth-botao-cadastro:focus-visible {
+  outline: 3px solid #12b99b;
+  outline-offset: 3px;
+}
