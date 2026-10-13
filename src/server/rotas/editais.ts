@@ -4,9 +4,10 @@ import { db, novoId, transacao } from '../db/index.js'
 import { ColetaServico } from '../coleta/servico.js'
 import { repositorios } from '../repositorios/index.js'
 import type { Edital, StatusEdital, StatusElegibilidade, Modalidade, Classificacao } from '../entidades.js'
-import { ErroOllama, transmitirRespostaSobreEdital } from '../chat/ollama.js'
-import { buscarTrechosEdital } from '../chat/indiceEdital.js'
+import { ErroOllama, extrairCamposDoEdital, transmitirRespostaSobreEdital, type CampoEditalExtraido, type ResultadoExtracaoEdital, type ValorCampoEditalExtraido } from '../chat/ollama.js'
 import { ehMarcadorDeTextoPdf, extrairPdf } from '../coleta/pdf.js'
+import { lerPaginaPublica } from '../coleta/pagina.js'
+import { MARCADOR_EDICAO_MANUAL, validarCamposManuais, type CampoEditavel } from '../validacaoCamposEdital.js'
 import { PARAMETROS_PADRAO, TIPOS_NOTIFICACAO } from '../notificacao/parametros.js'
 import { ELEGIBILIDADE, MODALIDADES, STATUS_EDITAL } from '../../shared/rotulos.js'
 
@@ -34,6 +35,43 @@ function normalizarLista(valor: unknown): string[] {
   if (Array.isArray(valor)) return valor.filter((v) => v != null).map((v) => String(v).trim()).filter(Boolean)
   if (typeof valor === 'string') return valor.split(',').map((v) => v.trim()).filter(Boolean)
   return []
+}
+
+function salvarCamposExtraidos(edital: Edital, extracao: ResultadoExtracaoEdital): CampoEditalExtraido[] {
+  const alteracoes: Partial<Edital> = {}
+  const camposAtualizados: CampoEditalExtraido[] = []
+  for (const [campo, valor] of Object.entries(extracao.campos) as [CampoEditalExtraido, ValorCampoEditalExtraido][]) {
+    const valorAtual = edital[campo]
+    if (valor == null || (valorAtual != null && valorAtual !== '')) continue
+    Object.assign(alteracoes, { [campo]: valor })
+    camposAtualizados.push(campo)
+  }
+
+  if (camposAtualizados.length) {
+    transacao(() => {
+      repositorios.edital.atualizar(edital.id, alteracoes)
+      for (const campo of camposAtualizados) {
+        const evidencia = extracao.evidencias[campo]
+        if (!evidencia) continue
+        repositorios.evidencia.excluirDoCampo(edital.id, campo)
+        repositorios.evidencia.inserir({
+          id: novoId(),
+          edital_id: edital.id,
+          campo,
+          trecho_literal: evidencia.trecho,
+          pagina: evidencia.pagina,
+          confianca: 'MEDIA',
+        })
+      }
+    })
+  }
+  return camposAtualizados
+}
+
+function semConteudoWebAnterior(texto: string): string {
+  return texto
+    .replace(/(?:^|\n\n)\[Fonte URL:[^\]]+\]\n[\s\S]*?(?=\n\n\[(?:Página\s+\d+|Fonte URL:)[^\]]*\]|$)/g, '')
+    .trim()
 }
 
 function obterCampo(obj: Record<string, any> | null | undefined, campo: string | null | undefined) {
@@ -192,7 +230,7 @@ function simularConfiguracao(editalId: string) {
   const perfil = repositorios.perfilEmpresa.obter()
   const criterios = repositorios.criterio.listar().filter((criteria) => criteria.ativo)
 
-  const falhas: { nome: string; mensagem: string }[] = []
+  const falhas: { criterio_id: string; nome: string; mensagem: string }[] = []
   let nota = 0
   let pesoTotal = 0
 
@@ -200,7 +238,11 @@ function simularConfiguracao(editalId: string) {
     if (criterio.tipo === 'ELIMINATORIO') {
       const ok = executarOperador(criterio, edital, perfil ?? {})
       if (!ok) {
-        falhas.push({ nome: criterio.nome, mensagem: criterio.mensagem_reprovacao ?? 'Critério não atendido.' })
+        falhas.push({
+          criterio_id: criterio.id,
+          nome: criterio.nome,
+          mensagem: criterio.mensagem_reprovacao ?? 'Critério não atendido.',
+        })
       }
     } else {
       const peso = Number(criterio.peso ?? 0)
@@ -213,7 +255,7 @@ function simularConfiguracao(editalId: string) {
   }
 
   const notaFit = pesoTotal > 0 ? (nota / pesoTotal) * 100 : 100
-  const status = falhas.length > 0 ? 'INELEGIVEL' : notaFit >= 70 ? 'ELEGIVEL' : notaFit >= 40 ? 'INDETERMINADO' : 'INELEGIVEL'
+  const status: StatusElegibilidade = falhas.length > 0 ? 'INELEGIVEL' : notaFit >= 70 ? 'ELEGIVEL' : notaFit >= 40 ? 'INDETERMINADO' : 'INELEGIVEL'
 
   return {
     status,
@@ -221,6 +263,36 @@ function simularConfiguracao(editalId: string) {
     falhas,
     resumo: falhas.length ? 'Com a configuração atual, o edital seria rejeitado pela regra eliminatória.' : 'Com a configuração atual, o edital continua compativel.',
   }
+}
+
+const STATUS_EDITAL_ATIVOS: StatusEdital[] = ['COLETADO', 'EM_ANALISE', 'ANALISADO', 'FALHA', 'EM_REVISAO', 'APROVADO']
+
+function reavaliarEditaisAtivos(perfilAtualizadoEm: string): number {
+  let total = 0
+  for (const edital of repositorios.edital.listarPorStatus(STATUS_EDITAL_ATIVOS)) {
+    const resultado = simularConfiguracao(edital.id)
+    const nota = resultado.nota_fit
+    repositorios.avaliacao.inserir({
+      id: novoId(),
+      edital_id: edital.id,
+      status_elegibilidade: resultado.status,
+      nota_fit: nota,
+      classificacao: nota >= 70 ? 'ALTO' : nota >= 40 ? 'MEDIO' : 'BAIXO',
+      criterios_violados: resultado.falhas.map((falha) => ({
+        criterio_id: falha.criterio_id,
+        nome: falha.nome,
+        motivo: falha.mensagem,
+        evidencia_id: null,
+      })),
+      criterios_indeterminados: null,
+      detalhamento_pontuacao: null,
+      nota_ajustada_manual: null,
+      ajustada_por: null,
+      perfil_atualizado_em: perfilAtualizadoEm,
+    })
+    total++
+  }
+  return total
 }
 
 export const rotasEditais = Router()
@@ -282,12 +354,23 @@ rotasEditais.post('/perfil-empresa', (req, res) => {
   }
 
   const existente = repositorios.perfilEmpresa.obter()
-  const salvo = existente ? repositorios.perfilEmpresa.salvar(perfil) : repositorios.perfilEmpresa.inserir(perfil)
+  const reavaliar = Boolean(payload.reavaliar)
+  let editaisReavaliados = 0
+  const salvo = transacao(() => {
+    const perfilSalvo = existente ? repositorios.perfilEmpresa.salvar(perfil) : repositorios.perfilEmpresa.inserir(perfil)
+    repositorios.mensagem.excluirDeTodasConversas()
+    if (reavaliar && perfilSalvo) {
+      editaisReavaliados = reavaliarEditaisAtivos(perfilSalvo.atualizado_em)
+    }
+    return perfilSalvo
+  })
 
   res.json({
     ok: true,
     perfil: salvo,
-    reavaliacaoSolicitada: Boolean(payload.reavaliar),
+    reavaliacaoSolicitada: reavaliar,
+    editaisReavaliados,
+    chatsLimpos: true,
   })
 })
 
@@ -1124,6 +1207,119 @@ rotasEditais.get('/editais/:id', (req, res) => {
   })
 })
 
+rotasEditais.patch('/editais/:id/campos', (req, res) => {
+  const edital = repositorios.edital.buscarPorId(req.params.id)
+  if (!edital) return res.status(404).json({ erro: 'Edital não encontrado.' })
+
+  let alteracoes: Partial<Edital>
+  try {
+    alteracoes = validarCamposManuais(req.body?.campos)
+  } catch (erro) {
+    return res.status(400).json({ erro: erro instanceof Error ? erro.message : 'Os campos informados são inválidos.' })
+  }
+
+  const camposAtualizados = Object.keys(alteracoes) as CampoEditavel[]
+  const atualizado = transacao(() => {
+    const registro = repositorios.edital.atualizar(edital.id, alteracoes)
+    for (const campo of camposAtualizados) {
+      repositorios.evidencia.excluirDoCampo(edital.id, campo)
+      repositorios.evidencia.inserir({
+        id: novoId(),
+        edital_id: edital.id,
+        campo,
+        trecho_literal: MARCADOR_EDICAO_MANUAL,
+        pagina: null,
+        confianca: null,
+      })
+    }
+    return registro
+  })
+
+  return res.json({
+    edital: atualizado,
+    campos: camposAtualizados,
+    mensagem: 'Dados atualizados manualmente.',
+  })
+})
+
+rotasEditais.post('/editais/:id/extrair-dados', async (req, res) => {
+  const edital = repositorios.edital.buscarPorId(req.params.id)
+  if (!edital) return res.status(404).json({ erro: 'Edital não encontrado.' })
+  if (!edital.texto_extraido?.trim() || ehMarcadorDeTextoPdf(edital.texto_extraido)) {
+    return res.status(422).json({ erro: 'Este edital não possui texto extraído. Envie um PDF com texto selecionável antes de extrair os dados.' })
+  }
+
+  try {
+    const extracao = await extrairCamposDoEdital(edital.id, edital.texto_extraido)
+    const camposAtualizados = salvarCamposExtraidos(edital, extracao)
+
+    return res.json({
+      edital: repositorios.edital.buscarPorId(edital.id),
+      atualizados: camposAtualizados.length,
+      campos: camposAtualizados,
+      mensagem: camposAtualizados.length
+        ? `${camposAtualizados.length} campo(s) preenchido(s) com evidência do documento.`
+        : 'Não foram encontrados novos campos com evidência verificável. Os dados existentes foram preservados.',
+    })
+  } catch (erro) {
+    console.error('Falha ao extrair dados estruturados do edital com Ollama:', erro)
+    const status = erro instanceof ErroOllama ? erro.statusCode : 500
+    const mensagem = erro instanceof ErroOllama ? erro.message : 'Não foi possível extrair os dados do edital.'
+    return res.status(status).json({ erro: mensagem })
+  }
+})
+
+rotasEditais.post('/editais/:id/ler-url', async (req, res) => {
+  const edital = repositorios.edital.buscarPorId(req.params.id)
+  if (!edital) return res.status(404).json({ erro: 'Edital não encontrado.' })
+  const url = edital.url_original ?? edital.url_documento
+  if (!url) return res.status(422).json({ erro: 'Este edital não tem uma URL cadastrada para leitura.' })
+
+  try {
+    const pagina = await lerPaginaPublica(url)
+    const textoAnterior = edital.texto_extraido?.trim()
+      ? semConteudoWebAnterior(edital.texto_extraido)
+      : ''
+    const textoExtraido = textoAnterior
+      ? `${textoAnterior}\n\n${pagina.texto}`
+      : pagina.texto
+    const tituloAtualizado = pagina.titulo && /^Chamada Pública identificada em /i.test(edital.titulo)
+      ? pagina.titulo
+      : edital.titulo
+    const editalComPagina = repositorios.edital.atualizar(edital.id, {
+      texto_extraido: textoExtraido,
+      titulo: tituloAtualizado,
+      erro_processamento: null,
+    })
+    if (!editalComPagina) throw new Error('O edital deixou de existir durante a leitura da página.')
+
+    let camposAtualizados: CampoEditalExtraido[] = []
+    try {
+      const extracao = await extrairCamposDoEdital(edital.id, textoExtraido)
+      camposAtualizados = salvarCamposExtraidos(editalComPagina, extracao)
+    } catch (erro) {
+      console.error('A página foi lida, mas a extração estruturada com Ollama falhou:', erro)
+      const detalhe = erro instanceof ErroOllama ? erro.message : 'Não foi possível extrair os campos com IA.'
+      return res.status(502).json({
+        erro: `O conteúdo da página foi salvo para o chat, mas a extração de campos falhou: ${detalhe}`,
+        textoSalvo: true,
+      })
+    }
+
+    return res.json({
+      edital: repositorios.edital.buscarPorId(edital.id),
+      atualizados: camposAtualizados.length,
+      campos: camposAtualizados,
+      mensagem: `Página lida e conteúdo adicionado ao contexto do chat. ${camposAtualizados.length} campo(s) preenchido(s) com evidência verificável.`,
+    })
+  } catch (erro) {
+    console.error('Falha ao ler a URL pública do edital:', erro)
+    return res.status(erro instanceof Error && /HTTP \d+/.test(erro.message) ? 502 : 422).json({
+      erro: erro instanceof Error ? erro.message : 'Não foi possível ler o conteúdo da URL.',
+    })
+  }
+})
+
 // ---- Chat sobre o edital ----
 rotasEditais.get('/editais/:id/chat', (req, res) => {
   const edital = repositorios.edital.buscarPorId(req.params.id)
@@ -1178,9 +1374,6 @@ rotasEditais.post('/editais/:id/chat', async (req, res) => {
     const historico = conversaExistente
       ? repositorios.mensagem.ultimasDaConversa(conversaExistente.id, 6)
       : []
-    const versaoEdital = `${edital.hash_documento ?? ''}:${edital.atualizado_em}:${textoEdital.length}`
-    const busca = buscarTrechosEdital(edital.id, textoEdital, pergunta.trim(), versaoEdital)
-
     res.status(200)
     res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
     res.setHeader('Cache-Control', 'no-cache, no-transform')
@@ -1188,9 +1381,7 @@ rotasEditais.post('/editais/:id/chat', async (req, res) => {
     res.flushHeaders()
     res.write(`${JSON.stringify({
       tipo: 'status',
-      mensagem: busca.relevante
-        ? 'Trechos localizados. O Ollama está preparando a resposta…'
-        : 'Essa pergunta parece estar fora do conteúdo do edital.',
+      mensagem: 'Enviando o edital completo ao Ollama. A resposta pode demorar um pouco mais…',
     })}\n`)
 
     const controlador = new AbortController()
@@ -1200,20 +1391,16 @@ rotasEditais.post('/editais/:id/chat', async (req, res) => {
 
     let conteudo = ''
     try {
-      if (!busca.relevante) {
-        conteudo = 'Posso ajudar com perguntas sobre este edital. Perguntas de matemática ou sobre outros assuntos ficam fora do escopo deste chat.'
-        res.write(`${JSON.stringify({ tipo: 'trecho', conteudo })}\n`)
-      } else {
-        for await (const trecho of transmitirRespostaSobreEdital(
-          busca.trechos,
-          pergunta.trim(),
-          historico.map(({ papel, conteudo: texto }) => ({ papel, conteudo: texto })),
-          fetch,
-          controlador.signal,
-        )) {
-          conteudo += trecho
-          res.write(`${JSON.stringify({ tipo: 'trecho', conteudo: trecho })}\n`)
-        }
+      for await (const trecho of transmitirRespostaSobreEdital(
+        textoEdital,
+        pergunta.trim(),
+        historico.map(({ papel, conteudo: texto }) => ({ papel, conteudo: texto })),
+        fetch,
+        controlador.signal,
+        repositorios.perfilEmpresa.obter() ?? null,
+      )) {
+        conteudo += trecho
+        res.write(`${JSON.stringify({ tipo: 'trecho', conteudo: trecho })}\n`)
       }
     } catch (erro) {
       if (res.destroyed) return

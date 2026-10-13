@@ -85,7 +85,11 @@ export function PerfilPage() {
       })
       const json = await resp.json()
       if (!resp.ok) throw new Error(json.erro ?? 'Não foi possível salvar o perfil.')
-      setMensagem(reavaliar ? 'Perfil salvo. A reavaliação dos editais ativos foi solicitada.' : 'Perfil salvo com sucesso.')
+      const chats = json.chatsLimpos ? ' O histórico dos chats foi limpo para usar o perfil atualizado.' : ''
+      const reavaliacao = json.reavaliacaoSolicitada
+        ? ` ${json.editaisReavaliados ?? 0} edital(is) ativo(s) reavaliado(s).`
+        : ''
+      setMensagem(`Perfil salvo com sucesso.${reavaliacao}${chats}`)
     } catch (erro: any) {
       setMensagem(erro.message ?? 'Erro ao salvar o perfil.')
     } finally {
