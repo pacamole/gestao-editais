@@ -12,6 +12,10 @@ export class EvidenciaRepositorio extends Repositorio<Evidencia, string, 'id'> {
     return this.consultar('SELECT * FROM evidencia WHERE edital_id = ? AND campo = ? ORDER BY pagina', editalId, campo)
   }
 
+  excluirDoCampo(editalId: string, campo: string): number {
+    return this.executar('DELETE FROM evidencia WHERE edital_id = ? AND campo = ?', editalId, campo)
+  }
+
   /** Remove as evidências de um edital, antes de reprocessar a extração. */
   excluirDoEdital(editalId: string): number {
     return this.executar('DELETE FROM evidencia WHERE edital_id = ?', editalId)

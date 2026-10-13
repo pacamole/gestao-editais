@@ -33,4 +33,8 @@ export class MensagemRepositorio extends Repositorio<Mensagem, string, 'id' | 'c
   excluirDaConversa(conversaId: string): number {
     return this.executar('DELETE FROM mensagem WHERE conversa_id = ?', conversaId)
   }
+
+  excluirDeTodasConversas(): number {
+    return this.executar('DELETE FROM mensagem')
+  }
 }

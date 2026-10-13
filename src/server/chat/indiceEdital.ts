@@ -39,7 +39,7 @@ function tokenizar(texto: string): string[] {
 }
 
 function dividirEmTrechos(texto: string): string[] {
-  const paginas = texto.split(/(?=\[Página\s+\d+\])/)
+  const paginas = texto.split(/(?=\[(?:Página\s+\d+|Fonte URL:)[^\]]*\])/)
   const trechos: string[] = []
 
   for (const pagina of paginas) {

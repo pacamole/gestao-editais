@@ -73,6 +73,12 @@ export function EditalDetalhePage() {
   const [enviando, setEnviando] = useState(false)
   const [respostaParcial, setRespostaParcial] = useState('')
   const [statusChat, setStatusChat] = useState('')
+  const [lendoConteudo, setLendoConteudo] = useState(false)
+  const [feedbackExtracao, setFeedbackExtracao] = useState('')
+  const [editandoCampos, setEditandoCampos] = useState(false)
+  const [salvandoCampos, setSalvandoCampos] = useState(false)
+  const [rascunhoCampos, setRascunhoCampos] = useState<Record<string, string>>({})
+  const [camposOriginaisEdicao, setCamposOriginaisEdicao] = useState<Record<string, string>>({})
 
   async function carregar() {
     const r = await fetch(`/api/editais/${id}`);
@@ -107,6 +113,96 @@ export function EditalDetalhePage() {
     if (!r.ok) return setErro(j.erro ?? "Não foi possível registrar a ação.");
     setComentario("");
     await carregar();
+  }
+
+  async function lerConteudo() {
+    if (lendoConteudo || !dados) return
+    setLendoConteudo(true)
+    setErro('')
+    setFeedbackExtracao('')
+    try {
+      const temUrl = Boolean(dados.edital.url_original || dados.edital.url_documento)
+      const acao = temUrl ? 'ler-url' : 'extrair-dados'
+      const r = await fetch(`/api/editais/${id}/${acao}`, { method: 'POST' })
+      const j = await r.json()
+      if (!r.ok) {
+        if (j.textoSalvo) await carregar()
+        throw new Error(j.erro ?? 'Não foi possível ler o conteúdo do edital.')
+      }
+      setFeedbackExtracao(j.mensagem ?? 'Leitura e extração concluídas.')
+      await carregar()
+    } catch (erroLeitura) {
+      setErro(erroLeitura instanceof Error ? erroLeitura.message : 'Não foi possível conectar ao servidor.')
+    } finally {
+      setLendoConteudo(false)
+    }
+  }
+
+  function iniciarEdicaoCampos(campos: [string, string, unknown][]) {
+    if (!dados) return
+    const rascunho: Record<string, string> = {}
+    for (const [, campo] of campos) {
+      if (campo === 'url_origem') continue
+      const valor = dados.edital[campo]
+      rascunho[campo] = valor == null
+        ? ''
+        : Array.isArray(valor)
+          ? valor.join(', ')
+          : typeof valor === 'boolean'
+            ? String(valor)
+            : campo.startsWith('data_') || campo === 'prazo_inscricao'
+              ? String(valor).slice(0, 10)
+              : String(valor)
+    }
+    setRascunhoCampos(rascunho)
+    setCamposOriginaisEdicao(rascunho)
+    setEditandoCampos(true)
+    setErro('')
+  }
+
+  async function salvarCamposManuais(campos: [string, string, unknown][]) {
+    if (salvandoCampos || !dados) return
+    setSalvandoCampos(true)
+    setErro('')
+    const valores: Record<string, string | number | boolean | string[] | null> = {}
+    for (const [, campo] of campos) {
+      if (campo === 'url_origem') continue
+      const texto = rascunhoCampos[campo] ?? ''
+      if (texto === (camposOriginaisEdicao[campo] ?? '')) continue
+      if (!texto.trim()) {
+        valores[campo] = null
+      } else if (['exige_contrapartida'].includes(campo)) {
+        valores[campo] = texto === 'true'
+      } else if (['valor_total_disponivel', 'valor_maximo_por_projeto', 'percentual_contrapartida'].includes(campo)) {
+        valores[campo] = Number(texto)
+      } else if (['publico_alvo', 'cnaes_aceitos', 'portes_aceitos', 'abrangencia_geografica', 'areas_tematicas'].includes(campo)) {
+        valores[campo] = texto.split(',').map((item) => item.trim()).filter(Boolean)
+      } else {
+        valores[campo] = texto.trim()
+      }
+    }
+
+    try {
+      if (!Object.keys(valores).length) {
+        setEditandoCampos(false)
+        setFeedbackExtracao('Nenhum campo foi alterado.')
+        return
+      }
+      const r = await fetch(`/api/editais/${id}/campos`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campos: valores }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.erro ?? 'Não foi possível salvar os campos.')
+      setFeedbackExtracao(j.mensagem ?? 'Dados atualizados manualmente.')
+      setEditandoCampos(false)
+      await carregar()
+    } catch (erroSalvar) {
+      setErro(erroSalvar instanceof Error ? erroSalvar.message : 'Não foi possível conectar ao servidor.')
+    } finally {
+      setSalvandoCampos(false)
+    }
   }
 
   async function enviar(sugerida?: string) {
@@ -211,6 +307,7 @@ export function EditalDetalhePage() {
 
   const { edital: e, avaliacao: a, evidencias = [], revisoes = [] } = dados;
   const campos: [string, string, unknown][] = [
+    ["URL de origem", "url_origem", e.url_original || e.url_documento],
     ["Órgão financiador", "orgao_financiador", e.orgao_financiador],
     ["Número", "numero_edital", e.numero_edital],
     ["Modalidade", "modalidade", e.modalidade],
@@ -359,8 +456,41 @@ export function EditalDetalhePage() {
       <div className="card detalhe-bloco">
         <div className="card__cabecalho">
           <h2>Dados extraídos</h2>
+          <div className="linha" style={{ gap: "var(--esp-2)" }}>
+            {editandoCampos ? (
+              <>
+                <button type="button" className="btn btn--sucesso" onClick={() => salvarCamposManuais(campos)} disabled={salvandoCampos}>
+                  {salvandoCampos ? 'Salvando...' : 'Salvar alterações'}
+                </button>
+                <button type="button" className="btn" onClick={() => setEditandoCampos(false)} disabled={salvandoCampos}>
+                  Cancelar
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="btn" onClick={() => iniciarEdicaoCampos(campos)}>
+                  Editar dados
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={lerConteudo}
+                  disabled={lendoConteudo || (!(e.url_original || e.url_documento) && !textoDisponivel)}
+                  title={!(e.url_original || e.url_documento) && !textoDisponivel ? 'Este edital ainda não tem URL nem texto extraído.' : undefined}
+                >
+                  {lendoConteudo ? 'Lendo conteúdo e extraindo...' : 'Ler edital com IA'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
         <div className="card__corpo card__corpo--justo">
+          <p className="discreto">
+            {editandoCampos
+              ? 'Edite os valores. Para listas, separe os itens por vírgulas; deixe vazio para marcar como não localizado.'
+              : 'Lê a página pública cadastrada ou analisa o texto do PDF já extraído. A IA preenche apenas campos vazios e exibe o trecho que comprova cada valor. Você também pode corrigir os dados manualmente.'}
+          </p>
+          {feedbackExtracao && <p role="status" className="discreto">{feedbackExtracao}</p>}
           <table className="tabela">
             <thead>
               <tr>
@@ -377,9 +507,78 @@ export function EditalDetalhePage() {
                     <td>
                       <strong>{nome}</strong>
                     </td>
-                    <td>{rotulo(valor)}</td>
                     <td>
-                      {ev ? (
+                      {editandoCampos && campo !== 'url_origem' ? (
+                        campo === 'resumo_executivo' ? (
+                          <textarea
+                            className="textarea"
+                            rows={3}
+                            value={rascunhoCampos[campo] ?? ''}
+                            onChange={(evento) => setRascunhoCampos({ ...rascunhoCampos, [campo]: evento.target.value })}
+                          />
+                        ) : campo === 'modalidade' ? (
+                          <select
+                            className="input"
+                            value={rascunhoCampos[campo] ?? ''}
+                            onChange={(evento) => setRascunhoCampos({ ...rascunhoCampos, [campo]: evento.target.value })}
+                          >
+                            <option value="">Não localizado</option>
+                            <option value="SUBVENCAO">Subvenção</option>
+                            <option value="CREDITO">Crédito</option>
+                            <option value="PREMIO">Prêmio</option>
+                            <option value="LICITACAO">Licitação</option>
+                            <option value="CHAMADA_PUBLICA">Chamada pública</option>
+                            <option value="OUTRO">Outro</option>
+                          </select>
+                        ) : campo === 'exige_contrapartida' ? (
+                          <select
+                            className="input"
+                            value={rascunhoCampos[campo] ?? ''}
+                            onChange={(evento) => setRascunhoCampos({ ...rascunhoCampos, [campo]: evento.target.value })}
+                          >
+                            <option value="">Não localizado</option>
+                            <option value="true">Sim</option>
+                            <option value="false">Não</option>
+                          </select>
+                        ) : campo.startsWith('data_') || campo === 'prazo_inscricao' ? (
+                          <input
+                            className="input"
+                            type="date"
+                            value={rascunhoCampos[campo] ?? ''}
+                            onChange={(evento) => setRascunhoCampos({ ...rascunhoCampos, [campo]: evento.target.value })}
+                          />
+                        ) : ['valor_total_disponivel', 'valor_maximo_por_projeto', 'percentual_contrapartida'].includes(campo) ? (
+                          <input
+                            className="input"
+                            type="number"
+                            min="0"
+                            max={campo === 'percentual_contrapartida' ? 100 : undefined}
+                            step="any"
+                            value={rascunhoCampos[campo] ?? ''}
+                            onChange={(evento) => setRascunhoCampos({ ...rascunhoCampos, [campo]: evento.target.value })}
+                          />
+                        ) : ['publico_alvo', 'cnaes_aceitos', 'portes_aceitos', 'abrangencia_geografica', 'areas_tematicas'].includes(campo) ? (
+                          <textarea
+                            className="textarea"
+                            rows={2}
+                            value={rascunhoCampos[campo] ?? ''}
+                            onChange={(evento) => setRascunhoCampos({ ...rascunhoCampos, [campo]: evento.target.value })}
+                          />
+                        ) : (
+                          <input
+                            className="input"
+                            value={rascunhoCampos[campo] ?? ''}
+                            onChange={(evento) => setRascunhoCampos({ ...rascunhoCampos, [campo]: evento.target.value })}
+                          />
+                        )
+                      ) : campo === "url_origem" && typeof valor === "string" && /^https?:\/\//i.test(valor) ? (
+                        <a href={valor} target="_blank" rel="noopener noreferrer">{valor}</a>
+                      ) : rotulo(valor)}
+                    </td>
+                    <td>
+                      {ev?.trecho_literal === 'Editado manualmente; sem evidência extraída do documento.' ? (
+                        <span className="discreto">Editado manualmente</span>
+                      ) : ev ? (
                         <details>
                           <summary className="discreto">Ver trecho</summary>
                           <p style={{ marginTop: 4, fontStyle: "italic" }}>
