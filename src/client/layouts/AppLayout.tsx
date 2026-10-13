@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from 'react-router'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 
 const linksOperacao = [
   { to: '/', rotulo: 'Dashboard', end: true },
@@ -15,6 +15,26 @@ const linksGestor = [
 ]
 
 export function AppLayout() {
+  const navigate = useNavigate()
+
+  // Encerra a sessão do usuário.
+  async function sairDaConta() {
+    try {
+      const resposta = await fetch('/api/bhrendon/sair', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (!resposta.ok) {
+        throw new Error('Não foi possível encerrar a sessão.')
+      }
+
+      navigate('/login', { replace: true })
+    } catch (erro) {
+      alert('Erro ao sair da conta. Tente novamente.')
+    }
+  }
+
   return (
     <div className="app">
       <nav className="app-menu" aria-label="Menu principal">
@@ -40,6 +60,14 @@ export function AppLayout() {
             ))}
           </ul>
         </div>
+           {/* Botão para encerrar a sessão */}
+        <button
+          type="button"
+          onClick={sairDaConta}
+          className="app-menu__sair"
+        >
+          Sair da conta
+        </button>
       </nav>
       <main className="app-conteudo">
         <Outlet />

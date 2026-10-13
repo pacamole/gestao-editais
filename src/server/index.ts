@@ -1,58 +1,72 @@
-import './env.js'
-import express, { type ErrorRequestHandler } from 'express'
-import path from 'node:path'
-import type { ErroApi, HealthResponse } from '../shared/api.js'
-import { Agendador } from './agendador.js'
-import { registroRotinas, tarefasColeta } from './coleta/rotinas.js'
-import { bancoVazio } from './db/index.js'
-import { tarefasNotificacao } from './notificacao/index.js'
-import { root } from './paths.js'
-import { rotasBase } from './rotas/base.js'
-import { rotasEditais } from './rotas/editais.js'
-import { semearEditaisExemplo } from './db/seedEditais.js'
+import "./env.js";
+import express, { type ErrorRequestHandler } from "express";
+import path from "node:path";
+import type { ErroApi, HealthResponse } from "../shared/api.js";
+import { Agendador } from "./agendador.js";
+import { registroRotinas, tarefasColeta } from "./coleta/rotinas.js";
+import { bancoVazio } from "./db/index.js";
+import { tarefasNotificacao } from "./notificacao/index.js";
+import { root } from "./paths.js";
+import { rotasBase } from "./rotas/base.js";
+import { rotas as rotasBhrendon } from "./rotas/bhrendon.js";
+import { rotasEditais } from "./rotas/editais.js";
+import { semearEditaisExemplo } from "./db/seedEditais.js";
 
-const isProd = process.env.NODE_ENV === 'production'
-const port = Number(process.env.PORT ?? 3000)
+const isProd = process.env.NODE_ENV === "production";
+const port = Number(process.env.PORT ?? 3000);
 
 if (bancoVazio()) {
-  console.error('Banco não criado. Rode `npm run db:reset` (base nova) ou `npm run db:importar -- arquivo.db`.')
-  process.exit(1)
+  console.error(
+    "Banco não criado. Rode `npm run db:reset` (base nova) ou `npm run db:importar -- arquivo.db`.",
+  );
+  process.exit(1);
 }
 
 // Garante que a base tenha editais iniciais para demonstração e testes
-semearEditaisExemplo()
+semearEditaisExemplo();
 
-const app = express()
-app.use(express.json({ limit: '35mb' }))
+const app = express();
+app.use(express.json({ limit: "35mb" }));
 
 // ---- API ----
-app.get('/api/health', (_req, res) => {
-  const body: HealthResponse = { ok: true, time: new Date().toISOString() }
-  res.json(body)
-})
+app.get("/api/health", (_req, res) => {
+  const body: HealthResponse = { ok: true, time: new Date().toISOString() };
+  res.json(body);
+});
 
-app.use('/api', rotasEditais)
-app.use('/api/base', rotasBase)
+app.use("/api", rotasEditais);
+app.use("/api/base", rotasBase);
+app.use("/api/bhrendon", rotasBhrendon);
 
 const tratarErro: ErrorRequestHandler = (erro, _req, res, _next) => {
-  console.error(erro)
-  const corpo: ErroApi = { erro: 'Erro interno do servidor.' }
-  res.status(500).json(corpo)
-}
-app.use('/api', tratarErro)
+  console.error(erro);
+  const corpo: ErroApi = { erro: "Erro interno do servidor." };
+  res.status(500).json(corpo);
+};
+app.use("/api", tratarErro);
 
 // ---- Front-end ----
 if (isProd) {
-  const clientDir = path.join(root, 'dist/client')
-  app.use(express.static(clientDir))
-  app.get(/^(?!\/api).*/, (_req, res) => res.sendFile(path.join(clientDir, 'index.html')))
+  const clientDir = path.join(root, "dist/client");
+  app.use(express.static(clientDir));
+  app.get(/^(?!\/api).*/, (_req, res) =>
+    res.sendFile(path.join(clientDir, "index.html")),
+  );
 } else {
-  const { createServer } = await import('vite')
-  const vite = await createServer({ root, server: { middlewareMode: true }, appType: 'spa' })
-  app.use(vite.middlewares)
+  const { createServer } = await import("vite");
+  const vite = await createServer({
+    root,
+    server: { middlewareMode: true },
+    appType: "spa",
+  });
+  app.use(vite.middlewares);
 }
 
 app.listen(port, () => {
-  console.log(`http://localhost:${port}`)
-  new Agendador([...tarefasColeta(), ...tarefasNotificacao], 60_000, registroRotinas).iniciar()
-})
+  console.log(`http://localhost:${port}`);
+  new Agendador(
+    [...tarefasColeta(), ...tarefasNotificacao],
+    60_000,
+    registroRotinas,
+  ).iniciar();
+});
