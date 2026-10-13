@@ -144,7 +144,13 @@ Esta versão inclui a implementação da parte de Bhrendon na Etapa 5:
 4. Execute `npm run dev`.
 5. Abra `http://localhost:3000/login` e entre com as credenciais definidas no `.env`.
 
-> O chat desta entrega é um MVP local para demonstrar a interface e o fluxo. Ele responde a perguntas de prazo, valor e contrapartida usando somente os dados já extraídos. A estrutura de conversa/mensagens fica pronta para uma integração futura com LLM.
+### Chat com Ollama
+
+O chat usa o Ollama local com Gemma 2 9B (`gemma2:latest`). Instale o Ollama, baixe o modelo com `ollama pull gemma2:latest`, deixe o serviço em execução e inicie o sistema com `npm run dev`. As opções `OLLAMA_URL`, `OLLAMA_MODEL`, `OLLAMA_TIMEOUT_MS` e `OLLAMA_NUM_CTX` podem ser configuradas no `.env`; os valores padrão apontam para `http://localhost:11434`, `gemma2:latest`, 600 segundos e contexto de 8.192 tokens. Se já tiver baixado a tag `gemma2:9b`, defina `OLLAMA_MODEL=gemma2:9b`.
+
+Na primeira pergunta sobre cada edital, o servidor cria um índice local de busca por palavras e o mantém em memória. Em perguntas seguintes, reutiliza esse índice e envia ao Gemma somente os trechos mais relevantes (até 9.000 caracteres), em vez de todo o documento. Perguntas sem termos relevantes — como cálculos simples fora do edital — recebem uma resposta imediata sem chamar o modelo. O índice é reconstruído automaticamente se o edital mudar e volta a ser criado após reiniciar o servidor; até 20 editais ficam em cache. Este índice lexical não usa um modelo adicional de embeddings. A resposta aparece progressivamente enquanto o modelo gera os trechos. As respostas são instruídas a citar a página/trecho e não alteram os dados do edital; se a informação não estiver nos trechos selecionados, peça uma pergunta mais específica. O limite diário padrão é de 20 perguntas por usuário e pode ser alterado pela chave `chat_limite_diario` na tabela `config`.
+
+O upload de PDF extrai automaticamente o texto selecionável. PDFs digitalizados como imagem precisam passar por OCR antes do envio. Editais cadastrados manualmente ou apenas por URL não têm o documento completo para consulta; envie o PDF original para habilitar o chat. Para recuperar editais enviados em versões antigas que guardaram apenas um marcador de texto, reenvie o mesmo PDF pela tela **Nova entrada → Upload de PDF**; o texto real será extraído e associado ao edital existente sem criar uma duplicata.
 
 ## Implementação — tarefas 12, 13 e 14 (Miguel)
 

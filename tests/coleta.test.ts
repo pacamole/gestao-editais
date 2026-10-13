@@ -3,7 +3,7 @@ import { test, after } from 'node:test'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { extrairPdf } from '../src/server/coleta/pdf.js'
+import { ehMarcadorDeTextoPdf, extrairPdf } from '../src/server/coleta/pdf.js'
 import { documentoPrincipal, listarPublicacoes } from '../src/server/coleta/portais.js'
 import { Agendador, type EstadoRotina, type RegistroRotinas } from '../src/server/agendador.js'
 
@@ -46,6 +46,13 @@ test('PDF: páginas físicas, texto e leitura manual em documento misto', async 
   assert.equal((await extrairPdf(pdf('Primeira pagina', ''))).requerLeituraManual, true)
   assert.equal((await extrairPdf(pdf('', ''))).requerLeituraManual, true)
   await assert.rejects(extrairPdf(Buffer.from('arquivo inválido')))
+})
+
+test('identifica marcadores antigos de upload sem confundir texto extraído real', () => {
+  assert.equal(ehMarcadorDeTextoPdf('[Texto extraído do documento PDF: edital-antigo.pdf]'), true)
+  assert.equal(ehMarcadorDeTextoPdf(' [Texto extraído do documento PDF: edital.pdf] '), true)
+  assert.equal(ehMarcadorDeTextoPdf('[Página 1]\nTexto real do edital.'), false)
+  assert.equal(ehMarcadorDeTextoPdf(null), false)
 })
 
 test('coletores separam chamadas de navegação, encerradas e anexos', () => {

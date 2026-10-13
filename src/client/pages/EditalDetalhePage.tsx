@@ -1,5 +1,6 @@
-import { FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
+import { TextoFormatado } from '../components/TextoFormatado'
 
 type Dados = {
   edital: any;
@@ -60,15 +61,18 @@ function itens(valor: unknown): string[] {
 
 // Tarefas 10 e 11 — leitura de dados reais e revisão persistida.
 export function EditalDetalhePage() {
-  const { id = "" } = useParams();
-  const navigate = useNavigate();
-  const [dados, setDados] = useState<Dados | null>(null);
-  const [erro, setErro] = useState("");
-  const [comentario, setComentario] = useState("");
-  const [mensagens, setMensagens] = useState<Msg[]>([]);
-  const [pergunta, setPergunta] = useState("");
-  const [restantes, setRestantes] = useState(20);
-  const [enviando, setEnviando] = useState(false);
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+  const [dados, setDados] = useState<Dados | null>(null)
+  const [erro, setErro] = useState('')
+  const [comentario, setComentario] = useState('')
+  const [mensagens, setMensagens] = useState<Msg[]>([])
+  const [pergunta, setPergunta] = useState('')
+  const [restantes, setRestantes] = useState(20)
+  const [limiteDiario, setLimiteDiario] = useState(20)
+  const [enviando, setEnviando] = useState(false)
+  const [respostaParcial, setRespostaParcial] = useState('')
+  const [statusChat, setStatusChat] = useState('')
 
   async function carregar() {
     const r = await fetch(`/api/editais/${id}`);
@@ -78,9 +82,10 @@ export function EditalDetalhePage() {
     setDados(j);
     const c = await fetch(`/api/editais/${id}/chat`);
     if (c.ok) {
-      const cj = await c.json();
-      setMensagens(cj.mensagens || []);
-      setRestantes(cj.restantes ?? 20);
+      const cj = await c.json()
+      setMensagens(cj.mensagens || [])
+      setRestantes(cj.restantes ?? 20)
+      setLimiteDiario(cj.limite ?? 20)
     }
   }
 
@@ -104,33 +109,88 @@ export function EditalDetalhePage() {
     await carregar();
   }
 
-  async function enviar(e?: FormEvent, sugerida?: string) {
-    e?.preventDefault();
-    const texto = (sugerida ?? pergunta).trim();
-    if (!texto || enviando) return;
-    setEnviando(true);
-    setErro("");
-    const r = await fetch(`/api/editais/${id}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pergunta: texto }),
-    });
-    const j = await r.json();
-    if (r.ok) {
-      setMensagens(j.mensagens || []);
-      setPergunta("");
-      setRestantes((x) => Math.max(0, x - 1));
-    } else {
-      setErro(j.erro ?? "Erro no chat.");
+  async function enviar(sugerida?: string) {
+    const texto = (sugerida ?? pergunta).trim()
+    if (!texto || enviando) return
+    setEnviando(true)
+    setRespostaParcial('')
+    setStatusChat('Iniciando o chat...')
+    setErro('')
+    let textoParcial = ''
+    try {
+      const r = await fetch(`/api/editais/${id}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pergunta: texto }),
+      })
+      if (!r.ok) {
+        const j = await r.json()
+        setRestantes(j.restantes ?? restantes)
+        throw new Error(j.erro ?? 'Erro no chat.')
+      }
+
+      if (!r.body) throw new Error('O servidor não iniciou a transmissão da resposta.')
+
+      const leitor = r.body.getReader()
+      const decodificador = new TextDecoder()
+      let buffer = ''
+      let concluido = false
+      while (true) {
+        const { done, value } = await leitor.read()
+        buffer += decodificador.decode(value, { stream: !done })
+        const linhas = buffer.split('\n')
+        buffer = linhas.pop() ?? ''
+        for (const linha of linhas) {
+          if (!linha.trim()) continue
+          const evento = JSON.parse(linha)
+          if (evento.tipo === 'status') {
+            setStatusChat(evento.mensagem)
+          } else if (evento.tipo === 'trecho') {
+            setStatusChat('O Gemma está respondendo...')
+            textoParcial += evento.conteudo
+            setRespostaParcial(textoParcial)
+          } else if (evento.tipo === 'erro') {
+            throw new Error(evento.mensagem)
+          } else if (evento.tipo === 'concluido') {
+            setMensagens(evento.mensagens || [])
+            setRestantes(evento.restantes ?? restantes)
+            setPergunta('')
+            setRespostaParcial('')
+            setStatusChat('')
+            concluido = true
+          }
+        }
+        if (done) break
+      }
+      if (!concluido) throw new Error('A transmissão da resposta foi interrompida. Tente novamente.')
+    } catch (erroChat) {
+      const mensagem = erroChat instanceof Error ? erroChat.message : 'Não foi possível conectar ao servidor.'
+      if (textoParcial) {
+        setStatusChat(`A geração foi interrompida antes de concluir. Trecho parcial abaixo (não salvo): ${mensagem}`)
+        setErro('')
+      } else {
+        setRespostaParcial('')
+        setStatusChat('')
+        setErro(mensagem)
+      }
+    } finally {
+      setEnviando(false)
     }
-    setEnviando(false);
   }
 
   async function limpar() {
-    await fetch(`/api/editais/${id}/chat`, { method: "DELETE" });
-    setMensagens([]);
-    setRestantes(20);
+    setErro('')
+    try {
+      const r = await fetch(`/api/editais/${id}/chat`, { method: 'DELETE' })
+      const j = await r.json()
+      if (!r.ok) return setErro(j.erro ?? 'Não foi possível limpar a conversa.')
+      setMensagens([])
+    } catch {
+      setErro('Não foi possível conectar ao servidor.')
+    }
   }
+
+  const textoDisponivel = Boolean(dados?.edital?.texto_extraido?.trim())
 
   if (erro && !dados) {
     return (
@@ -425,13 +485,16 @@ export function EditalDetalhePage() {
           <div>
             <h2>Chat sobre o edital</h2>
             <small className="discreto">
-              {restantes} perguntas restantes nesta sessão
+              {textoDisponivel
+                ? `${restantes} de ${limiteDiario} perguntas restantes hoje`
+                : 'Este edital não tem texto extraído. Envie o PDF com texto selecionável para habilitar o chat.'}
             </small>
           </div>
           <button
             type="button"
             className="btn btn--sm btn--fantasma"
             onClick={limpar}
+            disabled={!textoDisponivel}
           >
             Limpar conversa
           </button>
@@ -447,15 +510,16 @@ export function EditalDetalhePage() {
                     style={{ gap: "var(--esp-2)", marginTop: 4 }}
                   >
                     {[
-                      "Qual é o prazo de inscrição?",
-                      "Qual é o valor máximo por projeto?",
-                      "O edital exige contrapartida?",
+                      'Quais são os requisitos de elegibilidade deste edital?',
+                      'Quais documentos são exigidos para a inscrição?',
+                      'Resuma os critérios de avaliação das propostas.',
                     ].map((q) => (
                       <button
                         type="button"
                         className="btn btn--sm"
                         key={q}
-                        onClick={() => enviar(undefined, q)}
+                        onClick={() => void enviar(q)}
+                        disabled={!textoDisponivel || enviando || restantes === 0}
                       >
                         {q}
                       </button>
@@ -477,18 +541,35 @@ export function EditalDetalhePage() {
                         : "var(--cinza-fundo)",
                   }}
                 >
-                  <strong>
-                    {m.papel === "USUARIO" ? "Você" : "Assistente"}
-                  </strong>
-                  <p style={{ margin: "4px 0 0 0" }}>{m.conteudo}</p>
+                  <strong>{m.papel === 'USUARIO' ? 'Você' : 'Assistente'}</strong>
+                  <TextoFormatado texto={m.conteudo} />
                 </div>
               ))}
+              {(statusChat || respostaParcial) && (
+                <div
+                  className="chat-msg chat-msg--assistente"
+                  aria-live="polite"
+                  style={{
+                    padding: '8px 12px',
+                    margin: '6px 0',
+                    borderRadius: 'var(--raio-2)',
+                    background: 'var(--cinza-fundo)',
+                  }}
+                >
+                  <strong>Assistente</strong>
+                  {statusChat && <p className="discreto">{statusChat}</p>}
+                  {respostaParcial && <TextoFormatado texto={respostaParcial} />}
+                </div>
+              )}
             </div>
 
             <form
-              onSubmit={enviar}
+              onSubmit={(evento) => {
+                evento.preventDefault()
+                void enviar()
+              }}
               className="linha"
-              style={{ marginTop: "var(--esp-2)" }}
+              style={{ marginTop: 'var(--esp-2)' }}
             >
               <input
                 className="input"
@@ -496,12 +577,12 @@ export function EditalDetalhePage() {
                 value={pergunta}
                 onChange={(x) => setPergunta(x.target.value)}
                 placeholder="Pergunte sobre este edital..."
-                disabled={enviando}
+                disabled={!textoDisponivel || enviando || restantes === 0}
               />
               <button
                 type="submit"
                 className="btn btn--primario"
-                disabled={enviando || !pergunta.trim()}
+                disabled={!textoDisponivel || enviando || restantes === 0 || !pergunta.trim()}
               >
                 {enviando ? "Enviando..." : "Enviar"}
               </button>

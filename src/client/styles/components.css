@@ -85,6 +85,46 @@
   box-shadow: inset 3px 0 0 var(--azul-solido);
 }
 
+.chat-msg {
+  overflow-wrap: anywhere;
+}
+
+.texto-formatado {
+  margin-top: var(--esp-1);
+  line-height: 1.6;
+}
+
+.texto-formatado p {
+  margin: 0 0 var(--esp-2);
+  white-space: pre-wrap;
+}
+
+.texto-formatado p:last-child,
+.texto-formatado ul:last-child,
+.texto-formatado ol:last-child {
+  margin-bottom: 0;
+}
+
+.texto-formatado ul,
+.texto-formatado ol {
+  margin: 0 0 var(--esp-2);
+  padding-left: var(--esp-6);
+}
+
+.texto-formatado h3,
+.texto-formatado h4,
+.texto-formatado h5 {
+  margin: 0 0 var(--esp-2);
+  font-size: var(--texto-lg);
+}
+
+.texto-formatado code {
+  padding: 0.1em 0.35em;
+  border-radius: var(--raio-1);
+  background: var(--cor-superficie);
+  font-family: var(--fonte-mono);
+}
+
 .app-menu__rodape {
   margin-top: auto;
   padding: var(--esp-3);
