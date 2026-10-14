@@ -1,4 +1,4 @@
-import type { TipoFonte } from '../entidades.js'
+import type { TipoFonte } from '../dominio/entidades.js'
 import type { Repositorios } from '../repositorios/index.js'
 
 export const FONTES_AUTOMATICAS = {

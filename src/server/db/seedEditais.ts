@@ -1,6 +1,6 @@
 import { db, novoId } from './index.js'
 import { repositorios } from '../repositorios/index.js'
-import type { Modalidade, StatusEdital, StatusElegibilidade, Classificacao } from '../entidades.js'
+import type { Modalidade, StatusEdital, StatusElegibilidade, Classificacao } from '../dominio/entidades.js'
 
 export function semearEditaisExemplo() {
   const contagem = db.prepare('SELECT COUNT(*) as c FROM edital').get() as { c: number }

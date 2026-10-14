@@ -1,7 +1,7 @@
 // Exporta a base inteira para um arquivo .db.
 // Uso: npm run db:exportar              -> exportacoes/editais-AAAA-MM-DD_HHMM.db
 //      npm run db:exportar -- base.db   -> caminho escolhido
-import '../env.js'
+import '../config/env.js'
 import path from 'node:path'
 import { bancoVazio } from '../db/index.js'
 import { baseDados, nomeExportacao, pastaExportacoes } from './index.js'

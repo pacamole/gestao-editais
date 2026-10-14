@@ -1,7 +1,7 @@
 // Apaga o banco e recria do zero: schema.sql + seed.
-import '../env.js'
+import '../config/env.js'
 import fs from 'node:fs'
-import { arquivoBanco, arquivoSchema } from '../paths.js'
+import { arquivoBanco, arquivoSchema } from '../config/paths.js'
 
 for (const sufixo of ['', '-wal', '-shm']) fs.rmSync(arquivoBanco + sufixo, { force: true })
 

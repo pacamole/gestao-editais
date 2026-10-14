@@ -1,4 +1,4 @@
-import type { Conversa } from '../entidades.js'
+import type { Conversa } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 // CH05: uma conversa por edital e usuário.

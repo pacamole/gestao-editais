@@ -1,5 +1,5 @@
 import { transacao } from '../db/index.js'
-import type { Criterio, TipoCriterio } from '../entidades.js'
+import type { Criterio, TipoCriterio } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export class CriterioRepositorio extends Repositorio<Criterio, string, 'id' | 'ativo' | 'ordem'> {

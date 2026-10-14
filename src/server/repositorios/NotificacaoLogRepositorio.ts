@@ -1,4 +1,4 @@
-import type { NotificacaoLog, TipoNotificacao } from '../entidades.js'
+import type { NotificacaoLog, TipoNotificacao } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export class NotificacaoLogRepositorio extends Repositorio<NotificacaoLog, string, 'id' | 'marco' | 'enviado_em'> {

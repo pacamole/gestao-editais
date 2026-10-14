@@ -1,4 +1,4 @@
-import type { Tarefa } from '../agendador.js'
+import type { Tarefa } from '../infra/agendador.js'
 import { repositorios } from '../repositorios/index.js'
 import { GatilhosNotificacao } from './gatilhos.js'
 import { NotificacaoServico } from './servico.js'

@@ -1,4 +1,4 @@
-import type { EditalVersao } from '../entidades.js'
+import type { EditalVersao } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export class EditalVersaoRepositorio extends Repositorio<EditalVersao, string, 'id' | 'criado_em'> {

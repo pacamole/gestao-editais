@@ -1,5 +1,5 @@
 import { CAMPOS_EDITAL, MODALIDADES, type NomeCampoEdital } from '../../shared/rotulos.js'
-import type { Edital } from '../entidades.js'
+import type { Edital } from '../dominio/entidades.js'
 
 const FUSO = 'America/Sao_Paulo'
 const DIA_MS = 86_400_000

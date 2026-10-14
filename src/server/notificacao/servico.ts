@@ -1,4 +1,4 @@
-import type { Papel } from '../entidades.js'
+import type { Papel } from '../dominio/entidades.js'
 import type { Repositorios } from '../repositorios/index.js'
 import type { Destinatario, Notificacao } from './notificacao.js'
 import type { TransporteEmail } from './transporte.js'

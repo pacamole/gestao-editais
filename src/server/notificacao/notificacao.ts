@@ -1,4 +1,4 @@
-import type { Papel, TipoNotificacao } from '../entidades.js'
+import type { Papel, TipoNotificacao } from '../dominio/entidades.js'
 
 export type Destinatario = {
   nome: string

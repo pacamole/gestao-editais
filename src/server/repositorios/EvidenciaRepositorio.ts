@@ -1,4 +1,4 @@
-import type { Evidencia } from '../entidades.js'
+import type { Evidencia } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export class EvidenciaRepositorio extends Repositorio<Evidencia, string, 'id'> {

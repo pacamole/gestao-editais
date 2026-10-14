@@ -1,4 +1,4 @@
-import type { TipoNotificacao } from '../entidades.js'
+import type { TipoNotificacao } from '../dominio/entidades.js'
 
 // Parâmetros configuráveis de cada notificação (P09), guardados em config_alerta.parametros.
 export type ParametrosAlerta = {

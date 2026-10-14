@@ -1,4 +1,4 @@
-import type { Papel, Usuario } from '../entidades.js'
+import type { Papel, Usuario } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export class UsuarioRepositorio extends Repositorio<Usuario, string, 'id' | 'criado_em' | 'ativo'> {

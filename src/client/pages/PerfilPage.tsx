@@ -1,6 +1,31 @@
 import { useEffect, useState } from 'react'
+import type { PerfilEmpresa, Porte } from '../../shared/tipos/perfil'
+import { mensagemDeErro } from '../api/cliente'
+import { perfil as apiPerfil } from '../api/perfil'
 
-const perfilInicial = {
+// Estado do formulário: listas e números como texto editável.
+type FormPerfil = {
+  razao_social: string
+  nome_fantasia: string
+  cnpj: string
+  cnae_principal: string
+  cnaes_secundarios: string
+  porte: Porte
+  natureza_juridica: string
+  data_fundacao: string
+  faturamento_anual: string
+  uf: string
+  municipio: string
+  areas_atuacao: string
+  palavras_chave: string
+  possui_ict_parceira: boolean
+  certidoes_disponiveis: string
+  capacidade_contrapartida_percentual: string
+  valor_minimo_interesse: string
+  prazo_minimo_preparo_dias: string
+}
+
+const perfilInicial: FormPerfil = {
   razao_social: '',
   nome_fantasia: '',
   cnpj: '',
@@ -21,6 +46,33 @@ const perfilInicial = {
   prazo_minimo_preparo_dias: '',
 }
 
+const listaParaTexto = (lista: string[] | null) => (Array.isArray(lista) ? lista.join(', ') : '')
+const textoParaLista = (texto: string) => texto.split(',').map((item) => item.trim()).filter(Boolean)
+const numeroParaTexto = (valor: number | null) => (valor == null ? '' : String(valor))
+
+function paraFormulario(p: PerfilEmpresa): FormPerfil {
+  return {
+    razao_social: p.razao_social ?? '',
+    nome_fantasia: p.nome_fantasia ?? '',
+    cnpj: p.cnpj ?? '',
+    cnae_principal: p.cnae_principal ?? '',
+    cnaes_secundarios: listaParaTexto(p.cnaes_secundarios),
+    porte: p.porte ?? 'ME',
+    natureza_juridica: p.natureza_juridica ?? '',
+    data_fundacao: p.data_fundacao ?? '',
+    faturamento_anual: numeroParaTexto(p.faturamento_anual),
+    uf: p.uf ?? 'PR',
+    municipio: p.municipio ?? '',
+    areas_atuacao: listaParaTexto(p.areas_atuacao),
+    palavras_chave: listaParaTexto(p.palavras_chave),
+    possui_ict_parceira: Boolean(p.possui_ict_parceira),
+    certidoes_disponiveis: listaParaTexto(p.certidoes_disponiveis),
+    capacidade_contrapartida_percentual: numeroParaTexto(p.capacidade_contrapartida_percentual),
+    valor_minimo_interesse: numeroParaTexto(p.valor_minimo_interesse),
+    prazo_minimo_preparo_dias: numeroParaTexto(p.prazo_minimo_preparo_dias),
+  }
+}
+
 export function PerfilPage() {
   const [perfil, setPerfil] = useState(perfilInicial)
   const [reavaliar, setReavaliar] = useState(true)
@@ -31,30 +83,10 @@ export function PerfilPage() {
   useEffect(() => {
     async function carregar() {
       try {
-        const resp = await fetch('/api/perfil-empresa')
-        const json = await resp.json()
-        if (json.perfil) {
-          setPerfil({
-            razao_social: json.perfil.razao_social ?? '',
-            nome_fantasia: json.perfil.nome_fantasia ?? '',
-            cnpj: json.perfil.cnpj ?? '',
-            cnae_principal: json.perfil.cnae_principal ?? '',
-            cnaes_secundarios: Array.isArray(json.perfil.cnaes_secundarios) ? json.perfil.cnaes_secundarios.join(', ') : '',
-            porte: json.perfil.porte ?? 'ME',
-            natureza_juridica: json.perfil.natureza_juridica ?? '',
-            data_fundacao: json.perfil.data_fundacao ?? '',
-            faturamento_anual: json.perfil.faturamento_anual ?? '',
-            uf: json.perfil.uf ?? 'PR',
-            municipio: json.perfil.municipio ?? '',
-            areas_atuacao: Array.isArray(json.perfil.areas_atuacao) ? json.perfil.areas_atuacao.join(', ') : '',
-            palavras_chave: Array.isArray(json.perfil.palavras_chave) ? json.perfil.palavras_chave.join(', ') : '',
-            possui_ict_parceira: Boolean(json.perfil.possui_ict_parceira),
-            certidoes_disponiveis: Array.isArray(json.perfil.certidoes_disponiveis) ? json.perfil.certidoes_disponiveis.join(', ') : '',
-            capacidade_contrapartida_percentual: json.perfil.capacidade_contrapartida_percentual ?? '',
-            valor_minimo_interesse: json.perfil.valor_minimo_interesse ?? '',
-            prazo_minimo_preparo_dias: json.perfil.prazo_minimo_preparo_dias ?? '',
-          })
-        }
+        const resposta = await apiPerfil.obter()
+        if (resposta.perfil) setPerfil(paraFormulario(resposta.perfil))
+      } catch (erro) {
+        setMensagem(mensagemDeErro(erro, 'Não foi possível carregar o perfil.'))
       } finally {
         setCarregando(false)
       }
@@ -62,7 +94,7 @@ export function PerfilPage() {
     carregar()
   }, [])
 
-  const atualizar = (campo: keyof typeof perfilInicial, valor: string | boolean) => {
+  const atualizar = <K extends keyof FormPerfil>(campo: K, valor: FormPerfil[K]) => {
     setPerfil((atual) => ({ ...atual, [campo]: valor }))
   }
 
@@ -70,28 +102,21 @@ export function PerfilPage() {
     setSalvando(true)
     setMensagem('')
     try {
-      const payload = {
+      const resposta = await apiPerfil.salvar({
         ...perfil,
-        cnaes_secundarios: perfil.cnaes_secundarios.split(',').map((item) => item.trim()).filter(Boolean),
-        areas_atuacao: perfil.areas_atuacao.split(',').map((item) => item.trim()).filter(Boolean),
-        palavras_chave: perfil.palavras_chave.split(',').map((item) => item.trim()).filter(Boolean),
-        certidoes_disponiveis: perfil.certidoes_disponiveis.split(',').map((item) => item.trim()).filter(Boolean),
+        cnaes_secundarios: textoParaLista(perfil.cnaes_secundarios),
+        areas_atuacao: textoParaLista(perfil.areas_atuacao),
+        palavras_chave: textoParaLista(perfil.palavras_chave),
+        certidoes_disponiveis: textoParaLista(perfil.certidoes_disponiveis),
         reavaliar,
-      }
-      const resp = await fetch('/api/perfil-empresa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
       })
-      const json = await resp.json()
-      if (!resp.ok) throw new Error(json.erro ?? 'Não foi possível salvar o perfil.')
-      const chats = json.chatsLimpos ? ' O histórico dos chats foi limpo para usar o perfil atualizado.' : ''
-      const reavaliacao = json.reavaliacaoSolicitada
-        ? ` ${json.editaisReavaliados ?? 0} edital(is) ativo(s) reavaliado(s).`
+      const chats = resposta.chatsLimpos ? ' O histórico dos chats foi limpo para usar o perfil atualizado.' : ''
+      const reavaliacao = resposta.reavaliacaoSolicitada
+        ? ` ${resposta.editaisReavaliados ?? 0} edital(is) ativo(s) reavaliado(s).`
         : ''
       setMensagem(`Perfil salvo com sucesso.${reavaliacao}${chats}`)
-    } catch (erro: any) {
-      setMensagem(erro.message ?? 'Erro ao salvar o perfil.')
+    } catch (erro) {
+      setMensagem(mensagemDeErro(erro, 'Erro ao salvar o perfil.'))
     } finally {
       setSalvando(false)
     }
@@ -119,7 +144,7 @@ export function PerfilPage() {
             <div className="campo"><label htmlFor="cnpj">CNPJ</label><input id="cnpj" className="input" value={perfil.cnpj} onChange={(e) => atualizar('cnpj', e.target.value)} /></div>
             <div className="campo"><label htmlFor="cnae_principal">CNAE principal</label><input id="cnae_principal" className="input" value={perfil.cnae_principal} onChange={(e) => atualizar('cnae_principal', e.target.value)} /></div>
             <div className="campo"><label htmlFor="cnaes_secundarios">CNAEs secundários</label><input id="cnaes_secundarios" className="input" value={perfil.cnaes_secundarios} onChange={(e) => atualizar('cnaes_secundarios', e.target.value)} /></div>
-            <div className="campo"><label htmlFor="porte">Porte</label><select id="porte" className="select" value={perfil.porte} onChange={(e) => atualizar('porte', e.target.value)}><option value="MEI">MEI</option><option value="ME">ME</option><option value="EPP">EPP</option><option value="MEDIA">Média</option><option value="GRANDE">Grande</option></select></div>
+            <div className="campo"><label htmlFor="porte">Porte</label><select id="porte" className="select" value={perfil.porte} onChange={(e) => atualizar('porte', e.target.value as Porte)}><option value="MEI">MEI</option><option value="ME">ME</option><option value="EPP">EPP</option><option value="MEDIA">Média</option><option value="GRANDE">Grande</option></select></div>
             <div className="campo"><label htmlFor="natureza_juridica">Natureza jurídica</label><input id="natureza_juridica" className="input" value={perfil.natureza_juridica} onChange={(e) => atualizar('natureza_juridica', e.target.value)} /></div>
             <div className="campo"><label htmlFor="data_fundacao">Data de fundação</label><input id="data_fundacao" type="date" className="input" value={perfil.data_fundacao} onChange={(e) => atualizar('data_fundacao', e.target.value)} /></div>
             <div className="campo"><label htmlFor="faturamento_anual">Faturamento anual</label><input id="faturamento_anual" type="number" className="input" value={perfil.faturamento_anual} onChange={(e) => atualizar('faturamento_anual', e.target.value)} /></div>

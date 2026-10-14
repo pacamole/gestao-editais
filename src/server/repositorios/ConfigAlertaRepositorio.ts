@@ -1,4 +1,4 @@
-import type { ConfigAlerta, TipoNotificacao } from '../entidades.js'
+import type { ConfigAlerta, TipoNotificacao } from '../dominio/entidades.js'
 import { PARAMETROS_PADRAO, type ParametrosAlerta } from '../notificacao/parametros.js'
 import { Repositorio } from './repositorio.js'
 

@@ -1,27 +1,8 @@
 import type { Edital, Modalidade } from './entidades.js'
-import { MODALIDADES } from '../shared/rotulos.js'
+import { MODALIDADES } from '../../shared/rotulos.js'
+import { CAMPOS_EDITAVEIS, MARCADOR_EDICAO_MANUAL, type CampoEditavel } from '../../shared/camposEditaveis.js'
 
-export const CAMPOS_EDITAVEIS = [
-  'orgao_financiador',
-  'numero_edital',
-  'modalidade',
-  'data_publicacao',
-  'prazo_inscricao',
-  'data_resultado_prevista',
-  'valor_total_disponivel',
-  'valor_maximo_por_projeto',
-  'exige_contrapartida',
-  'percentual_contrapartida',
-  'publico_alvo',
-  'cnaes_aceitos',
-  'portes_aceitos',
-  'abrangencia_geografica',
-  'areas_tematicas',
-  'resumo_executivo',
-] as const
-
-export type CampoEditavel = typeof CAMPOS_EDITAVEIS[number]
-export const MARCADOR_EDICAO_MANUAL = 'Editado manualmente; sem evidência extraída do documento.'
+export { CAMPOS_EDITAVEIS, MARCADOR_EDICAO_MANUAL, type CampoEditavel }
 
 export function validarCamposManuais(valor: unknown): Partial<Edital> {
   if (!valor || typeof valor !== 'object' || Array.isArray(valor)) {

@@ -1,4 +1,4 @@
-import type { Config } from '../entidades.js'
+import type { Config } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 // Configurações gerais chave/valor.

@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { TextoFormatado } from '../src/client/components/TextoFormatado.js'
 import { ErroOllama, extrairCamposDoEdital, responderSobreEdital } from '../src/server/chat/ollama.js'
 import { buscarTrechosEdital } from '../src/server/chat/indiceEdital.js'
-import type { PerfilEmpresa } from '../src/server/entidades.js'
+import type { PerfilEmpresa } from '../src/server/dominio/entidades.js'
 
 test('renderiza negrito, parágrafos e listas com elementos seguros', () => {
   const html = renderToStaticMarkup(

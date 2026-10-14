@@ -1,5 +1,5 @@
 import { createBrowserRouter } from 'react-router'
-import { AppLayout } from './layouts/AppLayout'
+import { RotaProtegida } from './components/RotaProtegida'
 import { AlertasPage } from './pages/AlertasPage'
 import { BasePage } from './pages/BasePage'
 import { CriteriosPage } from './pages/CriteriosPage'
@@ -11,33 +11,12 @@ import { FontesPage } from './pages/FontesPage'
 import { LoginPage } from './pages/LoginPage'
 import { NovaEntradaPage } from './pages/NovaEntradaPage'
 import { PerfilPage } from './pages/PerfilPage'
-import { useEffect, useState } from 'react'
-import { Navigate } from 'react-router'
-
-
-function Protegido() {
-  const [estado, setEstado] = useState<'carregando' | 'sim' | 'nao'>('carregando')
-
-  useEffect(() => {
-    fetch('/api/bhrendon/sessao', { credentials: 'include' })
-      .then(res => setEstado(res.ok ? 'sim' : 'nao'))
-      .catch(() => setEstado('nao'))
-  }, [])
-
-  if (estado === 'carregando') {
-    return <p>Verificando sessão...</p>
-  }
-
-  return estado === 'sim'
-    ? <AppLayout />
-    : <Navigate to="/login" replace />
-}
 
 // Mapa de páginas (§5 da especificação).
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> }, // P01 — público
   {
-    element: <Protegido />,
+    element: <RotaProtegida />,
     errorElement: <ErroPage />,
     children: [
       // Analista e Gestor

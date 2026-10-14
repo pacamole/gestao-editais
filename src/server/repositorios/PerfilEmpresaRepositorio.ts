@@ -1,4 +1,4 @@
-import type { PerfilEmpresa } from '../entidades.js'
+import type { PerfilEmpresa } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 // Registro único (id = 1).

@@ -1,19 +1,25 @@
 import { useEffect, useState } from 'react'
+import type { ConfigAlerta, NotificacaoLog, TipoNotificacao } from '../../shared/tipos/alertas'
+import { alertas } from '../api/alertas'
+import { mensagemDeErro } from '../api/cliente'
+import { formatarDataHora } from '../util/formato'
 
 export function AlertasPage() {
-  const [configs, setConfigs] = useState<any[]>([])
-  const [logs, setLogs] = useState<any[]>([])
+  const [configs, setConfigs] = useState<ConfigAlerta[]>([])
+  const [logs, setLogs] = useState<NotificacaoLog[]>([])
+  const [erro, setErro] = useState('')
 
   async function carregar() {
-    const resp = await fetch('/api/alertas')
-    const json = await resp.json()
-    setConfigs(json.configuracoes ?? [])
-    setLogs(json.logs ?? [])
+    const resposta = await alertas.listar()
+    setConfigs(resposta.configuracoes ?? [])
+    setLogs(resposta.logs ?? [])
   }
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => {
+    carregar().catch((e) => setErro(mensagemDeErro(e, 'Não foi possível carregar os alertas.')))
+  }, [])
 
-  function atualizarConfig(tipo: string, chave: string, valor: string | boolean) {
+  function atualizarConfig(tipo: TipoNotificacao, chave: string, valor: string | boolean) {
     setConfigs((atual) => atual.map((config) => {
       if (config.tipo !== tipo) return config
       const parametros = { ...config.parametros }
@@ -23,23 +29,22 @@ export function AlertasPage() {
     }))
   }
 
-  async function salvar(tipo: string) {
+  async function salvar(tipo: TipoNotificacao) {
     const config = configs.find((item) => item.tipo === tipo)
     if (!config) return
 
-    const resp = await fetch('/api/alertas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    setErro('')
+    try {
+      await alertas.salvar({
         tipo,
         ativo: Boolean(config.ativo),
         destinatarios: config.destinatarios ?? [],
         parametros: config.parametros ?? {},
-      }),
-    })
-    const json = await resp.json()
-    if (!resp.ok) throw new Error(json.erro ?? 'Erro ao salvar alerta.')
-    await carregar()
+      })
+      await carregar()
+    } catch (e) {
+      setErro(mensagemDeErro(e, 'Erro ao salvar alerta.'))
+    }
   }
 
   return (
@@ -52,6 +57,7 @@ export function AlertasPage() {
       </header>
 
       <div className="pilha">
+        {erro ? <p className="aviso aviso--erro" role="alert">{erro}</p> : null}
         {configs.map((config) => (
           <div key={config.tipo} className="card">
             <div className="card__cabecalho linha linha--entre">
@@ -80,7 +86,7 @@ export function AlertasPage() {
                   <strong>{item.tipo}</strong>
                   <div className="discreto">{item.assunto}</div>
                 </div>
-                <div className="discreto">{new Date(item.enviado_em).toLocaleString('pt-BR')}</div>
+                <div className="discreto">{formatarDataHora(item.enviado_em)}</div>
               </div>
             )) : <p className="discreto">Nenhuma notificação enviada até o momento.</p>}
           </div>

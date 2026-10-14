@@ -1,5 +1,5 @@
 import { CAMPOS_EDITAL, STATUS_EDITAL, type NomeCampoEdital } from '../../../shared/rotulos.js'
-import type { CriterioIndeterminado, Edital } from '../../entidades.js'
+import type { CriterioIndeterminado, Edital } from '../../dominio/entidades.js'
 import { Formato, NAO_LOCALIZADO } from '../formato.js'
 import { Links } from '../links.js'
 import { Notificacao } from '../notificacao.js'

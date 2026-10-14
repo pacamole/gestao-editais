@@ -1,5 +1,5 @@
 import { CLASSIFICACAO, MODALIDADES } from '../../../shared/rotulos.js'
-import type { Avaliacao, Edital } from '../../entidades.js'
+import type { Avaliacao, Edital } from '../../dominio/entidades.js'
 import { Formato, NAO_LOCALIZADO } from '../formato.js'
 import { Links } from '../links.js'
 import { Notificacao } from '../notificacao.js'

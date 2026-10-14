@@ -1,5 +1,5 @@
 import { CAMPOS_EDITAL, type NomeCampoEdital } from '../../shared/rotulos.js'
-import type { Avaliacao, StatusEdital } from '../entidades.js'
+import type { Avaliacao, StatusEdital } from '../dominio/entidades.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { Formato } from './formato.js'
 import type { NotificacaoServico, ResultadoDisparo } from './servico.js'

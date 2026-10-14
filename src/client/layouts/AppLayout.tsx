@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import { auth } from '../api/auth'
 
 const linksOperacao = [
   { to: '/', rotulo: 'Dashboard', end: true },
@@ -20,15 +21,7 @@ export function AppLayout() {
   // Encerra a sessão do usuário.
   async function sairDaConta() {
     try {
-      const resposta = await fetch('/api/bhrendon/sair', {
-        method: 'POST',
-        credentials: 'include'
-      })
-
-      if (!resposta.ok) {
-        throw new Error('Não foi possível encerrar a sessão.')
-      }
-
+      await auth.sair()
       navigate('/login', { replace: true })
     } catch (erro) {
       alert('Erro ao sair da conta. Tente novamente.')

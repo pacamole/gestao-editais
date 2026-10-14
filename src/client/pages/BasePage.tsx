@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import type { ErroApi, ResultadoImportacao } from '../../shared/api'
+import type { ResultadoImportacao } from '../../shared/api'
+import { base } from '../api/base'
+import { ErroApi } from '../api/cliente'
 
 type Estado =
   | { tipo: 'ocioso' }
@@ -23,16 +25,11 @@ export function BasePage() {
 
     setEstado({ tipo: 'importando' })
     try {
-      const resposta = await fetch('/api/base/importar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: arquivo,
-      })
-      const corpo = (await resposta.json()) as ResultadoImportacao | ErroApi
-      if ('erro' in corpo) setEstado({ tipo: 'erro', mensagem: corpo.erro })
-      else setEstado({ tipo: 'sucesso', resultado: corpo })
-    } catch {
-      setEstado({ tipo: 'erro', mensagem: 'Não foi possível falar com o servidor.' })
+      setEstado({ tipo: 'sucesso', resultado: await base.importar(arquivo) })
+    } catch (erro) {
+      // Erro do servidor traz o motivo; qualquer outro é falha de comunicação.
+      const mensagem = erro instanceof ErroApi ? erro.message : 'Não foi possível falar com o servidor.'
+      setEstado({ tipo: 'erro', mensagem })
     }
   }
 
@@ -43,7 +40,7 @@ export function BasePage() {
 
       <h2>Exportar</h2>
       <p>Baixa um arquivo .db com todos os dados (editais, avaliações, perfil, critérios, usuários…).</p>
-      <a href="/api/base/exportar" download>
+      <a href={base.urlExportar} download>
         Baixar base
       </a>
 

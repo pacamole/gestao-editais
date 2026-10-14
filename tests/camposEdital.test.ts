@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { validarCamposManuais } from '../src/server/validacaoCamposEdital.js'
+import { validarCamposManuais } from '../src/server/dominio/validacaoCamposEdital.js'
 
 test('valida e normaliza edições manuais dos dados extraídos', () => {
   assert.deepEqual(

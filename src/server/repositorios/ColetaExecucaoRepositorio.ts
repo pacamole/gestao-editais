@@ -1,4 +1,4 @@
-import type { ColetaExecucao } from '../entidades.js'
+import type { ColetaExecucao } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export class ColetaExecucaoRepositorio extends Repositorio<

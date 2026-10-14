@@ -1,4 +1,4 @@
-import type { Mensagem } from '../entidades.js'
+import type { Mensagem } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export class MensagemRepositorio extends Repositorio<Mensagem, string, 'id' | 'criada_em'> {

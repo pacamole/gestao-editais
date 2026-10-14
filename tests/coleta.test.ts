@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { ehMarcadorDeTextoPdf, extrairPdf } from '../src/server/coleta/pdf.js'
 import { documentoPrincipal, listarPublicacoes } from '../src/server/coleta/portais.js'
-import { Agendador, type EstadoRotina, type RegistroRotinas } from '../src/server/agendador.js'
+import { Agendador, type EstadoRotina, type RegistroRotinas } from '../src/server/infra/agendador.js'
 
 const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'gestao-editais-teste-'))
 process.env.DATABASE_PATH = path.join(pasta, 'teste.db')

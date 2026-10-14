@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { db } from '../db/index.js'
-import { arquivoBanco, root } from '../paths.js'
+import { arquivoBanco, root } from '../config/paths.js'
 import { BaseDados } from './BaseDados.js'
 
 export const pastaExportacoes = path.join(root, 'exportacoes')

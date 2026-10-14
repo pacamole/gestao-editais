@@ -1,4 +1,4 @@
-import type { Fonte } from '../../entidades.js'
+import type { Fonte } from '../../dominio/entidades.js'
 import { Formato } from '../formato.js'
 import { Links } from '../links.js'
 import { Notificacao } from '../notificacao.js'

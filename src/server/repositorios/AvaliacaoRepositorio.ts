@@ -1,4 +1,4 @@
-import type { Avaliacao } from '../entidades.js'
+import type { Avaliacao } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 // Histórico: cada cálculo é uma nova linha. A avaliação vigente é a mais recente.

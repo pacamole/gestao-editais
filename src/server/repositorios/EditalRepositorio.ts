@@ -1,4 +1,4 @@
-import type { Edital, StatusEdital } from '../entidades.js'
+import type { Edital, StatusEdital } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export type ChavesDeduplicacao = Pick<Edital, 'hash_documento' | 'url_documento' | 'numero_edital' | 'orgao_financiador'>

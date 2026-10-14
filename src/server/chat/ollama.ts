@@ -1,5 +1,5 @@
 import { buscarTrechosEdital } from './indiceEdital.js'
-import type { Modalidade, PerfilEmpresa } from '../entidades.js'
+import type { Modalidade, PerfilEmpresa } from '../dominio/entidades.js'
 
 export type MensagemHistorico = {
   papel: 'USUARIO' | 'ASSISTENTE'

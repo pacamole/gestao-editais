@@ -1,4 +1,4 @@
-import type { AcaoRevisao, Revisao } from '../entidades.js'
+import type { AcaoRevisao, Revisao } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
 export class RevisaoRepositorio extends Repositorio<Revisao, string, 'id' | 'criado_em'> {

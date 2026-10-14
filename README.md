@@ -1,7 +1,7 @@
 # Gestor Inteligente de Editais — I9+
 
 Sistema web que capta, analisa e prioriza editais de fomento para a I9+.
-A especificação completa está em [especificacao-gestao-editais.md](especificacao-gestao-editais.md).
+A especificação completa está em [especificacao-gestao-editais.md](docs/especificacao-gestao-editais.md).
 O guia visual (cores, componentes e classes CSS) está em [docs/DESIGN.md](docs/DESIGN.md).
 
 Projeto único em React + TypeScript: o mesmo servidor Node (Express) entrega a API e a interface.
@@ -121,11 +121,23 @@ Depois, entre no sistema com os usuários da base importada.
 db/schema.sql          estrutura do banco (sem migrações: altere e rode db:reset)
 src/client/            interface React (páginas em pages/, rotas em router.tsx)
   styles/              design system em CSS (guia em docs/DESIGN.md)
-src/server/            servidor Express
+src/server/            servidor Express (index.ts monta a API em /api)
+  rotas/               endpoints HTTP, um arquivo por assunto (index.ts reúne todos)
+  servicos/            regras de negócio usadas pelas rotas (avaliação, extração, bootstrap)
+  auth/                senha e sessão (cookie)
+  dominio/             entidades e validações do domínio
   repositorios/        acesso ao banco, um repositório por tabela
+  db/                  conexão, reset e seeds
+  coleta/              coleta de editais nas fontes
+  chat/                integração com o Ollama
   notificacao/         e-mails E01–E06 e seus gatilhos
   base/                exportação e importação da base
+  infra/               agendador de rotinas
+  config/              variáveis de ambiente (.env) e caminhos do projeto
+  util/                funções utilitárias
 src/shared/            tipos e rótulos usados pelos dois lados
+tests/                 testes automatizados (npm test)
+docs/                  especificação e guia de design
 ```
 
 ## Implementação — tarefas 9, 10 e 11 (Bhrendon)
@@ -193,7 +205,7 @@ Esta versão inclui a implementação completa das tarefas atribuídas a Miguel 
 ### Como executar os testes
 
 ```bash
-npm test          # Executa a suíte automatizada de testes das tarefas 12 a 14 (tests/miguel.test.ts)
+npm test          # Executa a suíte automatizada de testes das tarefas 12 a 14 (tests/editais-dashboard.test.ts)
 npm run typecheck # Valida 100% dos tipos TypeScript sem erros
 ```
 

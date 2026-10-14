@@ -1,4 +1,4 @@
-import { Formato, type HoraLocal } from './notificacao/formato.js'
+import { Formato, type HoraLocal } from '../notificacao/formato.js'
 
 export type Tarefa = {
   nome: string

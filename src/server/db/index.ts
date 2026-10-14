@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { arquivoBanco } from '../paths.js'
+import { arquivoBanco } from '../config/paths.js'
 
 fs.mkdirSync(path.dirname(arquivoBanco), { recursive: true })
 

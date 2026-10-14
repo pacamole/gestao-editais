@@ -1,26 +1,10 @@
-// Entidades do sistema, como os repositórios as entregam: colunas JSON já convertidas
-// em arrays/objetos e colunas 0/1 em boolean. Nomes de campos iguais às colunas (db/schema.sql).
+// Entidades de domínio expostas pela API, como os repositórios as entregam: colunas JSON
+// já convertidas em arrays/objetos e colunas 0/1 em boolean. Nomes iguais às colunas (db/schema.sql).
+// Fonte única para servidor e interface; tipos exclusivos do servidor ficam em server/dominio/entidades.ts.
 
 // ---- Acesso ----
 
 export type Papel = 'ANALISTA' | 'GESTOR'
-
-export type Usuario = {
-  id: string
-  nome: string
-  email: string
-  senha_hash: string
-  papel: Papel
-  ativo: boolean
-  criado_em: string
-}
-
-export type Sessao = {
-  id: string
-  usuario_id: string
-  criada_em: string
-  expira_em: string
-}
 
 // ---- Editais ----
 
@@ -75,14 +59,6 @@ export type Edital = {
   erro_processamento: string | null
   criado_em: string
   atualizado_em: string
-}
-
-export type EditalVersao = {
-  id: string
-  edital_id: string
-  hash_documento: string | null
-  dados: Edital // snapshot do edital antes da retificação
-  criado_em: string
 }
 
 export type Confianca = 'ALTA' | 'MEDIA' | 'BAIXA'
@@ -227,14 +203,6 @@ export type ColetaExecucao = {
 
 // ---- Chat ----
 
-export type Conversa = {
-  id: string
-  edital_id: string
-  usuario_id: string
-  criada_em: string
-  atualizada_em: string
-}
-
 export type PapelMensagem = 'USUARIO' | 'ASSISTENTE'
 
 export type Mensagem = {
@@ -246,7 +214,7 @@ export type Mensagem = {
   criada_em: string
 }
 
-// ---- Notificações e configuração ----
+// ---- Notificações ----
 
 export type TipoNotificacao = 'E01' | 'E02' | 'E03' | 'E04' | 'E05' | 'E06'
 
@@ -266,9 +234,4 @@ export type ConfigAlerta = {
   ativo: boolean
   destinatarios: string[] // e-mails fixos; vazio = papéis padrão da notificação
   parametros: Record<string, unknown>
-}
-
-export type Config = {
-  chave: string
-  valor: string
 }

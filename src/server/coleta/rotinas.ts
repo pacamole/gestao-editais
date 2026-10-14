@@ -1,4 +1,4 @@
-import type { EstadoRotina, RegistroRotinas, Tarefa } from '../agendador.js'
+import type { EstadoRotina, RegistroRotinas, Tarefa } from '../infra/agendador.js'
 import { repositorios } from '../repositorios/index.js'
 import { gatilhosNotificacao } from '../notificacao/index.js'
 import { cadastrarFontes, FONTES_AUTOMATICAS } from './fontes.js'

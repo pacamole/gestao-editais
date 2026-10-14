@@ -1,4 +1,4 @@
-import '../env.js'
+import '../config/env.js'
 import { repositorios } from '../repositorios/index.js'
 import { cadastrarFontes, FONTES_AUTOMATICAS } from './fontes.js'
 import { ColetaServico } from './servico.js'

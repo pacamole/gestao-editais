@@ -1,6 +1,6 @@
 // Envia um e-mail simples para conferir a configuração do SMTP.
 // Uso: npm run email:teste -- destino@exemplo.com
-import '../env.js'
+import '../config/env.js'
 import { criarTransporte } from './transporte.js'
 
 const para = process.argv[2]

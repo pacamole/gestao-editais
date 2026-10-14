@@ -1,5 +1,5 @@
 import { ELEGIBILIDADE } from '../../../shared/rotulos.js'
-import type { Edital } from '../../entidades.js'
+import type { Edital } from '../../dominio/entidades.js'
 import { Formato, NAO_LOCALIZADO } from '../formato.js'
 import { Links } from '../links.js'
 import { Notificacao } from '../notificacao.js'

@@ -1,9 +1,9 @@
 // Substitui todos os dados da base local pelos de um arquivo exportado.
 // Uso: npm run db:importar -- exportacoes/editais-2026-09-28_2330.db
-import '../env.js'
+import '../config/env.js'
 import fs from 'node:fs'
 import path from 'node:path'
-import { arquivoBanco, arquivoSchema } from '../paths.js'
+import { arquivoBanco, arquivoSchema } from '../config/paths.js'
 
 const arquivo = process.argv[2]
 if (!arquivo) {

@@ -1,6 +1,8 @@
 
   import { useState, type FormEvent } from 'react'
   import { useNavigate } from 'react-router'
+  import { auth } from '../api/auth'
+  import { mensagemDeErro } from '../api/cliente'
   import '../styles/autenticacao.css'
 
   export function LoginPage() {
@@ -45,33 +47,8 @@
       setCarregando(true)
 
       try {
-        const resposta = await fetch(
-          cadastro
-            ? '/api/bhrendon/cadastro'
-            : '/api/bhrendon/login',
-          {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(
-              cadastro
-                ? { nome, email, senha }
-                : { email, senha }
-            )
-          }
-        )
-
-        const dados = await resposta.json()
-
-        if (!resposta.ok) {
-          throw new Error(
-            dados.erro || 'Não foi possível concluir a solicitação.'
-          )
-        }
-
         if (cadastro) {
+          await auth.cadastrar({ nome, email, senha })
           setCadastro(false)
           setSenha('')
           setConfirmacao('')
@@ -79,15 +56,12 @@
             'Conta criada com sucesso! Agora entre com seus dados.'
           )
         } else {
+          await auth.entrar({ email, senha })
           navigate('/', { replace: true })
         }
 
       } catch (e) {
-        setErro(
-          e instanceof Error
-            ? e.message
-            : 'Erro de conexão com o servidor.'
-        )
+        setErro(mensagemDeErro(e, 'Erro de conexão com o servidor.'))
       } finally {
         setCarregando(false)
       }
