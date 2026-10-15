@@ -6,7 +6,6 @@ import {
 } from "../notificacao/parametros.js";
 import { repositorios } from "../repositorios/index.js";
 import { transacao } from "./index.js";
-import { semearEditaisExemplo } from "./seedEditais.js";
 
 // Dados iniciais. Roda sobre um banco recém-criado (ver reset.ts).
 // Sem usuários: o primeiro entra por "Criar conta" no login.
@@ -62,8 +61,5 @@ export function semear() {
 
     // Limite diário de perguntas no chat por usuário (CH07).
     config.definir("chat_limite_diario", "20");
-
-    // Editais e execuções de exemplo para validação e testes
-    semearEditaisExemplo();
   });
 }

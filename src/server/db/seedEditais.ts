@@ -7,11 +7,13 @@ import type {
   Classificacao,
 } from "../dominio/entidades.js";
 
-export function semearEditaisExemplo() {
+// Editais e execuções de coleta fictícios, para testar o motor e as páginas sem
+// depender dos portais. Só roda por `npm run db:seed-editais` e numa base sem editais.
+export function semearEditaisExemplo(): boolean {
   const contagem = db.prepare("SELECT COUNT(*) as c FROM edital").get() as {
     c: number;
   };
-  if (contagem && contagem.c > 0) return;
+  if (contagem && contagem.c > 0) return false;
 
   const fontes = repositorios.fonte.listar();
   const fonteMap = new Map(fontes.map((f) => [f.nome, f.id]));
@@ -678,4 +680,5 @@ export function semearEditaisExemplo() {
       ultima_mensagem_erro: ex.mensagem_erro,
     });
   }
+  return true;
 }

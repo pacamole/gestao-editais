@@ -39,6 +39,7 @@ npm run dev                 # http://localhost:3000
 | `npm run build` e `npm start` | Gera e sobe a versão de produção |
 | `npm run typecheck` | Checa os tipos do TypeScript |
 | `npm run db:reset` | **Apaga** o banco e recria do zero a partir de `db/schema.sql` |
+| `npm run db:seed-editais` | Insere editais e coletas fictícios numa base sem editais, para testar o motor e as páginas |
 | `npm run db:exportar` | Exporta a base inteira para um arquivo `.db` |
 | `npm run db:importar -- arquivo.db` | Substitui a base local pela de um arquivo exportado |
 | `npm run email:teste -- voce@email.com` | Envia um e-mail de teste para conferir o SMTP |

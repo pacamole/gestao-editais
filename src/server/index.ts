@@ -9,7 +9,6 @@ import { bancoVazio } from "./db/index.js";
 import { tarefasNotificacao } from "./notificacao/index.js";
 import { root } from "./config/paths.js";
 import { rotasApi } from "./rotas/index.js";
-import { semearEditaisExemplo } from "./db/seedEditais.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const port = Number(process.env.PORT ?? 3000);
@@ -20,9 +19,6 @@ if (bancoVazio()) {
   );
   process.exit(1);
 }
-
-// Garante que a base tenha editais iniciais para demonstração e testes
-semearEditaisExemplo();
 
 const app = express();
 app.use(express.json({ limit: "35mb" }));
