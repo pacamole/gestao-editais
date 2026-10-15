@@ -226,9 +226,15 @@ export type NotificacaoLog = {
   status_envio: 'ENVIADO' | 'FALHOU'
 }
 
+// E-mail da lista de destinatários de alertas.
+export type Destinatario = {
+  email: string
+  criado_em: string
+}
+
 export type ConfigAlerta = {
   tipo: TipoNotificacao
   ativo: boolean
-  destinatarios: string[] // e-mails fixos; vazio = papéis padrão da notificação
+  destinatarios: string[] // e-mails da lista de destinatários; vazio = todos da lista
   parametros: Record<string, unknown>
 }

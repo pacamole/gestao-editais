@@ -568,7 +568,7 @@ texto_extraido + histórico recente + pergunta → LLM → resposta com citaçã
 ### E01 — Novo edital com fit alto
 
 **Gatilho:** avaliação concluída com `ELEGIVEL` e `nota_fit ≥ nota_minima_alerta`
-**Destinatários:** usuários ativos
+**Destinatários:** lista de destinatários (Configurações › Destinatários), ou os e-mails escolhidos no alerta
 **Assunto:** `[Editais I9+] Nova oportunidade com fit {nota}: {titulo_curto}`
 
 ```
@@ -602,7 +602,7 @@ Este é um e-mail automático. Ajuste seus alertas em {url_alertas}.
 ### E02 — Alerta de prazo se aproximando
 
 **Gatilho:** rotina diária. Dispara quando `dias_restantes` é exatamente 15, 7 ou 2 e o status é `ANALISADO`, `EM_REVISAO` ou `APROVADO`
-**Destinatários:** usuários ativos
+**Destinatários:** lista de destinatários (Configurações › Destinatários), ou os e-mails escolhidos no alerta
 **Assunto:** `[Editais I9+] Faltam {dias_restantes} dias: {titulo_curto}`
 
 ```
@@ -637,7 +637,7 @@ Gestor Inteligente de Editais · I9+
 ### E03 — Edital requer verificação humana
 
 **Gatilho:** avaliação concluída com `INDETERMINADO`
-**Destinatários:** usuários ativos
+**Destinatários:** lista de destinatários (Configurações › Destinatários), ou os e-mails escolhidos no alerta
 **Assunto:** `[Editais I9+] Verificação necessária: {titulo_curto}`
 
 ```
@@ -673,7 +673,7 @@ Gestor Inteligente de Editais · I9+
 ### E04 — Resumo semanal
 
 **Gatilho:** cron semanal, dia e hora configuráveis
-**Destinatários:** usuários ativos
+**Destinatários:** lista de destinatários (Configurações › Destinatários), ou os e-mails escolhidos no alerta
 **Assunto:** `[Editais I9+] Resumo da semana — {data_inicio} a {data_fim}`
 
 ```
@@ -719,7 +719,7 @@ Gestor Inteligente de Editais · I9+
 ### E05 — Edital retificado
 
 **Gatilho:** reprocessamento de edital existente resultou em mudança de elegibilidade, de prazo ou de nota em mais de 10 pontos
-**Destinatários:** usuários ativos
+**Destinatários:** lista de destinatários (Configurações › Destinatários), ou os e-mails escolhidos no alerta
 **Assunto:** `[Editais I9+] Edital retificado: {titulo_curto}`
 
 ```
@@ -751,7 +751,7 @@ Gestor Inteligente de Editais · I9+
 ### E06 — Falha na coleta
 
 **Gatilho:** uma fonte falha em duas execuções consecutivas
-**Destinatários:** usuários ativos
+**Destinatários:** lista de destinatários (Configurações › Destinatários), ou os e-mails escolhidos no alerta
 **Assunto:** `[Editais I9+] Falha na coleta: {nome_fonte}`
 
 ```

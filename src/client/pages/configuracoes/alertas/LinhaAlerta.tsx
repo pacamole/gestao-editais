@@ -5,6 +5,7 @@ import { CamposAlerta } from './CamposAlerta'
 
 type Props = {
   config: ConfigAlerta
+  lista: string[]
   aberto: boolean
   alterado: boolean
   erro: string | null
@@ -14,12 +15,12 @@ type Props = {
 }
 
 function resumoDestinatarios(emails: string[]): string {
-  if (!emails.length) return 'Todos os usuários ativos'
+  if (!emails.length) return 'Todos da lista'
   return emails.length === 1 ? emails[0] : `${emails[0]} +${emails.length - 1}`
 }
 
 // Uma linha por alerta: interruptor, o que faz (com os valores atuais) e quem recebe; expande para editar.
-export function LinhaAlerta({ config, aberto, alterado, erro, ultimoEnvio, onAbrir, onChange }: Props) {
+export function LinhaAlerta({ config, lista, aberto, alterado, erro, ultimoEnvio, onAbrir, onChange }: Props) {
   const { nome } = CATALOGO_ALERTAS[config.tipo]
   const painel = `alerta-${config.tipo}`
   const classes = ['alerta', aberto && 'alerta--aberto', !config.ativo && 'alerta--inativo', erro && 'alerta--erro']
@@ -53,7 +54,7 @@ export function LinhaAlerta({ config, aberto, alterado, erro, ultimoEnvio, onAbr
       </div>
       {aberto ? (
         <div id={painel} className="alerta__painel">
-          <CamposAlerta config={config} onChange={onChange} />
+          <CamposAlerta config={config} lista={lista} onChange={onChange} />
         </div>
       ) : null}
     </li>

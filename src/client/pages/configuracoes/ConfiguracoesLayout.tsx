@@ -19,6 +19,7 @@ export const gruposConfiguracoes: { grupo: string; secoes: Secao[] }[] = [
     grupo: 'Notificações',
     secoes: [
       { to: 'alertas', rotulo: 'Alertas', descricao: 'Quando cada alerta dispara e quem recebe.' },
+      { to: 'destinatarios', rotulo: 'Destinatários', descricao: 'E-mails que podem receber alertas. Cada alerta escolhe quem desta lista recebe.' },
       { to: 'email', rotulo: 'E-mail (SMTP)', descricao: 'Servidor usado para enviar os alertas por e-mail.' },
     ],
   },

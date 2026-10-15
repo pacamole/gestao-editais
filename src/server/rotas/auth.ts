@@ -2,6 +2,7 @@ import { Router, type Response } from 'express'
 import { randomUUID } from 'node:crypto'
 import { db } from '../db/index.js'
 import { gerarHashSenha, verificarSenha } from '../auth/senha.js'
+import { repositorios } from '../repositorios/index.js'
 import {
   DURACAO_SESSAO_SEGUNDOS,
   cookieDeSessao,
@@ -81,6 +82,8 @@ rotasAuth.post('/cadastro', async (req, res) => {
       'GESTOR', // coluna legada `papel`: gravada só porque é NOT NULL
       new Date().toISOString()
     )
+    // Toda conta nova passa a receber alertas; dá para tirar na lista de destinatários.
+    repositorios.destinatario.adicionar(email)
 
     res.status(201).json({
       ok: true,

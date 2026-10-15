@@ -234,8 +234,14 @@ CREATE INDEX idx_notificacao_marco ON notificacao_log(tipo, edital_id, marco);
 CREATE TABLE config_alerta (
   tipo           TEXT PRIMARY KEY CHECK (tipo IN ('E01', 'E02', 'E03', 'E04', 'E05', 'E06')),
   ativo          INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
-  destinatarios  TEXT NOT NULL DEFAULT '[]', -- JSON; vazio = todos os usuários ativos
+  destinatarios  TEXT NOT NULL DEFAULT '[]', -- JSON; e-mails da tabela destinatario; vazio = todos da lista
   parametros     TEXT NOT NULL DEFAULT '{}'  -- JSON; ex.: {"nota_minima": 70}
+);
+
+-- Lista de e-mails que podem receber alertas. Começa com os usuários; editável na tela.
+CREATE TABLE destinatario (
+  email      TEXT PRIMARY KEY COLLATE NOCASE,
+  criado_em  TEXT NOT NULL
 );
 
 -- Configurações gerais chave/valor (ex.: limite diário do chat, CH07).

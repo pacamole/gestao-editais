@@ -2,6 +2,8 @@ import { repositorios } from '../repositorios/index.js'
 import { PARAMETROS_PADRAO, TIPOS_NOTIFICACAO } from '../notificacao/parametros.js'
 import { CRITERIOS_PADRAO } from '../dominio/criteriosPadrao.js'
 
+const DESTINATARIOS_INICIADOS = 'destinatarios_iniciados'
+
 // Garante os dados mínimos (perfil, critérios, alertas e config) antes de atender a API.
 export function garantirBootstraps() {
   if (!repositorios.perfilEmpresa.obter()) {
@@ -42,5 +44,12 @@ export function garantirBootstraps() {
 
   if (!repositorios.config.obter('chat_limite_diario')) {
     repositorios.config.definir('chat_limite_diario', '20')
+  }
+
+  // Uma vez só: a lista de destinatários começa com os usuários existentes.
+  // Depois disso ela é do usuário; um e-mail removido não volta.
+  if (!repositorios.config.obter(DESTINATARIOS_INICIADOS)) {
+    for (const { email } of repositorios.usuario.listarAtivos()) repositorios.destinatario.adicionar(email)
+    repositorios.config.definir(DESTINATARIOS_INICIADOS, '1')
   }
 }

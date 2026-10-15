@@ -1,16 +1,19 @@
-import { DIAS_SEMANA, emailValido, LIMITES_ALERTA } from '../../../../shared/catalogoAlertas'
+import { DIAS_SEMANA, LIMITES_ALERTA } from '../../../../shared/catalogoAlertas'
 import type { ConfigAlerta } from '../../../../shared/tipos/alertas'
 import { EntradaChips } from './EntradaChips'
+import { EscolhaDestinatarios } from './EscolhaDestinatarios'
+import { SimularEnvio } from './SimularEnvio'
 
 type Props = {
   config: ConfigAlerta
+  lista: string[] // e-mails da lista de destinatários
   onChange: (config: ConfigAlerta) => void
 }
 
 type CampoNumerico = keyof typeof LIMITES_ALERTA
 
 // Parâmetros do alerta escritos como frase, cada um com o controle adequado ao seu tipo.
-export function CamposAlerta({ config, onChange }: Props) {
+export function CamposAlerta({ config, lista, onChange }: Props) {
   const p = config.parametros
   const definir = (chave: string, valor: unknown) => onChange({ ...config, parametros: { ...p, [chave]: valor } })
 
@@ -103,18 +106,14 @@ export function CamposAlerta({ config, onChange }: Props) {
         </p>
       ) : null}
 
-      <div className="campo">
-        <label htmlFor={id('destinatarios')}>Destinatários</label>
-        <EntradaChips
-          id={id('destinatarios')}
-          tipo="email"
-          valores={config.destinatarios}
-          placeholder={config.destinatarios.length ? '+ e-mail' : 'Todos os usuários ativos — digite um e-mail para restringir'}
-          validar={(v) => (emailValido(v) ? null : 'E-mail inválido.')}
-          onChange={(destinatarios) => onChange({ ...config, destinatarios })}
-        />
-        <span className="campo__ajuda">Sem e-mails na lista, o alerta vai para todos os usuários ativos.</span>
-      </div>
+      <EscolhaDestinatarios
+        id={id('destinatarios')}
+        lista={lista}
+        escolhidos={config.destinatarios}
+        onChange={(destinatarios) => onChange({ ...config, destinatarios })}
+      />
+
+      <SimularEnvio tipo={config.tipo} destinatarios={config.destinatarios} />
     </div>
   )
 }

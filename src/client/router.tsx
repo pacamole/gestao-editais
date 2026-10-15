@@ -4,6 +4,7 @@ import { SecaoAlertas } from './pages/configuracoes/alertas/SecaoAlertas'
 import { ConfiguracoesLayout } from './pages/configuracoes/ConfiguracoesLayout'
 import { SecaoBase } from './pages/configuracoes/SecaoBase'
 import { SecaoCriterios } from './pages/configuracoes/SecaoCriterios'
+import { SecaoDestinatarios } from './pages/configuracoes/SecaoDestinatarios'
 import { SecaoEmail } from './pages/configuracoes/SecaoEmail'
 import { SecaoFontes } from './pages/configuracoes/SecaoFontes'
 import { SecaoIa } from './pages/configuracoes/SecaoIa'
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
           { path: 'criterios', element: <SecaoCriterios /> }, // P07
           { path: 'fontes', element: <SecaoFontes /> }, // P08
           { path: 'alertas', element: <SecaoAlertas /> }, // P09
+          { path: 'destinatarios', element: <SecaoDestinatarios /> },
           { path: 'email', element: <SecaoEmail /> },
           { path: 'ia', element: <SecaoIa /> },
           { path: 'base', element: <SecaoBase /> }, // compartilhamento da base

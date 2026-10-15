@@ -10,6 +10,7 @@ import {
 import type { AlertasResposta, ConfigAlerta, TipoNotificacao } from '../../../../shared/tipos/alertas'
 import { alertas } from '../../../api/alertas'
 import { mensagemDeErro } from '../../../api/cliente'
+import { destinatarios as apiDestinatarios } from '../../../api/destinatarios'
 import { HistoricoEnvios } from './HistoricoEnvios'
 import { LinhaAlerta } from './LinhaAlerta'
 
@@ -47,6 +48,7 @@ function iguais(a: ConfigAlerta, b: ConfigAlerta): boolean {
 
 export function SecaoAlertas() {
   const [dados, setDados] = useState<AlertasResposta | null>(null)
+  const [lista, setLista] = useState<string[]>([])
   const [originais, setOriginais] = useState<PorTipo>({})
   const [rascunho, setRascunho] = useState<PorTipo>({})
   const [aberto, setAberto] = useState<TipoNotificacao | null>(null)
@@ -54,9 +56,9 @@ export function SecaoAlertas() {
   const [aviso, setAviso] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null)
 
   useEffect(() => {
-    alertas
-      .listar()
-      .then((resposta) => {
+    Promise.all([alertas.listar(), apiDestinatarios.listar()])
+      .then(([resposta, { destinatarios }]) => {
+        setLista(destinatarios.map((d) => d.email))
         setDados(resposta)
         setOriginais(porTipo(resposta.configuracoes))
         setRascunho(porTipo(resposta.configuracoes))
@@ -117,6 +119,7 @@ export function SecaoAlertas() {
                 <LinhaAlerta
                   key={t}
                   config={rascunho[t]!}
+                  lista={lista}
                   aberto={aberto === t}
                   alterado={alterados.includes(t)}
                   erro={erroDe(rascunho[t]!)}

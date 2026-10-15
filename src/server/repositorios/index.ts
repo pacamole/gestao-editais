@@ -4,6 +4,7 @@ import { ConfigAlertaRepositorio } from './ConfigAlertaRepositorio.js'
 import { ConfigRepositorio } from './ConfigRepositorio.js'
 import { ConversaRepositorio } from './ConversaRepositorio.js'
 import { CriterioRepositorio } from './CriterioRepositorio.js'
+import { DestinatarioRepositorio } from './DestinatarioRepositorio.js'
 import { EditalRepositorio } from './EditalRepositorio.js'
 import { EditalVersaoRepositorio } from './EditalVersaoRepositorio.js'
 import { EvidenciaRepositorio } from './EvidenciaRepositorio.js'
@@ -32,6 +33,7 @@ export const repositorios = {
   mensagem: new MensagemRepositorio(),
   notificacaoLog: new NotificacaoLogRepositorio(),
   configAlerta: new ConfigAlertaRepositorio(),
+  destinatario: new DestinatarioRepositorio(),
   config: new ConfigRepositorio(),
 }
 
@@ -44,6 +46,7 @@ export {
   ConfigRepositorio,
   ConversaRepositorio,
   CriterioRepositorio,
+  DestinatarioRepositorio,
   EditalRepositorio,
   EditalVersaoRepositorio,
   EvidenciaRepositorio,
