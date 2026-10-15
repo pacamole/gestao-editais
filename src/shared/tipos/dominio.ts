@@ -2,10 +2,6 @@
 // já convertidas em arrays/objetos e colunas 0/1 em boolean. Nomes iguais às colunas (db/schema.sql).
 // Fonte única para servidor e interface; tipos exclusivos do servidor ficam em server/dominio/entidades.ts.
 
-// ---- Acesso ----
-
-export type Papel = 'ANALISTA' | 'GESTOR'
-
 // ---- Editais ----
 
 export type StatusEdital =

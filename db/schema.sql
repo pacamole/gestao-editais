@@ -19,7 +19,7 @@ CREATE TABLE usuario (
   nome        TEXT NOT NULL,
   email       TEXT NOT NULL UNIQUE COLLATE NOCASE,
   senha_hash  TEXT NOT NULL,
-  papel       TEXT NOT NULL CHECK (papel IN ('ANALISTA', 'GESTOR')),
+  papel       TEXT NOT NULL CHECK (papel IN ('ANALISTA', 'GESTOR')), -- legado: não é mais lido; todo usuário tem acesso total
   ativo       INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
   criado_em   TEXT NOT NULL
 );
@@ -234,7 +234,7 @@ CREATE INDEX idx_notificacao_marco ON notificacao_log(tipo, edital_id, marco);
 CREATE TABLE config_alerta (
   tipo           TEXT PRIMARY KEY CHECK (tipo IN ('E01', 'E02', 'E03', 'E04', 'E05', 'E06')),
   ativo          INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
-  destinatarios  TEXT NOT NULL DEFAULT '[]', -- JSON; vazio = papéis padrão do tipo
+  destinatarios  TEXT NOT NULL DEFAULT '[]', -- JSON; vazio = todos os usuários ativos
   parametros     TEXT NOT NULL DEFAULT '{}'  -- JSON; ex.: {"nota_minima": 70}
 );
 

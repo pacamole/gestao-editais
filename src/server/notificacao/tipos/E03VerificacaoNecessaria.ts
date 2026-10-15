@@ -7,7 +7,6 @@ import { Notificacao } from '../notificacao.js'
 // E03 — Edital requer verificação humana
 export class VerificacaoNecessaria extends Notificacao {
   readonly tipo = 'E03'
-  readonly papeisPadrao = ['ANALISTA'] as const
 
   constructor(
     private readonly edital: Edital,

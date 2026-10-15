@@ -25,13 +25,14 @@ O sistema resolve isso capturando editais de múltiplas fontes, extraindo os dad
 
 ## 2. Atores e Níveis de Acesso
 
-| Ator         | Descrição                                                                  | Permissões                                                                                                         |
-| ------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **Analista** | Opera o sistema no dia a dia. Revisa análises, aprova ou descarta editais. | Ler tudo. Criar entradas manuais. Revisar e corrigir avaliações. Alterar status de edital.                         |
-| **Gestor**   | Acompanha o funil e define a estratégia de captação.                       | Tudo do Analista, mais: editar Perfil da Empresa, Critérios e Pesos, Fontes Monitoradas e Configurações de Alerta. |
-| **Sistema**  | Ator não-humano. Executa coleta, extração e avaliação.                     | Criar e atualizar editais e avaliações. Disparar notificações.                                                     |
+| Ator        | Descrição                                                          | Permissões                                                                                                       |
+| ----------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **Usuário** | Opera o sistema: revisa análises, decide editais e configura tudo. | Acesso total: editais, revisões, Perfil da Empresa, Critérios e Pesos, Fontes Monitoradas, Alertas e Base de dados. |
+| **Sistema** | Ator não-humano. Executa coleta, extração e avaliação.             | Criar e atualizar editais e avaliações. Disparar notificações.                                                   |
 
-**Autenticação:** login por e-mail e senha, sessão via cookie. Sem cadastro público — usuários são criados por seed ou por um Gestor. Sem recuperação de senha automatizada no MVP.
+Não há papéis nem administrador: o sistema roda localmente e todo usuário tem acesso total.
+
+**Autenticação:** login por e-mail e senha, sessão via cookie. Novos usuários se cadastram pelo "Criar conta" da tela de login. Sem recuperação de senha automatizada no MVP.
 
 ### Tabela `usuario`
 
@@ -41,7 +42,7 @@ O sistema resolve isso capturando editais de múltiplas fontes, extraindo os dad
 | `nome`       | varchar(120) | sim    |                        |
 | `email`      | varchar(160) | sim    | único                  |
 | `senha_hash` | varchar(255) | sim    | bcrypt ou argon2       |
-| `papel`      | enum         | sim    | `ANALISTA` \| `GESTOR` |
+| `papel`      | enum         | sim    | legado, não é lido     |
 | `ativo`      | boolean      | sim    | default `true`         |
 | `criado_em`  | timestamptz  | sim    |                        |
 
@@ -101,10 +102,10 @@ stateDiagram-v2
 | `EM_ANALISE`               | `FALHA`      | Sistema             | Erro técnico ou documento ilegível             |
 | `FALHA`                    | `EM_ANALISE` | Usuário             | Botão "Reprocessar"                            |
 | `ANALISADO`                | `EM_REVISAO` | Sistema             | Há ao menos um critério indeterminado          |
-| `ANALISADO` / `EM_REVISAO` | `APROVADO`   | Analista            | Decisão de participar                          |
-| `ANALISADO` / `EM_REVISAO` | `DESCARTADO` | Analista ou Sistema | Decisão de não participar ou `INELEGÍVEL`      |
-| `APROVADO`                 | `INSCRITO`   | Analista            | Confirma envio da proposta                     |
-| `INSCRITO`                 | `ENCERRADO`  | Analista            | Registra resultado (ganho/perdido)             |
+| `ANALISADO` / `EM_REVISAO` | `APROVADO`   | Usuário             | Decisão de participar                          |
+| `ANALISADO` / `EM_REVISAO` | `DESCARTADO` | Usuário ou Sistema  | Decisão de não participar ou `INELEGÍVEL`      |
+| `APROVADO`                 | `INSCRITO`   | Usuário             | Confirma envio da proposta                     |
+| `INSCRITO`                 | `ENCERRADO`  | Usuário             | Registra resultado (ganho/perdido)             |
 | qualquer ativo             | `EXPIRADO`   | Sistema             | `prazo_inscricao < hoje` e status não terminal |
 
 **Regra:** `INELEGÍVEL` **não** apaga o edital. Ele vai para `DESCARTADO` mas permanece visível com filtro próprio, e o motivo da desclassificação fica registrado. Isso protege contra falso negativo.
@@ -113,17 +114,17 @@ stateDiagram-v2
 
 ## 5. Mapa de Páginas
 
-| #   | Página                  | Rota            | Acesso           | Função                                |
-| --- | ----------------------- | --------------- | ---------------- | ------------------------------------- |
-| P01 | Login                   | `/login`        | Público          | Autenticação                          |
-| P02 | Dashboard               | `/`             | Analista, Gestor | Visão geral do funil                  |
-| P03 | Lista de Editais        | `/editais`      | Analista, Gestor | Fila priorizada com filtros           |
-| P04 | Detalhe do Edital       | `/editais/:id`  | Analista, Gestor | Análise completa e revisão            |
-| P05 | Nova Entrada            | `/editais/novo` | Analista, Gestor | Upload de PDF, URL ou cadastro manual |
-| P06 | Perfil da Empresa       | `/perfil`       | Gestor           | Dados de referência da I9+            |
-| P07 | Critérios e Pesos       | `/criterios`    | Gestor           | Configuração do filtro dinâmico       |
-| P08 | Fontes Monitoradas      | `/fontes`       | Gestor           | Portais e status da coleta            |
-| P09 | Configurações de Alerta | `/alertas`      | Gestor           | Gatilhos e destinatários              |
+| #   | Página                  | Rota            | Acesso  | Função                                |
+| --- | ----------------------- | --------------- | ------- | ------------------------------------- |
+| P01 | Login                   | `/login`        | Público | Autenticação                          |
+| P02 | Dashboard               | `/`             | Todos   | Visão geral do funil                  |
+| P03 | Lista de Editais        | `/editais`      | Todos   | Fila priorizada com filtros           |
+| P04 | Detalhe do Edital       | `/editais/:id`  | Todos   | Análise completa e revisão            |
+| P05 | Nova Entrada            | `/editais/novo` | Todos   | Upload de PDF, URL ou cadastro manual |
+| P06 | Perfil da Empresa       | `/perfil`       | Todos   | Dados de referência da I9+            |
+| P07 | Critérios e Pesos       | `/criterios`    | Todos   | Configuração do filtro dinâmico       |
+| P08 | Fontes Monitoradas      | `/fontes`       | Todos   | Portais e status da coleta            |
+| P09 | Configurações de Alerta | `/alertas`      | Todos   | Gatilhos e destinatários              |
 
 ---
 
@@ -471,7 +472,7 @@ Critérios com valor `null` no edital são **excluídos do numerador e do denomi
 
 | Via                   | Como funciona                                                                              | Comportamento em falha                                                 |
 | --------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| **Coleta automática** | Agendador dispara o coletor por fonte em horário fixo. Novos itens entram como `COLETADO`. | Registra `FALHA` na fonte, não interrompe as demais, notifica o Gestor |
+| **Coleta automática** | Agendador dispara o coletor por fonte em horário fixo. Novos itens entram como `COLETADO`. | Registra `FALHA` na fonte, não interrompe as demais, notifica os usuários |
 | **Upload de PDF**     | Usuário envia arquivo. Vai direto para extração.                                           | Erro exibido na tela, edital fica em `FALHA`                           |
 | **Colar URL**         | Sistema baixa o conteúdo da URL e processa.                                                | Se a URL não for acessível, oferece fallback para upload               |
 | **Cadastro manual**   | Formulário preenchido à mão, sem LLM. Avaliação roda normalmente.                          | —                                                                      |
@@ -567,7 +568,7 @@ texto_extraido + histórico recente + pergunta → LLM → resposta com citaçã
 ### E01 — Novo edital com fit alto
 
 **Gatilho:** avaliação concluída com `ELEGIVEL` e `nota_fit ≥ nota_minima_alerta`
-**Destinatários:** Analistas e Gestores
+**Destinatários:** usuários ativos
 **Assunto:** `[Editais I9+] Nova oportunidade com fit {nota}: {titulo_curto}`
 
 ```
@@ -601,7 +602,7 @@ Este é um e-mail automático. Ajuste seus alertas em {url_alertas}.
 ### E02 — Alerta de prazo se aproximando
 
 **Gatilho:** rotina diária. Dispara quando `dias_restantes` é exatamente 15, 7 ou 2 e o status é `ANALISADO`, `EM_REVISAO` ou `APROVADO`
-**Destinatários:** Analistas e Gestores
+**Destinatários:** usuários ativos
 **Assunto:** `[Editais I9+] Faltam {dias_restantes} dias: {titulo_curto}`
 
 ```
@@ -636,7 +637,7 @@ Gestor Inteligente de Editais · I9+
 ### E03 — Edital requer verificação humana
 
 **Gatilho:** avaliação concluída com `INDETERMINADO`
-**Destinatários:** Analistas
+**Destinatários:** usuários ativos
 **Assunto:** `[Editais I9+] Verificação necessária: {titulo_curto}`
 
 ```
@@ -672,7 +673,7 @@ Gestor Inteligente de Editais · I9+
 ### E04 — Resumo semanal
 
 **Gatilho:** cron semanal, dia e hora configuráveis
-**Destinatários:** Gestores
+**Destinatários:** usuários ativos
 **Assunto:** `[Editais I9+] Resumo da semana — {data_inicio} a {data_fim}`
 
 ```
@@ -718,7 +719,7 @@ Gestor Inteligente de Editais · I9+
 ### E05 — Edital retificado
 
 **Gatilho:** reprocessamento de edital existente resultou em mudança de elegibilidade, de prazo ou de nota em mais de 10 pontos
-**Destinatários:** Analistas e Gestores
+**Destinatários:** usuários ativos
 **Assunto:** `[Editais I9+] Edital retificado: {titulo_curto}`
 
 ```
@@ -750,7 +751,7 @@ Gestor Inteligente de Editais · I9+
 ### E06 — Falha na coleta
 
 **Gatilho:** uma fonte falha em duas execuções consecutivas
-**Destinatários:** Gestores
+**Destinatários:** usuários ativos
 **Assunto:** `[Editais I9+] Falha na coleta: {nome_fonte}`
 
 ```
@@ -830,7 +831,7 @@ Estas decisões foram tomadas pela equipe por indisponibilidade do parceiro. **T
 | LM04 | Nota de fit não é preditiva de vitória     | Não há histórico de resultados disponível                                                                                                             | Nota explicável por critérios, com pesos ajustáveis                    |
 | LM05 | Extração pode conter erro                  | Limitação inerente a LLM sobre documento longo                                                                                                        | Toda conclusão traz evidência clicável e é corrigível pelo analista    |
 | LM06 | Sem multiempresa                           | Escopo definido como instância única                                                                                                                  | —                                                                      |
-| LM07 | Sem recuperação de senha automatizada      | Escopo enxuto, poucos usuários                                                                                                                        | Redefinição por um Gestor                                              |
+| LM07 | Sem recuperação de senha automatizada      | Escopo enxuto, poucos usuários                                                                                                                        | Redefinição manual no banco                                            |
 | LM08 | Serviços podem hibernar                    | Hospedagem gratuita                                                                                                                                   | Aviso de carregamento na interface                                     |
 | LM09 | Chat com limite diário de perguntas        | Cota da camada gratuita do LLM                                                                                                                        | Contador visível e perguntas sugeridas que cobrem os casos mais comuns |
 | LM10 | Chat não responde sobre editais escaneados | Sem camada de texto não há contexto a enviar                                                                                                          | Edital marcado como "requer leitura manual"                            |

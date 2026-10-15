@@ -1,4 +1,3 @@
-import type { Papel } from '../dominio/entidades.js'
 import type { Repositorios } from '../repositorios/index.js'
 import type { Destinatario, Notificacao } from './notificacao.js'
 import type { TransporteEmail } from './transporte.js'
@@ -35,7 +34,7 @@ export class NotificacaoServico {
     if (!config.ativo) return 'DESATIVADO'
     if (this.repositorios.notificacaoLog.jaEnviada(tipo, editalId, marco)) return 'DUPLICADO'
 
-    const destinatarios = this.destinatarios(config.destinatarios, notificacao.papeisPadrao)
+    const destinatarios = this.destinatarios(config.destinatarios)
     if (!destinatarios.length) return 'SEM_DESTINATARIOS'
 
     const assunto = notificacao.assunto()
@@ -60,8 +59,8 @@ export class NotificacaoServico {
     return enviados.length ? 'PARCIAL' : 'FALHOU'
   }
 
-  // E-mails fixos da configuração, ou os usuários ativos dos papéis padrão da notificação.
-  private destinatarios(emailsFixos: string[], papeisPadrao: readonly Papel[]): Destinatario[] {
+  // E-mails fixos da configuração, ou todos os usuários ativos.
+  private destinatarios(emailsFixos: string[]): Destinatario[] {
     if (emailsFixos.length) {
       return emailsFixos.map((email) => ({
         email,
@@ -69,7 +68,7 @@ export class NotificacaoServico {
       }))
     }
     return this.repositorios.usuario
-      .listarAtivosPorPapel(papeisPadrao)
+      .listarAtivos()
       .map(({ nome, email }) => ({ nome, email }))
   }
 }

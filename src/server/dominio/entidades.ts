@@ -3,7 +3,7 @@
 // As entidades expostas pela API vivem em shared/tipos/dominio.ts (fonte única com a interface);
 // aqui ficam só as exclusivas do servidor.
 
-import type { Edital, Papel } from '../../shared/tipos/dominio.js'
+import type { Edital } from '../../shared/tipos/dominio.js'
 
 export type * from '../../shared/tipos/dominio.js'
 
@@ -14,7 +14,6 @@ export type Usuario = {
   nome: string
   email: string
   senha_hash: string
-  papel: Papel
   ativo: boolean
   criado_em: string
 }

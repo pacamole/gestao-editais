@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Response } from 'express'
 import { randomUUID } from 'node:crypto'
 import { db } from '../db/index.js'
 import { gerarHashSenha, verificarSenha } from '../auth/senha.js'
@@ -13,26 +13,48 @@ import type { CadastroResposta, OkResposta, SessaoResposta } from '../../shared/
 
 export const rotasAuth = Router()
 
-// Cadastro público: novos usuários recebem o papel ANALISTA.
-rotasAuth.post('/cadastro', async (req, res) => {
-  const nome = String(req.body?.nome ?? '').trim()
-  const email = String(req.body?.email ?? '').trim().toLowerCase()
-  const senha = String(req.body?.senha ?? '')
+type DadosCadastro = { nome: string; email: string; senha: string }
 
-  // Validação dos dados.
-  if (
-    nome.length < 2 ||
-    nome.length > 100 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-    email.length > 254 ||
-    senha.length < 8 ||
-    senha.length > 128
-  ) {
-    res.status(400).json({
-      erro: 'Informe nome válido, e-mail válido e senha de 8 a 128 caracteres.'
-    })
+// Dados de cadastro normalizados, ou null se inválidos.
+function lerCadastro(corpo: unknown): DadosCadastro | null {
+  const dados = (corpo ?? {}) as Record<string, unknown>
+  const nome = String(dados.nome ?? '').trim()
+  const email = String(dados.email ?? '').trim().toLowerCase()
+  const senha = String(dados.senha ?? '')
+  const valido =
+    nome.length >= 2 &&
+    nome.length <= 100 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    email.length <= 254 &&
+    senha.length >= 8 &&
+    senha.length <= 128
+  return valido ? { nome, email, senha } : null
+}
+
+const ERRO_CADASTRO_INVALIDO = 'Informe nome válido, e-mail válido e senha de 8 a 128 caracteres.'
+
+// Cria a sessão do usuário e envia o cookie.
+function abrirSessao(res: Response, usuarioId: string) {
+  const id = randomUUID()
+  db.prepare(
+    'INSERT INTO sessao(id,usuario_id,criada_em,expira_em) VALUES(?,?,?,?)'
+  ).run(
+    id,
+    usuarioId,
+    new Date().toISOString(),
+    new Date(Date.now() + DURACAO_SESSAO_SEGUNDOS * 1000).toISOString()
+  )
+  res.setHeader('Set-Cookie', cookieDeSessao(id))
+}
+
+// Cadastro público. Todo usuário tem acesso total.
+rotasAuth.post('/cadastro', async (req, res) => {
+  const dados = lerCadastro(req.body)
+  if (!dados) {
+    res.status(400).json({ erro: ERRO_CADASTRO_INVALIDO })
     return
   }
+  const { nome, email, senha } = dados
 
   // Verifica se o e-mail já foi cadastrado.
   if (
@@ -56,7 +78,7 @@ rotasAuth.post('/cadastro', async (req, res) => {
       nome,
       email,
       hash,
-      'ANALISTA',
+      'GESTOR', // coluna legada `papel`: gravada só porque é NOT NULL
       new Date().toISOString()
     )
 
@@ -89,18 +111,7 @@ rotasAuth.post('/login', async (req, res) => {
     return
   }
 
-  const id = randomUUID()
-
-  db.prepare(
-    'INSERT INTO sessao(id,usuario_id,criada_em,expira_em) VALUES(?,?,?,?)'
-  ).run(
-    id,
-    u.id,
-    new Date().toISOString(),
-    new Date(Date.now() + DURACAO_SESSAO_SEGUNDOS * 1000).toISOString()
-  )
-
-  res.setHeader('Set-Cookie', cookieDeSessao(id))
+  abrirSessao(res, u.id)
 
   res.json({ ok: true } satisfies OkResposta)
 })

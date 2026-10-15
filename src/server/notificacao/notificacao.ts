@@ -1,4 +1,4 @@
-import type { Papel, TipoNotificacao } from '../dominio/entidades.js'
+import type { TipoNotificacao } from '../dominio/entidades.js'
 
 export type Destinatario = {
   nome: string
@@ -10,8 +10,6 @@ export abstract class Notificacao {
   protected static readonly PREFIXO = '[Editais I9+]'
 
   abstract readonly tipo: TipoNotificacao
-  // Quem recebe quando config_alerta não define destinatários.
-  abstract readonly papeisPadrao: readonly Papel[]
 
   /**
    * @param editalId edital relacionado; null em resumos e alertas de fonte.

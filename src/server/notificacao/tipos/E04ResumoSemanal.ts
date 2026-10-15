@@ -23,7 +23,6 @@ export type ResumoSemanalDados = {
 // E04 — Resumo semanal. Marco = dia final do período, para não repetir na mesma semana.
 export class ResumoSemanal extends Notificacao {
   readonly tipo = 'E04'
-  readonly papeisPadrao = ['GESTOR'] as const
 
   constructor(private readonly dados: ResumoSemanalDados) {
     super(null, Formato.horaLocal(dados.fim).dia)

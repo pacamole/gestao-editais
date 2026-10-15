@@ -7,7 +7,6 @@ import { Notificacao } from '../notificacao.js'
 // para avisar uma vez por sequência e não a cada nova falha.
 export class FalhaColeta extends Notificacao {
   readonly tipo = 'E06'
-  readonly papeisPadrao = ['GESTOR'] as const
 
   constructor(
     private readonly fonte: Fonte,

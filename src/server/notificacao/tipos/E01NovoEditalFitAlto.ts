@@ -9,7 +9,6 @@ export type Destaque = { nome: string; contribuicao: number }
 // E01 — Novo edital com fit alto
 export class NovoEditalFitAlto extends Notificacao {
   readonly tipo = 'E01'
-  readonly papeisPadrao = ['ANALISTA', 'GESTOR'] as const
 
   constructor(
     private readonly edital: Edital,

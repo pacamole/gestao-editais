@@ -25,13 +25,13 @@ export function usuarioDaSessao(req: { headers: { cookie?: string } }): string |
   return row?.usuario_id || null
 }
 
-// Usuário da requisição; sem sessão válida, cai no primeiro gestor (ou num id fixo).
+// Usuário da requisição; sem sessão válida, cai no primeiro usuário ativo (ou num id fixo).
 export function obterUsuarioId(req: { headers: { cookie?: string } }): string {
   const logado = usuarioDaSessao(req)
   if (logado) return logado
 
-  const gestor = db.prepare("SELECT id FROM usuario WHERE papel='GESTOR' LIMIT 1").get() as { id: string } | undefined
-  return gestor?.id ?? '00000000-0000-0000-0000-000000000001'
+  const primeiro = db.prepare('SELECT id FROM usuario WHERE ativo = 1 ORDER BY criado_em LIMIT 1').get() as { id: string } | undefined
+  return primeiro?.id ?? '00000000-0000-0000-0000-000000000001'
 }
 
 export function cookieDeSessao(token: string): string {

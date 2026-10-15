@@ -7,7 +7,6 @@ import { Notificacao } from '../notificacao.js'
 // E02 — Alerta de prazo se aproximando. Marco = dias restantes ("15d", "7d", "2d").
 export class PrazoProximo extends Notificacao {
   readonly tipo = 'E02'
-  readonly papeisPadrao = ['ANALISTA', 'GESTOR'] as const
 
   constructor(
     private readonly edital: Edital,

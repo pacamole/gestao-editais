@@ -10,7 +10,6 @@ export type Comparacao<T> = { antes: T; agora: T }
 // E05 — Edital retificado. Marco = hash do novo documento (uma notificação por retificação).
 export class EditalRetificado extends Notificacao {
   readonly tipo = 'E05'
-  readonly papeisPadrao = ['ANALISTA', 'GESTOR'] as const
 
   constructor(
     private readonly edital: Edital,

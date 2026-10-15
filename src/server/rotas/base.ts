@@ -6,7 +6,6 @@ import type { ErroApi } from '../../shared/api.js'
 import { novoId } from '../db/index.js'
 import { baseDados, ErroImportacao, nomeExportacao } from '../base/index.js'
 
-// TODO: restringir ao papel GESTOR quando a autenticação existir.
 export const rotasBase = Router()
 
 const temporario = () => path.join(os.tmpdir(), `gestao-editais-${novoId()}.db`)
