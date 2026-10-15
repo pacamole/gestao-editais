@@ -42,7 +42,7 @@ rotasPerfil.post('/perfil-empresa', (req, res) => {
     const perfilSalvo = existente ? repositorios.perfilEmpresa.salvar(perfil) : repositorios.perfilEmpresa.inserir(perfil)
     repositorios.mensagem.excluirDeTodasConversas()
     if (reavaliar && perfilSalvo) {
-      editaisReavaliados = reavaliarEditaisAtivos(perfilSalvo.atualizado_em)
+      editaisReavaliados = reavaliarEditaisAtivos()
     }
     return perfilSalvo
   })

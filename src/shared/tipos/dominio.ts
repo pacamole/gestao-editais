@@ -136,7 +136,8 @@ export type Classificacao = 'ALTO' | 'MEDIO' | 'BAIXO'
 
 export type CriterioViolado = { criterio_id: string; nome: string; motivo: string; evidencia_id: string | null }
 export type CriterioIndeterminado = { criterio_id: string; nome: string; campo_faltante: string }
-export type ItemPontuacao = { criterio_id: string; peso: number; pontuacao: number; contribuicao: number }
+// nome: cópia do nome do critério no momento do cálculo (o critério pode ser renomeado ou excluído depois).
+export type ItemPontuacao = { criterio_id: string; nome?: string; peso: number; pontuacao: number; contribuicao: number }
 
 export type Avaliacao = {
   id: string

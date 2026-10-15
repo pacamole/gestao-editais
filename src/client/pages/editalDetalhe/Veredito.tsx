@@ -69,7 +69,7 @@ export function Veredito({ avaliacao: a }: Props) {
                 <tbody>
                   {a.detalhamento_pontuacao.map((x) => (
                     <tr key={x.criterio_id}>
-                      <td>{x.criterio_id}</td>
+                      <td>{x.nome ?? x.criterio_id}</td>
                       <td className="mono">{x.peso}</td>
                       <td className="mono">{x.pontuacao}</td>
                       <td className="mono">{x.contribuicao}</td>
