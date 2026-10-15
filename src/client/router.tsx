@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import { RotaProtegida } from './components/RotaProtegida'
-import { AlertasPage } from './pages/AlertasPage'
+import { SecaoAlertas } from './pages/configuracoes/alertas/SecaoAlertas'
 import { ConfiguracoesLayout } from './pages/configuracoes/ConfiguracoesLayout'
 import { SecaoBase } from './pages/configuracoes/SecaoBase'
 import { SecaoCriterios } from './pages/configuracoes/SecaoCriterios'
@@ -36,7 +36,7 @@ export const router = createBrowserRouter([
           { path: 'perfil', element: <SecaoPerfil /> }, // P06
           { path: 'criterios', element: <SecaoCriterios /> }, // P07
           { path: 'fontes', element: <SecaoFontes /> }, // P08
-          { path: 'alertas', element: <AlertasPage /> }, // P09
+          { path: 'alertas', element: <SecaoAlertas /> }, // P09
           { path: 'email', element: <SecaoEmail /> },
           { path: 'ia', element: <SecaoIa /> },
           { path: 'base', element: <SecaoBase /> }, // compartilhamento da base

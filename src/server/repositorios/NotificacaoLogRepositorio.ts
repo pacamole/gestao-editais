@@ -13,4 +13,17 @@ export class NotificacaoLogRepositorio extends Repositorio<NotificacaoLog, strin
       this.contarOnde("tipo = ? AND edital_id IS ? AND marco = ? AND status_envio = 'ENVIADO'", tipo, editalId, marco) > 0
     )
   }
+
+  recentes(limite: number): NotificacaoLog[] {
+    return this.consultar('SELECT * FROM notificacao_log ORDER BY enviado_em DESC LIMIT ?', limite)
+  }
+
+  /** Último envio bem-sucedido de cada tipo. */
+  ultimosEnvios(): Partial<Record<TipoNotificacao, string>> {
+    const logs = this.consultar(
+      `SELECT * FROM notificacao_log l WHERE status_envio = 'ENVIADO' AND enviado_em =
+         (SELECT MAX(enviado_em) FROM notificacao_log WHERE tipo = l.tipo AND status_envio = 'ENVIADO')`,
+    )
+    return Object.fromEntries(logs.map((l) => [l.tipo, l.enviado_em]))
+  }
 }
