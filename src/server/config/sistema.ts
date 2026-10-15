@@ -1,6 +1,8 @@
 import { MODELO, OLLAMA_URL_PADRAO } from '../chat/ollama.js'
 import { repositorios } from '../repositorios/index.js'
 import type { ConfigSmtp } from '../notificacao/transporte.js'
+import { emailValido } from '../../shared/catalogoAlertas.js'
+import { NOME_REMETENTE_PADRAO } from '../../shared/provedoresEmail.js'
 import type { ConfigSistema, SalvarConfigSistemaEntrada } from '../../shared/tipos/configSistema.js'
 
 // Configurações do sistema guardadas na tabela `config`, editáveis a qualquer momento.
@@ -12,7 +14,7 @@ export const CHAVES_CONFIG = {
   smtpPorta: 'smtp_porta',
   smtpUsuario: 'smtp_usuario',
   smtpSenha: 'smtp_senha',
-  smtpRemetente: 'smtp_remetente',
+  smtpNomeRemetente: 'smtp_nome_remetente',
 } as const
 
 const SMTP_PORTA_PADRAO = 465
@@ -37,7 +39,7 @@ export function configSmtp(): ConfigSmtp | null {
     porta: repositorios.config.obterNumero(CHAVES_CONFIG.smtpPorta, SMTP_PORTA_PADRAO),
     usuario,
     senha,
-    remetente: texto(CHAVES_CONFIG.smtpRemetente) || `Editais I9+ <${usuario}>`,
+    remetente: `${texto(CHAVES_CONFIG.smtpNomeRemetente) || NOME_REMETENTE_PADRAO} <${usuario}>`,
   }
 }
 
@@ -51,7 +53,7 @@ export function lerConfigSistema(): ConfigSistema {
     smtp_porta: repositorios.config.obterNumero(CHAVES_CONFIG.smtpPorta, SMTP_PORTA_PADRAO),
     smtp_usuario: texto(CHAVES_CONFIG.smtpUsuario),
     smtp_senha_definida: Boolean(repositorios.config.obter(CHAVES_CONFIG.smtpSenha)),
-    smtp_remetente: texto(CHAVES_CONFIG.smtpRemetente),
+    smtp_nome_remetente: texto(CHAVES_CONFIG.smtpNomeRemetente),
   }
 }
 
@@ -75,12 +77,13 @@ export function salvarConfigSistema(entrada: SalvarConfigSistemaEntrada): Config
   const porta = entrada.smtp_porta === undefined ? atual.smtp_porta : Number(entrada.smtp_porta)
   const usuario = limpar(entrada.smtp_usuario, atual.smtp_usuario)
   const senhaNova = typeof entrada.smtp_senha === 'string' && entrada.smtp_senha ? entrada.smtp_senha : null
-  const remetente = limpar(entrada.smtp_remetente, atual.smtp_remetente)
+  // Sem < > nem aspas: o nome entra no cabeçalho "De:".
+  const nomeRemetente = limpar(entrada.smtp_nome_remetente, atual.smtp_nome_remetente).replace(/[<>"]/g, '')
 
   if (urlOllama && !urlHttpValida(urlOllama)) throw new ErroConfigSistema('URL do Ollama inválida: use http:// ou https://.')
   if (!Number.isInteger(porta) || porta < 1 || porta > 65535) throw new ErroConfigSistema('Porta SMTP inválida (1 a 65535).')
-  if (host && !usuario) throw new ErroConfigSistema('Informe o usuário do SMTP.')
-  if (host && !senhaNova && !atual.smtp_senha_definida) throw new ErroConfigSistema('Informe a senha do SMTP.')
+  if (host && !emailValido(usuario)) throw new ErroConfigSistema('Informe o e-mail da conta que envia os alertas.')
+  if (host && !senhaNova && !atual.smtp_senha_definida) throw new ErroConfigSistema('Informe a senha de app da conta.')
 
   const { config } = repositorios
   config.definir(CHAVES_CONFIG.ollamaUrl, urlOllama)
@@ -88,6 +91,6 @@ export function salvarConfigSistema(entrada: SalvarConfigSistemaEntrada): Config
   config.definir(CHAVES_CONFIG.smtpPorta, String(porta))
   config.definir(CHAVES_CONFIG.smtpUsuario, usuario)
   if (senhaNova) config.definir(CHAVES_CONFIG.smtpSenha, senhaNova)
-  config.definir(CHAVES_CONFIG.smtpRemetente, remetente)
+  config.definir(CHAVES_CONFIG.smtpNomeRemetente, nomeRemetente)
   return lerConfigSistema()
 }

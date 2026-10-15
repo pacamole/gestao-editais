@@ -7,9 +7,9 @@ export type ConfigSistema = {
   ollama_modelo: string
   smtp_host: string // '' = SMTP desligado (e-mails só no terminal)
   smtp_porta: number
-  smtp_usuario: string
-  smtp_senha_definida: boolean
-  smtp_remetente: string
+  smtp_usuario: string // e-mail da conta que envia os alertas
+  smtp_senha_definida: boolean // senha de app
+  smtp_nome_remetente: string // nome exibido no "De:"; '' = padrão
 }
 
 // smtp_senha ausente ou vazia mantém a senha atual.
@@ -19,7 +19,7 @@ export type SalvarConfigSistemaEntrada = {
   smtp_porta?: number
   smtp_usuario?: string
   smtp_senha?: string
-  smtp_remetente?: string
+  smtp_nome_remetente?: string
 }
 
 export type ConfigSistemaResposta = { config: ConfigSistema }

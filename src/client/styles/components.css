@@ -258,6 +258,26 @@
   }
 }
 
+/* Passo a passo recolhível (ex.: gerar senha de app na tela de E-mail). */
+.ajuda-senha {
+  padding: var(--esp-3) var(--esp-4);
+  border: 1px solid var(--cor-linha);
+  border-radius: var(--raio-2);
+  background: var(--azul-fundo);
+  color: var(--azul-texto);
+  font-size: var(--texto-sm);
+}
+
+.ajuda-senha summary {
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ajuda-senha ol {
+  margin: var(--esp-2) 0;
+  padding-left: var(--esp-5);
+}
+
 /* ---- Alertas (seção de configurações) ---- */
 
 .alerta-grupo + .alerta-grupo {
