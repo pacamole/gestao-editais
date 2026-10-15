@@ -23,6 +23,12 @@ export function formatarMoeda(valor: number | null | undefined, vazio = '—'): 
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// Tamanho de arquivo: "850 KB", "2,4 MB".
+export function formatarBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
+}
+
 // Texto para qualquer valor: listas viram "a, b" (vazia = semLista), booleanos viram Sim/Não.
 export function rotuloValor(valor: unknown, vazio = '—', semLista = 'Sem restrição'): string {
   if (valor == null || valor === '') return vazio

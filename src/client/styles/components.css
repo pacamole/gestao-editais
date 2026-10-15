@@ -445,6 +445,76 @@
   cursor: default;
 }
 
+/* ---- Base de dados (seção de configurações) ---- */
+
+.base__atual {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-4);
+}
+
+.base__backup {
+  overflow-wrap: anywhere;
+}
+
+/* Os dois cards (levar / trazer) com a mesma altura e o rodapé embaixo. */
+.base__acoes > .card {
+  display: flex;
+  flex-direction: column;
+}
+
+.base__acoes > .card > .card__corpo {
+  flex: 1;
+}
+
+.base__passos {
+  margin: 0;
+  padding-left: var(--esp-5);
+  line-height: 1.8;
+  color: var(--cor-texto-2);
+}
+
+.base__soltar {
+  width: 100%;
+  min-height: 120px;
+  padding: var(--esp-5);
+  font: inherit;
+  cursor: pointer;
+}
+
+.base__soltar:hover {
+  border-color: var(--cor-primaria);
+}
+
+.base__arquivo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+  border: 1px solid var(--cor-linha);
+  border-radius: var(--raio-2);
+  background: var(--cor-superficie-2);
+  overflow-wrap: anywhere;
+}
+
+.base__backups {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.base__backups li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  flex-wrap: wrap;
+  padding: var(--esp-2) 0;
+  border-top: 1px solid var(--cor-linha);
+}
+
 /* ---- Alertas (seção de configurações) ---- */
 
 .alerta-grupo + .alerta-grupo {

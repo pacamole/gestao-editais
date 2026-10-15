@@ -2,7 +2,7 @@ import express, { Router } from 'express'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import type { ErroApi } from '../../shared/api.js'
+import type { ErroApi, ListaBackupsResposta, ResumoBase } from '../../shared/api.js'
 import { novoId } from '../db/index.js'
 import { baseDados, ErroImportacao, nomeExportacao } from '../base/index.js'
 
@@ -41,5 +41,29 @@ rotasBase.post('/importar', express.raw({ type: 'application/octet-stream', limi
     next(erro)
   } finally {
     fs.rmSync(arquivo, { force: true })
+  }
+})
+
+rotasBase.get('/resumo', (_req, res) => {
+  res.json(baseDados.resumo() satisfies ResumoBase)
+})
+
+rotasBase.get('/backups', (_req, res) => {
+  res.json({ backups: baseDados.listarBackups() } satisfies ListaBackupsResposta)
+})
+
+rotasBase.get('/backups/:nome', (req, res) => {
+  const caminho = baseDados.caminhoBackup(req.params.nome)
+  if (!caminho) return res.status(404).json({ erro: 'Backup não encontrado.' } satisfies ErroApi)
+  res.download(caminho, req.params.nome)
+})
+
+// Volta a base para um backup; o estado atual vira um novo backup antes.
+rotasBase.post('/backups/:nome/restaurar', (req, res, next) => {
+  try {
+    res.json(baseDados.restaurar(req.params.nome))
+  } catch (erro) {
+    if (erro instanceof ErroImportacao) return res.status(400).json({ erro: erro.message } satisfies ErroApi)
+    next(erro)
   }
 })

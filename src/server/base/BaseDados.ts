@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
-import type { ResultadoExportacao, ResultadoImportacao, TabelaResumo } from '../../shared/api.js'
+import type { BackupBase, ResultadoExportacao, ResultadoImportacao, ResumoBase, TabelaResumo } from '../../shared/api.js'
 
 // Erro de arquivo recebido (inválido, corrompido ou de outro schema). A base atual não é alterada.
 export class ErroImportacao extends Error {}
@@ -10,6 +10,9 @@ export class ErroImportacao extends Error {}
 const TABELAS_LOCAIS = ['sessao']
 
 const APELIDO = 'importada'
+
+// Só nomes simples de arquivo .db: impede pedir um arquivo fora da pasta de backups.
+const NOME_BACKUP = /^[\w.-]+\.db$/
 
 /**
  * Exporta a base inteira para um arquivo SQLite e importa a partir de um arquivo exportado.
@@ -40,12 +43,12 @@ export class BaseDados {
    * Substitui todos os dados da base atual pelos do arquivo. Antes, grava um backup da
    * base atual em `pastaBackups`. Sessões de login são apagadas (todos entram de novo).
    */
-  importar(arquivo: string): ResultadoImportacao {
+  importar(arquivo: string, motivoBackup = 'antes-da-importacao'): ResultadoImportacao {
     if (!fs.existsSync(arquivo)) throw new ErroImportacao(`Arquivo não encontrado: ${arquivo}`)
     this.anexar(arquivo)
     try {
       const tabelas = this.validar()
-      const backup = this.fazerBackup()
+      const backup = this.fazerBackup(motivoBackup)
 
       // foreign_keys não pode mudar dentro de transação; a integridade já foi checada em validar().
       this.conexao.exec('PRAGMA foreign_keys = OFF')
@@ -71,6 +74,41 @@ export class BaseDados {
     } finally {
       this.desanexar()
     }
+  }
+
+  /** Arquivo, tamanho e contagem de registros da base em uso. */
+  resumo(): ResumoBase {
+    const arquivo = String(this.conexao.prepare('PRAGMA main.database_list').all()[0]?.file ?? '')
+    const paginas = Number(this.conexao.prepare('PRAGMA main.page_count').get()?.page_count ?? 0)
+    const tamanhoPagina = Number(this.conexao.prepare('PRAGMA main.page_size').get()?.page_size ?? 0)
+    return { arquivo, tamanhoBytes: paginas * tamanhoPagina, tabelas: this.resumir('main') }
+  }
+
+  /** Backups automáticos, do mais recente para o mais antigo. */
+  listarBackups(): BackupBase[] {
+    if (!fs.existsSync(this.pastaBackups)) return []
+    return fs
+      .readdirSync(this.pastaBackups)
+      .filter((nome) => NOME_BACKUP.test(nome))
+      .map((nome) => {
+        const info = fs.statSync(path.join(this.pastaBackups, nome))
+        return { nome, tamanhoBytes: info.size, criadoEm: info.mtime.toISOString() }
+      })
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
+  }
+
+  /** Caminho de um backup existente; null se o nome for inválido ou não existir. */
+  caminhoBackup(nome: string): string | null {
+    if (!NOME_BACKUP.test(nome)) return null
+    const caminho = path.join(this.pastaBackups, nome)
+    return fs.existsSync(caminho) ? caminho : null
+  }
+
+  /** Volta a base para um backup. É uma importação: valida e grava um backup do estado atual antes. */
+  restaurar(nome: string): ResultadoImportacao {
+    const caminho = this.caminhoBackup(nome)
+    if (!caminho) throw new ErroImportacao(`Backup não encontrado: ${nome}`)
+    return this.importar(caminho, 'antes-da-restauracao')
   }
 
   // ---- Validação ----
@@ -117,8 +155,10 @@ export class BaseDados {
     this.conexao.prepare('VACUUM INTO ?').run(destino)
   }
 
-  private fazerBackup(): string {
-    const destino = path.join(this.pastaBackups, `antes-da-importacao-${BaseDados.carimbo()}.db`)
+  private fazerBackup(motivo: string): string {
+    // Com segundos: duas importações no mesmo minuto não sobrescrevem o backup uma da outra.
+    const agora = new Date()
+    const destino = path.join(this.pastaBackups, `${motivo}-${BaseDados.carimbo(agora)}${agora.toISOString().slice(17, 19)}.db`)
     this.copiar(destino)
     return destino
   }
