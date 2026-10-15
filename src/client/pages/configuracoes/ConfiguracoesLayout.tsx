@@ -26,7 +26,7 @@ export const gruposConfiguracoes: { grupo: string; secoes: Secao[] }[] = [
   {
     grupo: 'Sistema',
     secoes: [
-      { to: 'ia', rotulo: 'Inteligência artificial', descricao: 'Servidor Ollama usado na extração de dados e no chat.' },
+      { to: 'ia', rotulo: 'Inteligência artificial', descricao: 'Leitura automática dos editais e chat sobre cada edital.' },
       { to: 'base', rotulo: 'Base de dados', descricao: 'Leve a base inteira de um computador para outro: exporte aqui e importe lá.' },
     ],
   },

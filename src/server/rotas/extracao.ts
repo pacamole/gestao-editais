@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { repositorios } from '../repositorios/index.js'
-import { ollamaUrl } from '../config/sistema.js'
+import { conexaoOllama } from '../config/sistema.js'
 import { ErroOllama, extrairCamposDoEdital, type CampoEditalExtraido } from '../chat/ollama.js'
 import { ehMarcadorDeTextoPdf } from '../coleta/pdf.js'
 import { lerPaginaPublica } from '../coleta/pagina.js'
@@ -17,7 +17,7 @@ rotasExtracao.post('/editais/:id/extrair-dados', async (req, res) => {
   }
 
   try {
-    const extracao = await extrairCamposDoEdital(edital.id, edital.texto_extraido, fetch, ollamaUrl())
+    const extracao = await extrairCamposDoEdital(edital.id, edital.texto_extraido, fetch, conexaoOllama())
     const camposAtualizados = salvarCamposExtraidos(edital, extracao)
 
     return res.json({
@@ -62,7 +62,7 @@ rotasExtracao.post('/editais/:id/ler-url', async (req, res) => {
 
     let camposAtualizados: CampoEditalExtraido[] = []
     try {
-      const extracao = await extrairCamposDoEdital(edital.id, textoExtraido, fetch, ollamaUrl())
+      const extracao = await extrairCamposDoEdital(edital.id, textoExtraido, fetch, conexaoOllama())
       camposAtualizados = salvarCamposExtraidos(editalComPagina, extracao)
     } catch (erro) {
       console.error('A página foi lida, mas a extração estruturada com Ollama falhou:', erro)

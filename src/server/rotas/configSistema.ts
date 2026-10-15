@@ -2,20 +2,23 @@ import { Router } from 'express'
 import type { ErroApi } from '../../shared/api.js'
 import type {
   ConfigSistemaResposta,
+  SituacaoOllama,
   TestarEmailResposta,
   TestarOllamaResposta,
 } from '../../shared/tipos/configSistema.js'
+import { cabecalhosOllama, enderecoOllama } from '../chat/ollama.js'
 import {
   configSmtp,
+  conexaoOllamaParaTeste,
   ErroConfigSistema,
   lerConfigSistema,
-  ollamaUrl,
   salvarConfigSistema,
   urlHttpValida,
 } from '../config/sistema.js'
 import { SmtpTransporte } from '../notificacao/transporte.js'
 
 const TIMEOUT_TESTE_OLLAMA_MS = 5_000
+const TIMEOUT_TESTE_NUVEM_MS = 20_000
 
 export const rotasConfigSistema = Router()
 
@@ -59,20 +62,52 @@ rotasConfigSistema.post('/config/sistema/testar-email', async (req, res) => {
   }
 })
 
-// Confere se o Ollama responde e se o modelo usado pelo sistema está instalado.
+// Confere se o Ollama responde, se aceita a chave e se o modelo está disponível.
+// Responde 200 com a situação; 400 só para endereço inválido.
 rotasConfigSistema.post('/config/sistema/testar-ollama', async (req, res) => {
-  const informada = typeof req.body?.url === 'string' ? req.body.url.trim().replace(/\/+$/, '') : ''
-  const url = informada || ollamaUrl()
-  if (!urlHttpValida(url)) return res.status(400).json(erro('URL do Ollama inválida: use http:// ou https://.'))
+  const { modo, conexao } = conexaoOllamaParaTeste(req.body ?? {})
+  if (!urlHttpValida(conexao.url)) return res.status(400).json(erro('Endereço do Ollama inválido: use http:// ou https://.'))
 
+  const responder = (situacao: SituacaoOllama, modelos: string[] = []) =>
+    res.json({ situacao, modo, url: conexao.url, modelo: conexao.modelo, modelos } satisfies TestarOllamaResposta)
+
+  if (modo === 'NUVEM' && !conexao.chave) return responder('SEM_CHAVE')
+
+  const chamar = (caminho: string, init: RequestInit = {}) =>
+    fetch(enderecoOllama(conexao, caminho), {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...cabecalhosOllama(conexao) },
+      signal: AbortSignal.timeout(modo === 'NUVEM' ? TIMEOUT_TESTE_NUVEM_MS : TIMEOUT_TESTE_OLLAMA_MS),
+    })
+
+  let tags: Response
   try {
-    const resposta = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(TIMEOUT_TESTE_OLLAMA_MS) })
-    if (!resposta.ok) return res.status(502).json(erro(`O Ollama respondeu HTTP ${resposta.status}.`))
-    const dados = (await resposta.json()) as { models?: { name?: string }[] }
-    const modelos = (dados.models ?? []).map((m) => m.name ?? '').filter(Boolean)
-    const { ollama_modelo } = lerConfigSistema()
-    res.json({ url, modelos, modelo_disponivel: modelos.includes(ollama_modelo) } satisfies TestarOllamaResposta)
+    tags = await chamar('/api/tags')
   } catch {
-    res.status(502).json(erro(`Não foi possível conectar ao Ollama em ${url}.`))
+    return responder('SEM_CONEXAO')
+  }
+  if (tags.status === 401 || tags.status === 403) return responder('ACESSO_NEGADO')
+  if (!tags.ok) return responder('SEM_CONEXAO')
+
+  const dados = (await tags.json().catch(() => ({}))) as { models?: { name?: string }[] }
+  const modelos = (dados.models ?? []).map((m) => m.name ?? '').filter(Boolean)
+  if (!conexao.modelo || !modelos.includes(conexao.modelo)) return responder('SEM_MODELO', modelos)
+  if (modo === 'LOCAL') return responder('OK', modelos)
+
+  // No Ollama Cloud a lista de modelos é pública: só uma chamada de verdade (1 token) prova que a chave vale.
+  try {
+    const chat = await chamar('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: conexao.modelo,
+        stream: false,
+        messages: [{ role: 'user', content: 'Responda apenas: ok' }],
+        options: { num_predict: 1 },
+      }),
+    })
+    if (chat.status === 401 || chat.status === 403) return responder('ACESSO_NEGADO', modelos)
+    responder(chat.ok ? 'OK' : 'SEM_CONEXAO', modelos)
+  } catch {
+    responder('SEM_CONEXAO', modelos)
   }
 })

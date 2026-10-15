@@ -2,7 +2,7 @@ import { Router, type Response } from 'express'
 import { novoId, transacao } from '../db/index.js'
 import { obterUsuarioId } from '../auth/sessao.js'
 import { repositorios } from '../repositorios/index.js'
-import { ollamaUrl } from '../config/sistema.js'
+import { chatLimiteDiario, conexaoOllama } from '../config/sistema.js'
 import { ErroOllama, transmitirRespostaSobreEdital } from '../chat/ollama.js'
 import type { ErroChatDados, EventoChat, HistoricoChatResposta, LimparChatResposta } from '../../shared/tipos/chat.js'
 
@@ -31,7 +31,7 @@ rotasChat.get('/editais/:id/chat', (req, res) => {
 
   const usuarioId = obterUsuarioId(req)
   const conversa = repositorios.conversa.buscarDoUsuario(edital.id, usuarioId)
-  const limite = repositorios.config.obterNumero('chat_limite_diario', 20)
+  const limite = chatLimiteDiario()
   const inicioDoDia = new Date()
   inicioDoDia.setHours(0, 0, 0, 0)
   const feitasHoje = repositorios.mensagem.contarPerguntasDoUsuarioDesde(usuarioId, inicioDoDia.toISOString())
@@ -61,7 +61,7 @@ rotasChat.post('/editais/:id/chat', async (req, res) => {
 
   return executarPerguntaSerialmente(async () => {
     const usuarioId = obterUsuarioId(req)
-    const limite = repositorios.config.obterNumero('chat_limite_diario', 20)
+    const limite = chatLimiteDiario()
     const inicioDoDia = new Date()
     inicioDoDia.setHours(0, 0, 0, 0)
     const feitasHoje = repositorios.mensagem.contarPerguntasDoUsuarioDesde(usuarioId, inicioDoDia.toISOString())
@@ -102,7 +102,7 @@ rotasChat.post('/editais/:id/chat', async (req, res) => {
         fetch,
         controlador.signal,
         repositorios.perfilEmpresa.obter() ?? null,
-        ollamaUrl(),
+        conexaoOllama(),
       )) {
         conteudo += trecho
         enviarEvento(res, { tipo: 'trecho', conteudo: trecho })

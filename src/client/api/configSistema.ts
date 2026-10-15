@@ -2,6 +2,7 @@ import type {
   ConfigSistemaResposta,
   SalvarConfigSistemaEntrada,
   TestarEmailResposta,
+  TestarOllamaEntrada,
   TestarOllamaResposta,
 } from '../../shared/tipos/configSistema'
 import { requisicao } from './cliente'
@@ -15,6 +16,7 @@ export const configSistema = {
   testarEmail: (para: string) =>
     requisicao<TestarEmailResposta>('/api/config/sistema/testar-email', { metodo: 'POST', corpo: { para } }),
 
-  testarOllama: (url?: string) =>
-    requisicao<TestarOllamaResposta>('/api/config/sistema/testar-ollama', { metodo: 'POST', corpo: { url } }),
+  // Sem campos, testa o que está salvo; com campos, testa o que foi digitado.
+  testarOllama: (entrada: TestarOllamaEntrada = {}) =>
+    requisicao<TestarOllamaResposta>('/api/config/sistema/testar-ollama', { metodo: 'POST', corpo: entrada }),
 }

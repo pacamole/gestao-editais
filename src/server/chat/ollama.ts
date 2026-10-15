@@ -1,9 +1,31 @@
 import { buscarTrechosEdital } from './indiceEdital.js'
 import type { Modalidade, PerfilEmpresa } from '../dominio/entidades.js'
 
-// Parâmetros fixos do modelo; só a URL do Ollama é configurável (tabela `config`).
+// Onde está o Ollama e qual modelo usar (tabela `config`, tela Configurações › IA):
+// local, com o gemma2 fixo, ou Ollama Cloud, com chave de API e modelo escolhido.
 export const OLLAMA_URL_PADRAO = 'http://localhost:11434'
-export const MODELO = 'gemma2:latest'
+export const MODELO = 'gemma2:latest' // modelo do modo local
+// API direta do Ollama Cloud; a chave vem da conta em ollama.com/settings/keys.
+export const OLLAMA_CLOUD_URL = 'https://ollama.com'
+
+export type ConexaoOllama = { url: string; chave: string | null; modelo: string }
+export const CONEXAO_OLLAMA_PADRAO: ConexaoOllama = { url: OLLAMA_URL_PADRAO, chave: null, modelo: MODELO }
+
+// Mantém o caminho do endereço (ex.: http://servidor/ollama + /api/chat).
+export function enderecoOllama(conexao: ConexaoOllama, caminho: string): string {
+  return `${conexao.url.replace(/\/+$/, '')}${caminho}`
+}
+
+export function cabecalhosOllama(conexao: ConexaoOllama): Record<string, string> {
+  return conexao.chave ? { Authorization: `Bearer ${conexao.chave}` } : {}
+}
+
+// 401/403: o servidor recusou a chave de API (ou a falta dela).
+function erroDeAcesso(status: number): ErroOllama | null {
+  if (status !== 401 && status !== 403) return null
+  return new ErroOllama('O Ollama Cloud recusou a chave de API. Confira em Configurações › Inteligência artificial.', 503)
+}
+
 const TIMEOUT_MS = 600_000
 const CONTEXTO_TOKENS = 8192
 
@@ -118,7 +140,7 @@ export async function extrairCamposDoEdital(
   editalId: string,
   textoEdital: string,
   fazerFetch: typeof fetch = fetch,
-  baseUrl = OLLAMA_URL_PADRAO,
+  conexao: ConexaoOllama = CONEXAO_OLLAMA_PADRAO,
 ): Promise<ResultadoExtracaoEdital> {
   const trechosUnicos = new Set<string>()
   let contexto = ''
@@ -136,12 +158,12 @@ export async function extrairCamposDoEdital(
 
   let resposta: Response
   try {
-    resposta = await fazerFetch(new URL('/api/chat', baseUrl), {
+    resposta = await fazerFetch(enderecoOllama(conexao, '/api/chat'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...cabecalhosOllama(conexao) },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       body: JSON.stringify({
-        model: MODELO,
+        model: conexao.modelo,
         stream: false,
         keep_alive: '5m',
         format: 'json',
@@ -180,7 +202,7 @@ export async function extrairCamposDoEdital(
   }
 
   if (!resposta.ok) {
-    throw new ErroOllama(`O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${MODELO} está instalado.`, 503)
+    throw erroDeAcesso(resposta.status) ?? new ErroOllama(`O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${conexao.modelo} está disponível.`, 503)
   }
 
   let conteudo: unknown
@@ -233,7 +255,7 @@ export async function* transmitirRespostaSobreEdital(
   fazerFetch: typeof fetch = fetch,
   signal?: AbortSignal,
   perfilEmpresa?: PerfilEmpresa | null,
-  baseUrl = OLLAMA_URL_PADRAO,
+  conexao: ConexaoOllama = CONEXAO_OLLAMA_PADRAO,
 ): AsyncGenerator<string> {
   const historicoLimitado: MensagemHistorico[] = []
   let caracteresHistorico = 0
@@ -266,15 +288,15 @@ export async function* transmitirRespostaSobreEdital(
 
   let resposta: Response
   try {
-    resposta = await fazerFetch(new URL('/api/chat', baseUrl), {
+    resposta = await fazerFetch(enderecoOllama(conexao, '/api/chat'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...cabecalhosOllama(conexao) },
       signal: AbortSignal.any([
         AbortSignal.timeout(TIMEOUT_MS),
         ...(signal ? [signal] : []),
       ]),
       body: JSON.stringify({
-        model: MODELO,
+        model: conexao.modelo,
         stream: true,
         keep_alive: '5m',
         options: {
@@ -321,8 +343,8 @@ export async function* transmitirRespostaSobreEdital(
   }
 
   if (!resposta.ok) {
-    throw new ErroOllama(
-      `O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${MODELO} está instalado.`,
+    throw erroDeAcesso(resposta.status) ?? new ErroOllama(
+      `O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${conexao.modelo} está disponível.`,
       503,
     )
   }

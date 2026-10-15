@@ -119,7 +119,9 @@ Ficam no banco e podem ser alteradas a qualquer momento, sem reiniciar o servido
 
 | Chave | Uso |
 | --- | --- |
-| `ollama_url` | Endereço do Ollama (padrão `http://localhost:11434`) |
+| `ollama_modo` | `LOCAL` (Ollama neste computador) ou `NUVEM` (Ollama Cloud, ollama.com) |
+| `ollama_url` | Modo local: endereço do Ollama (padrão `http://localhost:11434`); modelo fixo `gemma2:latest` |
+| `ollama_chave`, `ollama_modelo_nuvem` | Modo nuvem: chave de API da conta Ollama (ollama.com/settings/keys) e modelo escolhido |
 | `smtp_host`, `smtp_porta`, `smtp_usuario`, `smtp_senha`, `smtp_nome_remetente` | Envio de e-mail (tela Configurações › E-mail). `smtp_usuario` é o e-mail da conta que envia e `smtp_senha` a senha de app dessa conta. Sem `smtp_host`, os e-mails só são impressos no terminal. |
 | `chat_limite_diario` | Perguntas por usuário por dia no chat (padrão 20) |
 

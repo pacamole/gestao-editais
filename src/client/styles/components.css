@@ -278,6 +278,173 @@
   padding-left: var(--esp-5);
 }
 
+/* ---- Inteligência artificial (seção de configurações) ---- */
+
+/* Painel de status: borda lateral colorida + ponto antes do título. */
+.status-ia {
+  border-left: 4px solid var(--cinza-solido);
+}
+
+.status-ia--ok {
+  border-left-color: var(--verde-solido);
+}
+
+.status-ia--erro {
+  border-left-color: var(--vermelho-solido);
+}
+
+.status-ia__titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  font-size: var(--texto-lg);
+}
+
+.status-ia__titulo::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cinza-solido);
+}
+
+.status-ia--ok .status-ia__titulo::before {
+  background: var(--verde-solido);
+}
+
+.status-ia--erro .status-ia__titulo::before {
+  background: var(--vermelho-solido);
+}
+
+/* Guia passo a passo: concluídos com ✓, o atual destacado e aberto. */
+.passos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passo {
+  display: flex;
+  gap: var(--esp-3);
+  padding: var(--esp-3);
+  border-radius: var(--raio-2);
+}
+
+.passo__icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--cinza-fundo);
+  color: var(--cinza-texto);
+  font-size: var(--texto-sm);
+  font-weight: 700;
+}
+
+.passo__conteudo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--esp-2);
+  min-width: 0;
+}
+
+.passo--feito .passo__icone {
+  background: var(--verde-fundo);
+  color: var(--verde-texto);
+}
+
+.passo--feito strong {
+  color: var(--cor-texto-2);
+}
+
+.passo--atual {
+  background: var(--laranja-fundo);
+}
+
+.passo--atual .passo__icone {
+  background: var(--laranja-solido);
+  color: #fff;
+}
+
+.passo--pendente strong {
+  color: var(--cor-texto-3);
+  font-weight: 500;
+}
+
+/* Comando de terminal com botão de copiar. */
+.comando {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  max-width: 100%;
+  padding: var(--esp-2) var(--esp-2) var(--esp-2) var(--esp-3);
+  border-radius: var(--raio-2);
+  background: var(--cor-menu);
+  color: var(--cor-menu-texto-ativo);
+}
+
+.comando code {
+  overflow-x: auto;
+  font-family: var(--fonte-mono);
+  white-space: nowrap;
+}
+
+/* Campo que ocupa o espaço livre ao lado de um botão, numa .linha. */
+.campo-flex {
+  flex: 1;
+  min-width: 200px;
+  width: auto;
+}
+
+.usos-ia {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usos-ia li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--esp-4);
+  border-left: 2px solid var(--cor-primaria-suave);
+}
+
+.avancado-ia {
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.avancado-ia form {
+  margin-top: var(--esp-3);
+}
+
+/* Botão com cara de link, para ações discretas dentro de um texto de ajuda. */
+.link-botao {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cor-primaria);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-botao:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ---- Alertas (seção de configurações) ---- */
 
 .alerta-grupo + .alerta-grupo {

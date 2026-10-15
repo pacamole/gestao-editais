@@ -1,6 +1,7 @@
 import { repositorios } from '../repositorios/index.js'
 import { PARAMETROS_PADRAO, TIPOS_NOTIFICACAO } from '../notificacao/parametros.js'
 import { CRITERIOS_PADRAO } from '../dominio/criteriosPadrao.js'
+import { CHAT_LIMITE_DIARIO_PADRAO, CHAVES_CONFIG } from '../config/sistema.js'
 
 const DESTINATARIOS_INICIADOS = 'destinatarios_iniciados'
 
@@ -42,8 +43,8 @@ export function garantirBootstraps() {
     }
   }
 
-  if (!repositorios.config.obter('chat_limite_diario')) {
-    repositorios.config.definir('chat_limite_diario', '20')
+  if (!repositorios.config.obter(CHAVES_CONFIG.chatLimiteDiario)) {
+    repositorios.config.definir(CHAVES_CONFIG.chatLimiteDiario, String(CHAT_LIMITE_DIARIO_PADRAO))
   }
 
   // Uma vez só: a lista de destinatários começa com os usuários existentes.
