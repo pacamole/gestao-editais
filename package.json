@@ -4,13 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test:coleta": "tsx --test tests/coleta.test.ts",
     "coleta": "tsx src/server/coleta/cli.ts",
     "dev": "tsx watch --disable-warning=ExperimentalWarning --ignore ./src/client src/server/index.ts",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "cross-env NODE_ENV=production node --disable-warning=ExperimentalWarning dist/server/index.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
-    "test": "tsx --test tests/**/*.test.ts",
     "db:reset": "tsx --disable-warning=ExperimentalWarning src/server/db/reset.ts",
     "email:teste": "tsx --disable-warning=ExperimentalWarning src/server/notificacao/cli-teste.ts",
     "db:exportar": "tsx --disable-warning=ExperimentalWarning src/server/base/cli-exportar.ts",

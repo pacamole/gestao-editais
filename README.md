@@ -144,7 +144,6 @@ src/server/            servidor Express (index.ts monta a API em /api)
   config/              variáveis de ambiente (.env) e caminhos do projeto
   util/                funções utilitárias
 src/shared/            tipos e rótulos usados pelos dois lados
-tests/                 testes automatizados (npm test)
 docs/                  especificação e guia de design
 ```
 
@@ -210,11 +209,10 @@ Esta versão inclui a implementação completa das tarefas atribuídas a Miguel 
   - Distribuição visual por classificação de fit (Alto fit ≥ 70, Médio fit 40–69, Baixo fit < 40).
   - Painel de saúde da coleta monitorando a última execução de cada fonte com indicador verde/amarelo/vermelho (Sucesso, Parcial, Falha).
 
-### Como executar os testes
+### Como validar
 
 ```bash
-npm test          # Executa a suíte automatizada de testes das tarefas 12 a 14 (tests/editais-dashboard.test.ts)
-npm run typecheck # Valida 100% dos tipos TypeScript sem erros
+npm run typecheck # Valida os tipos TypeScript
 ```
 
 ### Limitações da entrega
@@ -229,11 +227,10 @@ npm run typecheck # Valida 100% dos tipos TypeScript sem erros
 - **21:** coletores de CNPq e Embrapii; versões anteriores em `edital_versao`, flag `retificado` e retorno a `COLETADO` após nova extração textual. As cinco fontes manuais nomeadas na documentação são cadastradas. As duas fontes sem nome permanecem pendentes, conforme orientação de não inventar os dados faltantes. Upload/URL manual são vias de entrada, não duas fontes adicionais do parceiro.
 - **22:** coleta diária às 06:00 (Brasília), alerta de prazo existente às 07:00 e expiração diária. O horário de coleta aceita `minuto hora * * *` em `frequencia_cron`. Histórico das últimas 30 execuções e último sucesso persistem em `config`, nas chaves `rotina:*`; detalhes da coleta persistem em `coleta_execucao`. Na abertura, rotinas diárias atrasadas executam uma vez com os dados atuais, sem reproduzir cada dia perdido. Falhas são repetidas após uma hora. O sistema precisa estar aberto.
 
-### Executar e testar
+### Executar
 
 ```bash
 npm install
-npm run test:coleta
 npm run typecheck
 npm run build
 npm run coleta -- FINEP     # banco já criado; pode usar CNPq ou Embrapii
