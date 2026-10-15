@@ -7,11 +7,11 @@ import { registroRotinas, tarefasColeta } from "./coleta/rotinas.js";
 import { ehErroDeConexaoNuvem } from "./db/conexao.js";
 import { bancoVazio } from "./db/index.js";
 import { tarefasNotificacao } from "./notificacao/index.js";
+import { appUrl, porta } from "./config/app.js";
 import { root } from "./config/paths.js";
 import { rotasApi } from "./rotas/index.js";
 
 const isProd = process.env.NODE_ENV === "production";
-const port = Number(process.env.PORT ?? 3000);
 
 if (bancoVazio()) {
   console.error(
@@ -60,8 +60,8 @@ if (isProd) {
   app.use(vite.middlewares);
 }
 
-app.listen(port, () => {
-  console.log(`http://localhost:${port}`);
+app.listen(porta, () => {
+  console.log(appUrl);
   new Agendador(
     [...tarefasColeta(), ...tarefasNotificacao],
     60_000,
