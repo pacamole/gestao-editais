@@ -50,19 +50,19 @@ export class ConsoleTransporte implements TransporteEmail {
   }
 }
 
-// SMTP se SMTP_HOST estiver definido; senão, console.
-export function criarTransporte(): TransporteEmail {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env
-  if (!SMTP_HOST) {
-    console.warn('SMTP_HOST não definido: e-mails serão apenas impressos no terminal.')
-    return new ConsoleTransporte()
+// Lê a configuração do SMTP a cada envio, então mudanças valem sem reiniciar.
+// Sem SMTP configurado, imprime no terminal.
+export class TransporteConfiguravel implements TransporteEmail {
+  private readonly console = new ConsoleTransporte()
+  private smtp?: { chave: string; transporte: SmtpTransporte }
+
+  constructor(private readonly lerConfig: () => ConfigSmtp | null) {}
+
+  async enviar(mensagem: MensagemEmail): Promise<void> {
+    const config = this.lerConfig()
+    if (!config) return this.console.enviar(mensagem)
+    const chave = JSON.stringify(config)
+    if (this.smtp?.chave !== chave) this.smtp = { chave, transporte: new SmtpTransporte(config) }
+    await this.smtp.transporte.enviar(mensagem)
   }
-  if (!SMTP_USER || !SMTP_PASS) throw new Error('Defina SMTP_USER e SMTP_PASS no .env.')
-  return new SmtpTransporte({
-    host: SMTP_HOST,
-    porta: Number(SMTP_PORT ?? 465),
-    usuario: SMTP_USER,
-    senha: SMTP_PASS,
-    remetente: SMTP_FROM ?? `Editais I9+ <${SMTP_USER}>`,
-  })
 }

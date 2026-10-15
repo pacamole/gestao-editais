@@ -2,6 +2,7 @@ import { Router, type Response } from 'express'
 import { novoId, transacao } from '../db/index.js'
 import { obterUsuarioId } from '../auth/sessao.js'
 import { repositorios } from '../repositorios/index.js'
+import { ollamaUrl } from '../config/sistema.js'
 import { ErroOllama, transmitirRespostaSobreEdital } from '../chat/ollama.js'
 import type { ErroChatDados, EventoChat, HistoricoChatResposta, LimparChatResposta } from '../../shared/tipos/chat.js'
 
@@ -101,6 +102,7 @@ rotasChat.post('/editais/:id/chat', async (req, res) => {
         fetch,
         controlador.signal,
         repositorios.perfilEmpresa.obter() ?? null,
+        ollamaUrl(),
       )) {
         conteudo += trecho
         enviarEvento(res, { tipo: 'trecho', conteudo: trecho })

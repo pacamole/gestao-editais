@@ -1,6 +1,12 @@
 import { buscarTrechosEdital } from './indiceEdital.js'
 import type { Modalidade, PerfilEmpresa } from '../dominio/entidades.js'
 
+// Parâmetros fixos do modelo; só a URL do Ollama é configurável (tabela `config`).
+export const OLLAMA_URL_PADRAO = 'http://localhost:11434'
+const MODELO = 'gemma2:latest'
+const TIMEOUT_MS = 600_000
+const CONTEXTO_TOKENS = 8192
+
 export type MensagemHistorico = {
   papel: 'USUARIO' | 'ASSISTENTE'
   conteudo: string
@@ -112,6 +118,7 @@ export async function extrairCamposDoEdital(
   editalId: string,
   textoEdital: string,
   fazerFetch: typeof fetch = fetch,
+  baseUrl = OLLAMA_URL_PADRAO,
 ): Promise<ResultadoExtracaoEdital> {
   const trechosUnicos = new Set<string>()
   let contexto = ''
@@ -127,24 +134,20 @@ export async function extrairCamposDoEdital(
   }
   if (!contexto) throw new ErroOllama('Não encontrei trechos suficientes no texto para extrair os dados. Verifique se o PDF tem texto legível.', 422)
 
-  const baseUrl = process.env.OLLAMA_URL?.trim() || 'http://localhost:11434'
-  const modelo = process.env.OLLAMA_MODEL?.trim() || 'gemma2:latest'
-  const timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS ?? 600_000)
-  const contextoTokens = Number(process.env.OLLAMA_NUM_CTX ?? 8192)
   let resposta: Response
   try {
     resposta = await fazerFetch(new URL('/api/chat', baseUrl), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 600_000),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
       body: JSON.stringify({
-        model: modelo,
+        model: MODELO,
         stream: false,
         keep_alive: '5m',
         format: 'json',
         options: {
           temperature: 0,
-          num_ctx: Number.isFinite(contextoTokens) && contextoTokens > 0 ? contextoTokens : 8192,
+          num_ctx: CONTEXTO_TOKENS,
           num_predict: 2048,
         },
         messages: [
@@ -177,7 +180,7 @@ export async function extrairCamposDoEdital(
   }
 
   if (!resposta.ok) {
-    throw new ErroOllama(`O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${modelo} está instalado.`, 503)
+    throw new ErroOllama(`O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${MODELO} está instalado.`, 503)
   }
 
   let conteudo: unknown
@@ -230,11 +233,8 @@ export async function* transmitirRespostaSobreEdital(
   fazerFetch: typeof fetch = fetch,
   signal?: AbortSignal,
   perfilEmpresa?: PerfilEmpresa | null,
+  baseUrl = OLLAMA_URL_PADRAO,
 ): AsyncGenerator<string> {
-  const baseUrl = process.env.OLLAMA_URL?.trim() || 'http://localhost:11434'
-  const modelo = process.env.OLLAMA_MODEL?.trim() || 'gemma2:latest'
-  const timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS ?? 600_000)
-  const contexto = Number(process.env.OLLAMA_NUM_CTX ?? 8192)
   const historicoLimitado: MensagemHistorico[] = []
   let caracteresHistorico = 0
   for (const mensagem of historico.slice(-6).reverse()) {
@@ -270,16 +270,16 @@ export async function* transmitirRespostaSobreEdital(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: AbortSignal.any([
-        AbortSignal.timeout(Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 600_000),
+        AbortSignal.timeout(TIMEOUT_MS),
         ...(signal ? [signal] : []),
       ]),
       body: JSON.stringify({
-        model: modelo,
+        model: MODELO,
         stream: true,
         keep_alive: '5m',
         options: {
           temperature: 0.2,
-          num_ctx: Number.isFinite(contexto) && contexto > 0 ? contexto : 8192,
+          num_ctx: CONTEXTO_TOKENS,
           num_predict: 2048,
         },
         messages: [
@@ -322,7 +322,7 @@ export async function* transmitirRespostaSobreEdital(
 
   if (!resposta.ok) {
     throw new ErroOllama(
-      `O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${modelo} está instalado.`,
+      `O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${MODELO} está instalado.`,
       503,
     )
   }

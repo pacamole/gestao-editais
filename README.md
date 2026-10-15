@@ -112,8 +112,16 @@ Depois, entre no sistema com os usuários da base importada.
 | `PORT` | Porta do servidor (padrão 3000) |
 | `DATABASE_PATH` | Caminho do banco (padrão `data/editais.db`) |
 | `APP_URL` | Endereço do sistema, usado nos links dos e-mails |
-| `GESTOR_NOME`, `GESTOR_EMAIL`, `GESTOR_SENHA` | Usuário Gestor criado pelo `db:reset` |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Envio de e-mail. Sem `SMTP_HOST`, os e-mails só são impressos no terminal. |
+
+### Configurações do sistema (tabela `config`)
+
+Ficam no banco e podem ser alteradas a qualquer momento, sem reiniciar o servidor.
+
+| Chave | Uso |
+| --- | --- |
+| `ollama_url` | Endereço do Ollama (padrão `http://localhost:11434`) |
+| `smtp_host`, `smtp_porta`, `smtp_usuario`, `smtp_senha`, `smtp_remetente` | Envio de e-mail. Sem `smtp_host`, os e-mails só são impressos no terminal. Porta padrão 465. |
+| `chat_limite_diario` | Perguntas por usuário por dia no chat (padrão 20) |
 
 ## Estrutura
 
@@ -150,17 +158,17 @@ Esta versão inclui a implementação da parte de Bhrendon na Etapa 5:
 
 ### Como testar
 
-1. Copie `.env.example` para `.env` e defina `GESTOR_EMAIL` e `GESTOR_SENHA`.
+1. Copie `.env.example` para `.env`.
 2. Execute `npm install`.
-3. Execute `npm run db:reset` para criar o banco e o usuário gestor.
+3. Execute `npm run db:reset` para criar o banco.
 4. Execute `npm run dev`.
-5. Abra `http://localhost:3000/login` e entre com as credenciais definidas no `.env`.
+5. Abra `http://localhost:3000`. Na primeira vez, clique em **Criar conta**; todo usuário tem acesso total.
 
 ### Implementação — tarefas 23, 24, 25 e 26 (Samuel)
 **Chat com Ollama**
-O chat usa o Ollama local com Gemma 2 9B (`gemma2:latest`). Instale o Ollama, baixe o modelo com `ollama pull gemma2:latest`, deixe o serviço em execução e inicie o sistema com `npm run dev`. As opções `OLLAMA_URL`, `OLLAMA_MODEL`, `OLLAMA_TIMEOUT_MS` e `OLLAMA_NUM_CTX` podem ser configuradas no `.env`; os valores padrão apontam para `http://localhost:11434`, `gemma2:latest`, 600 segundos e contexto de 8.192 tokens. Se já tiver baixado a tag `gemma2:9b`, defina `OLLAMA_MODEL=gemma2:9b`.
+O chat usa o Ollama local com Gemma 2 9B (`gemma2:latest`). Instale o Ollama, baixe o modelo com `ollama pull gemma2:latest`, deixe o serviço em execução e inicie o sistema com `npm run dev`. O modelo (`gemma2:latest`), o tempo limite (600 segundos) e o contexto (8.192 tokens) são fixos no código; o endereço do Ollama é a configuração `ollama_url` (padrão `http://localhost:11434`).
 
-Em cada pergunta, o chat envia ao Gemma o texto completo do edital, sem selecionar passagens por palavras-chave e sem bloquear perguntas por parecerem fora de contexto. Isso pode aumentar o tempo de resposta e o uso de memória, mas dá ao modelo acesso a todo o texto disponível. O Gemma também recebe os dados relevantes do **Perfil da Empresa** e pode comparar porte, CNAE, localização, faturamento, áreas de atuação, contrapartida, parceria ICT e certidões com os requisitos do edital. Essa análise é informativa, não uma decisão oficial. Respostas aparecem progressivamente; o limite de saída é de 2.048 tokens por resposta. O contexto padrão do Ollama é de 8.192 tokens (`OLLAMA_NUM_CTX`): editais e históricos que excedam esse limite podem não caber integralmente no contexto efetivo do modelo. O limite diário padrão é de 20 perguntas por usuário e pode ser alterado pela chave `chat_limite_diario` na tabela `config`.
+Em cada pergunta, o chat envia ao Gemma o texto completo do edital, sem selecionar passagens por palavras-chave e sem bloquear perguntas por parecerem fora de contexto. Isso pode aumentar o tempo de resposta e o uso de memória, mas dá ao modelo acesso a todo o texto disponível. O Gemma também recebe os dados relevantes do **Perfil da Empresa** e pode comparar porte, CNAE, localização, faturamento, áreas de atuação, contrapartida, parceria ICT e certidões com os requisitos do edital. Essa análise é informativa, não uma decisão oficial. Respostas aparecem progressivamente; o limite de saída é de 2.048 tokens por resposta. O contexto do Ollama é de 8.192 tokens: editais e históricos que excedam esse limite podem não caber integralmente no contexto efetivo do modelo. O limite diário padrão é de 20 perguntas por usuário e pode ser alterado pela chave `chat_limite_diario` na tabela `config`.
 
 Ao salvar o Perfil da Empresa, o histórico de mensagens dos chats é limpo para impedir que respostas anteriores baseadas no perfil antigo sejam reutilizadas. Se **Reavaliar todos os editais ativos com o novo perfil** estiver marcado, o sistema cria uma nova avaliação para cada edital ativo com os critérios atuais e informa quantos foram reavaliados.
 

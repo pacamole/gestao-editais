@@ -1,13 +1,14 @@
+import { configSmtp } from '../config/sistema.js'
 import type { Tarefa } from '../infra/agendador.js'
 import { repositorios } from '../repositorios/index.js'
 import { GatilhosNotificacao } from './gatilhos.js'
 import { NotificacaoServico } from './servico.js'
-import { criarTransporte } from './transporte.js'
+import { TransporteConfiguravel } from './transporte.js'
 
 // RNF05: prazos verificados 1× por dia, às 07:00.
 const HORA_VERIFICACAO_PRAZOS = '07:00'
 
-export const notificacaoServico = new NotificacaoServico(criarTransporte(), repositorios)
+export const notificacaoServico = new NotificacaoServico(new TransporteConfiguravel(configSmtp), repositorios)
 export const gatilhosNotificacao = new GatilhosNotificacao(notificacaoServico, repositorios)
 
 export const tarefasNotificacao: Tarefa[] = [
