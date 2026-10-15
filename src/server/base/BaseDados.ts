@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { DatabaseSync } from 'node:sqlite'
+import { DatabaseSync } from 'node:sqlite'
 import type { BackupBase, ResultadoExportacao, ResultadoImportacao, ResumoBase, TabelaResumo } from '../../shared/api.js'
+import type { Conexao, ValorSql } from '../db/conexao.js'
 
 // Erro de arquivo recebido (inválido, corrompido ou de outro schema). A base atual não é alterada.
 export class ErroImportacao extends Error {}
@@ -9,79 +10,74 @@ export class ErroImportacao extends Error {}
 // Tabelas que não viajam entre computadores: sessões de login valem só onde foram criadas.
 const TABELAS_LOCAIS = ['sessao']
 
-const APELIDO = 'importada'
-
 // Só nomes simples de arquivo .db: impede pedir um arquivo fora da pasta de backups.
 const NOME_BACKUP = /^[\w.-]+\.db$/
 
+// Parâmetros por INSERT em lote (abaixo do limite do SQLite e leve para a nuvem).
+const PARAMETROS_POR_LOTE = 500
+
+// Situação de uma base na nuvem antes de conectar.
+export type AnaliseNuvem =
+  | { situacao: 'VAZIA' }
+  | { situacao: 'COM_DADOS'; tabelas: TabelaResumo[] }
+  | { situacao: 'SCHEMA_DIFERENTE'; diferencas: string[] }
+
 /**
- * Exporta a base inteira para um arquivo SQLite e importa a partir de um arquivo exportado.
+ * Exporta, importa e faz backup da base, com a base local (node:sqlite) ou na nuvem (libsql).
  *
- * A importação não troca o arquivo do banco: anexa o arquivo recebido (ATTACH) e copia os
- * dados tabela a tabela numa transação. Assim funciona com o servidor rodando e valida
- * tudo antes de tocar na base atual.
+ * Não usa ATTACH: na base da nuvem as escritas vão para o servidor, que não enxerga arquivos
+ * deste computador. Por isso o arquivo recebido é aberto numa conexão própria e as linhas são
+ * copiadas em lotes, dentro de uma transação, depois de tudo validado.
  */
 export class BaseDados {
   constructor(
-    private readonly conexao: DatabaseSync,
+    // Função, e não a conexão: a base em uso pode ser trocada com o servidor rodando.
+    private readonly conexao: () => Conexao,
     private readonly pastaBackups: string,
+    private readonly arquivoSchema: string,
   ) {}
 
-  /** Grava uma cópia consistente da base em `destino`, sem as tabelas locais. */
+  /** Grava uma cópia da base em `destino`, sem as tabelas locais. */
   exportar(destino: string): ResultadoExportacao {
-    this.copiar(destino)
-    this.anexar(destino)
+    this.copiarPara(destino)
+    const copia = new DatabaseSync(destino)
     try {
-      for (const tabela of TABELAS_LOCAIS) this.conexao.exec(`DELETE FROM ${APELIDO}.${tabela}`)
-      return { arquivo: destino, tamanhoBytes: fs.statSync(destino).size, tabelas: this.resumir(APELIDO) }
+      for (const tabela of TABELAS_LOCAIS) copia.exec(`DELETE FROM ${tabela}`)
+      return { arquivo: destino, tamanhoBytes: fs.statSync(destino).size, tabelas: resumir(copia) }
     } finally {
-      this.desanexar()
+      copia.close()
     }
   }
 
   /**
-   * Substitui todos os dados da base atual pelos do arquivo. Antes, grava um backup da
+   * Substitui todos os dados da base em uso pelos do arquivo. Antes, grava um backup da
    * base atual em `pastaBackups`. Sessões de login são apagadas (todos entram de novo).
    */
   importar(arquivo: string, motivoBackup = 'antes-da-importacao'): ResultadoImportacao {
     if (!fs.existsSync(arquivo)) throw new ErroImportacao(`Arquivo não encontrado: ${arquivo}`)
-    this.anexar(arquivo)
+    const fonte = abrirArquivoRecebido(arquivo)
     try {
-      const tabelas = this.validar()
+      const destino = this.conexao()
+      const nomes = validarContra(fonte, destino)
       const backup = this.fazerBackup(motivoBackup)
-
-      // foreign_keys não pode mudar dentro de transação; a integridade já foi checada em validar().
-      this.conexao.exec('PRAGMA foreign_keys = OFF')
-      try {
-        this.conexao.exec('BEGIN')
-        try {
-          for (const tabela of tabelas) {
-            this.conexao.exec(`DELETE FROM main.${tabela}`)
-            if (TABELAS_LOCAIS.includes(tabela)) continue
-            const colunas = this.colunas('main', tabela).join(', ')
-            this.conexao.exec(`INSERT INTO main.${tabela} (${colunas}) SELECT ${colunas} FROM ${APELIDO}.${tabela}`)
-          }
-          this.conexao.exec('COMMIT')
-        } catch (erro) {
-          this.conexao.exec('ROLLBACK')
-          throw erro
-        }
-      } finally {
-        this.conexao.exec('PRAGMA foreign_keys = ON')
-      }
-
-      return { backup, tabelas: this.resumir('main') }
+      substituirDados(fonte, destino, nomes)
+      return { backup, tabelas: resumir(destino) }
     } finally {
-      this.desanexar()
+      fonte.close()
     }
   }
 
   /** Arquivo, tamanho e contagem de registros da base em uso. */
   resumo(): ResumoBase {
-    const arquivo = String(this.conexao.prepare('PRAGMA main.database_list').all()[0]?.file ?? '')
-    const paginas = Number(this.conexao.prepare('PRAGMA main.page_count').get()?.page_count ?? 0)
-    const tamanhoPagina = Number(this.conexao.prepare('PRAGMA main.page_size').get()?.page_size ?? 0)
-    return { arquivo, tamanhoBytes: paginas * tamanhoPagina, tabelas: this.resumir('main') }
+    const conexao = this.conexao()
+    const arquivo = String(conexao.prepare('PRAGMA main.database_list').all()[0]?.file ?? '')
+    let tamanhoBytes = 0
+    try {
+      tamanhoBytes = arquivo ? fs.statSync(arquivo).size : 0
+    } catch {
+      // Arquivo inacessível: segue sem o tamanho.
+    }
+    return { arquivo, tamanhoBytes, tabelas: resumir(conexao) }
   }
 
   /** Backups automáticos, do mais recente para o mais antigo. */
@@ -111,102 +107,175 @@ export class BaseDados {
     return this.importar(caminho, 'antes-da-restauracao')
   }
 
-  // ---- Validação ----
+  // ---- Base na nuvem ----
 
-  // Confere que o arquivo anexado é um SQLite íntegro, com o mesmo schema da base atual.
-  private validar(): string[] {
-    const integridade = this.conexao.prepare(`PRAGMA ${APELIDO}.integrity_check`).get()?.integrity_check
-    if (integridade !== 'ok') throw new ErroImportacao(`Arquivo corrompido: ${String(integridade)}`)
-
-    const atuais = this.tabelas('main')
-    const recebidas = this.tabelas(APELIDO)
-    const diferencas: string[] = []
-
-    for (const tabela of atuais.filter((t) => !recebidas.includes(t))) diferencas.push(`falta a tabela ${tabela}`)
-    for (const tabela of recebidas.filter((t) => !atuais.includes(t))) diferencas.push(`tabela desconhecida ${tabela}`)
-    for (const tabela of atuais.filter((t) => recebidas.includes(t))) {
-      const esperadas = this.colunas('main', tabela)
-      const encontradas = this.colunas(APELIDO, tabela)
-      for (const c of esperadas.filter((c) => !encontradas.includes(c))) diferencas.push(`falta a coluna ${tabela}.${c}`)
-      for (const c of encontradas.filter((c) => !esperadas.includes(c))) diferencas.push(`coluna desconhecida ${tabela}.${c}`)
+  /** Compara uma base na nuvem com o schema desta versão do sistema. */
+  analisarNuvem(remota: Conexao): AnaliseNuvem {
+    if (!tabelas(remota).length) return { situacao: 'VAZIA' }
+    const referencia = this.schemaDeReferencia()
+    try {
+      const diferencas = diferencasDeSchema(referencia, remota)
+      if (diferencas.length) return { situacao: 'SCHEMA_DIFERENTE', diferencas }
+      return { situacao: 'COM_DADOS', tabelas: resumir(remota) }
+    } finally {
+      referencia.close()
     }
-    if (diferencas.length) {
-      throw new ErroImportacao(
-        'O arquivo foi exportado com outra versão do schema (db/schema.sql). ' +
-          'Atualize o código nos dois computadores para a mesma versão e exporte de novo. ' +
-          `Diferenças: ${diferencas.join('; ')}.`,
-      )
-    }
+  }
 
-    const violacoes = this.conexao.prepare(`PRAGMA ${APELIDO}.foreign_key_check`).all()
-    if (violacoes.length) {
-      throw new ErroImportacao(`O arquivo tem ${violacoes.length} referência(s) quebrada(s) entre tabelas.`)
-    }
-
-    return atuais
+  /** Cria a estrutura numa base vazia da nuvem e, se pedido, envia os dados de `dadosLocais`. */
+  prepararNuvem(remota: Conexao, dadosLocais: Conexao | null): void {
+    remota.exec(fs.readFileSync(this.arquivoSchema, 'utf8'))
+    if (dadosLocais) substituirDados(dadosLocais, remota, tabelas(remota))
   }
 
   // ---- Apoio ----
 
-  // VACUUM INTO: cópia consistente mesmo com o banco em uso, já incluindo o conteúdo do WAL.
-  private copiar(destino: string): void {
+  // Base vazia em memória com o db/schema.sql desta versão, para comparar.
+  private schemaDeReferencia(): DatabaseSync {
+    const referencia = new DatabaseSync(':memory:')
+    referencia.exec(fs.readFileSync(this.arquivoSchema, 'utf8'))
+    return referencia
+  }
+
+  // Base local: VACUUM INTO (rápido e consistente). Nuvem: copia schema e linhas da réplica.
+  private copiarPara(destino: string): void {
     fs.mkdirSync(path.dirname(destino), { recursive: true })
     fs.rmSync(destino, { force: true })
-    this.conexao.prepare('VACUUM INTO ?').run(destino)
+    const origem = this.conexao()
+    if (origem instanceof DatabaseSync) {
+      origem.prepare('VACUUM INTO ?').run(destino)
+      return
+    }
+    const copia = new DatabaseSync(destino)
+    try {
+      const objetos = origem
+        .prepare("SELECT type, sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'libsql_%'")
+        .all()
+      // Tabelas antes de índices, gatilhos e visões.
+      for (const tipo of ['table', 'index', 'trigger', 'view']) {
+        for (const objeto of objetos.filter((o) => o.type === tipo)) copia.exec(String(objeto.sql))
+      }
+      substituirDados(origem, copia, tabelas(copia))
+    } finally {
+      copia.close()
+    }
   }
 
   private fazerBackup(motivo: string): string {
     // Com segundos: duas importações no mesmo minuto não sobrescrevem o backup uma da outra.
     const agora = new Date()
     const destino = path.join(this.pastaBackups, `${motivo}-${BaseDados.carimbo(agora)}${agora.toISOString().slice(17, 19)}.db`)
-    this.copiar(destino)
+    this.copiarPara(destino)
     return destino
-  }
-
-  // O SQLite pode recusar um arquivo inválido já no ATTACH ou só na primeira leitura.
-  private anexar(arquivo: string): void {
-    const invalido = (erro: unknown) =>
-      new ErroImportacao(`O arquivo não é uma base SQLite válida (${(erro as Error).message}).`)
-    try {
-      this.conexao.prepare(`ATTACH DATABASE ? AS ${APELIDO}`).run(arquivo)
-    } catch (erro) {
-      throw invalido(erro)
-    }
-    try {
-      this.conexao.prepare(`SELECT 1 FROM ${APELIDO}.sqlite_master LIMIT 1`).all()
-    } catch (erro) {
-      this.desanexar()
-      throw invalido(erro)
-    }
-  }
-
-  private desanexar(): void {
-    this.conexao.exec(`DETACH DATABASE ${APELIDO}`)
-  }
-
-  private tabelas(esquema: string): string[] {
-    return this.conexao
-      .prepare(`SELECT name FROM ${esquema}.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
-      .all()
-      .map((linha) => String(linha.name))
-  }
-
-  private colunas(esquema: string, tabela: string): string[] {
-    return this.conexao
-      .prepare(`PRAGMA ${esquema}.table_info(${tabela})`)
-      .all()
-      .map((linha) => String(linha.name))
-  }
-
-  private resumir(esquema: string): TabelaResumo[] {
-    return this.tabelas(esquema).map((nome) => ({
-      nome,
-      registros: Number(this.conexao.prepare(`SELECT COUNT(*) AS n FROM ${esquema}.${nome}`).get()?.n ?? 0),
-    }))
   }
 
   /** "2026-09-28_2330", para nomes de arquivo. */
   static carimbo(instante = new Date()): string {
     return instante.toISOString().slice(0, 16).replace('T', '_').replace(':', '')
+  }
+}
+
+// ---- Funções sobre qualquer conexão (local, réplica ou remota) ----
+
+function abrirArquivoRecebido(arquivo: string): DatabaseSync {
+  let fonte: DatabaseSync | undefined
+  try {
+    fonte = new DatabaseSync(arquivo, { readOnly: true })
+    fonte.prepare('SELECT 1 FROM sqlite_master LIMIT 1').all()
+    return fonte
+  } catch (erro) {
+    fonte?.close()
+    throw new ErroImportacao(`O arquivo não é uma base SQLite válida (${(erro as Error).message}).`)
+  }
+}
+
+function tabelas(conexao: Conexao): string[] {
+  return conexao
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'libsql_%' ORDER BY name")
+    .all()
+    .map((linha) => String(linha.name))
+}
+
+function colunas(conexao: Conexao, tabela: string): string[] {
+  return conexao
+    .prepare(`PRAGMA table_info(${tabela})`)
+    .all()
+    .map((linha) => String(linha.name))
+}
+
+function resumir(conexao: Conexao): TabelaResumo[] {
+  return tabelas(conexao).map((nome) => ({
+    nome,
+    registros: Number(conexao.prepare(`SELECT COUNT(*) AS n FROM ${nome}`).get()?.n ?? 0),
+  }))
+}
+
+function diferencasDeSchema(esperado: Conexao, encontrado: Conexao): string[] {
+  const atuais = tabelas(esperado)
+  const recebidas = tabelas(encontrado)
+  const diferencas: string[] = []
+  for (const tabela of atuais.filter((t) => !recebidas.includes(t))) diferencas.push(`falta a tabela ${tabela}`)
+  for (const tabela of recebidas.filter((t) => !atuais.includes(t))) diferencas.push(`tabela desconhecida ${tabela}`)
+  for (const tabela of atuais.filter((t) => recebidas.includes(t))) {
+    const esperadas = colunas(esperado, tabela)
+    const encontradas = colunas(encontrado, tabela)
+    for (const c of esperadas.filter((c) => !encontradas.includes(c))) diferencas.push(`falta a coluna ${tabela}.${c}`)
+    for (const c of encontradas.filter((c) => !esperadas.includes(c))) diferencas.push(`coluna desconhecida ${tabela}.${c}`)
+  }
+  return diferencas
+}
+
+// Confere que o arquivo recebido é íntegro e tem o mesmo schema da base em uso.
+function validarContra(fonte: DatabaseSync, destino: Conexao): string[] {
+  const integridade = fonte.prepare('PRAGMA integrity_check').get()?.integrity_check
+  if (integridade !== 'ok') throw new ErroImportacao(`Arquivo corrompido: ${String(integridade)}`)
+
+  const diferencas = diferencasDeSchema(destino, fonte)
+  if (diferencas.length) {
+    throw new ErroImportacao(
+      'O arquivo foi exportado com outra versão do schema (db/schema.sql). ' +
+        'Atualize o código nos dois computadores para a mesma versão e exporte de novo. ' +
+        `Diferenças: ${diferencas.join('; ')}.`,
+    )
+  }
+
+  const violacoes = fonte.prepare('PRAGMA foreign_key_check').all()
+  if (violacoes.length) {
+    throw new ErroImportacao(`O arquivo tem ${violacoes.length} referência(s) quebrada(s) entre tabelas.`)
+  }
+  return tabelas(destino)
+}
+
+/**
+ * Troca todos os dados de `destino` pelos de `origem`, numa transação.
+ * Apaga tudo antes de inserir: apagar e inserir tabela por tabela faria o ON DELETE CASCADE de
+ * uma tabela "pai" levar junto linhas recém-copiadas das "filhas". Referências são conferidas
+ * só no COMMIT (defer_foreign_keys), porque a ordem das tabelas não segue as dependências.
+ */
+function substituirDados(origem: Conexao, destino: Conexao, nomes: string[]): void {
+  destino.exec('BEGIN')
+  try {
+    destino.exec('PRAGMA defer_foreign_keys = ON')
+    for (const tabela of nomes) destino.exec(`DELETE FROM ${tabela}`)
+    for (const tabela of nomes) {
+      if (!TABELAS_LOCAIS.includes(tabela)) copiarLinhas(origem, destino, tabela)
+    }
+    destino.exec('COMMIT')
+  } catch (erro) {
+    destino.exec('ROLLBACK')
+    throw erro
+  }
+}
+
+function copiarLinhas(origem: Conexao, destino: Conexao, tabela: string): void {
+  const nomes = colunas(destino, tabela)
+  const lista = nomes.join(', ')
+  const linhas = origem.prepare(`SELECT ${lista} FROM ${tabela}`).all()
+  const porLote = Math.max(1, Math.floor(PARAMETROS_POR_LOTE / nomes.length))
+  const marcadores = `(${nomes.map(() => '?').join(', ')})`
+  for (let i = 0; i < linhas.length; i += porLote) {
+    const lote = linhas.slice(i, i + porLote)
+    const valores = lote.flatMap((linha) => nomes.map((c) => (linha[c] ?? null) as ValorSql))
+    destino.prepare(`INSERT INTO ${tabela} (${lista}) VALUES ${lote.map(() => marcadores).join(', ')}`).run(...valores)
   }
 }

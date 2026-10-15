@@ -541,6 +541,10 @@
   overflow-wrap: anywhere;
 }
 
+.base__entrar {
+  align-self: flex-start;
+}
+
 .base__backups {
   margin: 0;
   padding: 0;

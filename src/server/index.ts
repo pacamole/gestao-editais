@@ -4,6 +4,7 @@ import path from "node:path";
 import type { ErroApi, HealthResponse } from "../shared/api.js";
 import { Agendador } from "./infra/agendador.js";
 import { registroRotinas, tarefasColeta } from "./coleta/rotinas.js";
+import { ehErroDeConexaoNuvem } from "./db/conexao.js";
 import { bancoVazio } from "./db/index.js";
 import { tarefasNotificacao } from "./notificacao/index.js";
 import { root } from "./config/paths.js";
@@ -36,6 +37,11 @@ app.use("/api", rotasApi);
 
 const tratarErro: ErrorRequestHandler = (erro, _req, res, _next) => {
   console.error(erro);
+  if (ehErroDeConexaoNuvem(erro)) {
+    const corpo: ErroApi = { erro: "Sem conexão com a base na nuvem. Confira a internet e tente de novo." };
+    res.status(503).json(corpo);
+    return;
+  }
   const corpo: ErroApi = { erro: "Erro interno do servidor." };
   res.status(500).json(corpo);
 };

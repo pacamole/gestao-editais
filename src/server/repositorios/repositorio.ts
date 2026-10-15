@@ -1,4 +1,4 @@
-import type { SQLInputValue } from 'node:sqlite'
+import type { ValorSql } from '../db/conexao.js'
 import { agora, db, novoId } from '../db/index.js'
 
 // Campos que aceitam null podem ser omitidos na inserção.
@@ -81,30 +81,30 @@ export abstract class Repositorio<T extends object, Id extends string | number =
 
   // ---- Apoio às subclasses ----
 
-  protected consultar(sql: string, ...params: SQLInputValue[]): T[] {
+  protected consultar(sql: string, ...params: ValorSql[]): T[] {
     return db
       .prepare(sql)
       .all(...params)
       .map((linha) => this.paraEntidade(linha))
   }
 
-  protected consultarUm(sql: string, ...params: SQLInputValue[]): T | undefined {
+  protected consultarUm(sql: string, ...params: ValorSql[]): T | undefined {
     const linha = db.prepare(sql).get(...params)
     return linha ? this.paraEntidade(linha) : undefined
   }
 
-  protected contarOnde(condicao: string, ...params: SQLInputValue[]): number {
+  protected contarOnde(condicao: string, ...params: ValorSql[]): number {
     return this.escalar(`SELECT COUNT(*) FROM ${this.tabela} WHERE ${condicao}`, ...params)
   }
 
   /** Primeira coluna da primeira linha, como número (COUNT, SUM…). */
-  protected escalar(sql: string, ...params: SQLInputValue[]): number {
+  protected escalar(sql: string, ...params: ValorSql[]): number {
     const linha = db.prepare(sql).get(...params)
     return linha ? Number(Object.values(linha)[0] ?? 0) : 0
   }
 
   /** Executa um comando (DELETE, UPDATE, upsert) e devolve quantas linhas foram afetadas. */
-  protected executar(sql: string, ...params: SQLInputValue[]): number {
+  protected executar(sql: string, ...params: ValorSql[]): number {
     return Number(db.prepare(sql).run(...params).changes)
   }
 
@@ -125,8 +125,8 @@ export abstract class Repositorio<T extends object, Id extends string | number =
     return entidade as T
   }
 
-  private paraLinha(registro: Record<string, unknown>): Record<string, SQLInputValue> {
-    const linha: Record<string, SQLInputValue> = {}
+  private paraLinha(registro: Record<string, unknown>): Record<string, ValorSql> {
+    const linha: Record<string, ValorSql> = {}
     for (const [coluna, valor] of Object.entries(registro)) {
       if (valor === undefined) continue
       // Nomes de coluna entram no SQL: nunca aceitar chave arbitrária (ex.: vinda de req.body).
@@ -134,7 +134,7 @@ export abstract class Repositorio<T extends object, Id extends string | number =
       if (valor === null) linha[coluna] = null
       else if ((this.colunasJson as readonly string[]).includes(coluna)) linha[coluna] = JSON.stringify(valor)
       else if (typeof valor === 'boolean') linha[coluna] = valor ? 1 : 0
-      else linha[coluna] = valor as SQLInputValue
+      else linha[coluna] = valor as ValorSql
     }
     return linha
   }

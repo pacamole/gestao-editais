@@ -1,15 +1,64 @@
-import fs from "node:fs";
-import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { arquivoBanco } from "../config/paths.js";
+import {
+  abrirLocal,
+  abrirRemota,
+  lerConfigConexao,
+  salvarConfigConexao,
+  type ConfigConexao,
+  type Conexao,
+  type ModoBase,
+} from "./conexao.js";
 
-fs.mkdirSync(path.dirname(arquivoBanco), { recursive: true });
+// Conexão única: com a base deste computador (node:sqlite) ou com a base na nuvem
+// (Turso, via libsql). Fora dos repositórios, use só para schema e transações.
+// `let` de propósito: trocarBase() substitui a conexão e todos os módulos passam a usar a nova.
+export let db: Conexao;
 
-// Conexão única. Fora dos repositórios, use só para schema e transações.
-export const db = new DatabaseSync(arquivoBanco);
-db.exec("PRAGMA journal_mode = WAL");
-db.exec("PRAGMA foreign_keys = ON");
-db.exec("PRAGMA busy_timeout = 5000");
+type Estado = {
+  modo: ModoBase;
+  url: string;
+  // Preenchido quando a nuvem estava configurada mas não abriu: o sistema seguiu com a base local.
+  erroNuvem: string | null;
+};
+
+const estado: Estado = { modo: "LOCAL", url: "", erroNuvem: null };
+
+function abrir(config: ConfigConexao): void {
+  const nova = config.modo === "NUVEM" ? abrirRemota(config.url, config.token) : abrirLocal();
+  fecharAtual();
+  db = nova;
+  Object.assign(estado, { modo: config.modo, url: config.modo === "NUVEM" ? config.url : "", erroNuvem: null });
+}
+
+function fecharAtual(): void {
+  if (!db) return;
+  try {
+    (db as Conexao & { close(): void }).close();
+  } catch {
+    // Conexão já fechada.
+  }
+}
+
+// Na inicialização: se a nuvem não abrir (sem internet, token revogado), segue com a base local.
+const configInicial = lerConfigConexao();
+try {
+  abrir(configInicial);
+} catch (erro) {
+  console.error("Não foi possível abrir a base na nuvem; usando a base deste computador.", erro);
+  abrir({ modo: "LOCAL", url: "", token: "" });
+  estado.erroNuvem = (erro as Error).message;
+  estado.url = configInicial.url;
+}
+
+export function estadoBase(): Readonly<Estado> {
+  return { ...estado };
+}
+
+// Troca a base em uso sem reiniciar o servidor e grava a escolha para as próximas inicializações.
+// Abre a nova antes de fechar a atual: se falhar, nada muda.
+export function trocarBase(config: ConfigConexao): void {
+  abrir(config);
+  salvarConfigConexao(config);
+}
 
 export function bancoVazio(): boolean {
   return !db

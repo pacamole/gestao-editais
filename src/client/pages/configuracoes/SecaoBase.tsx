@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import type { BackupBase, ResultadoImportacao, ResumoBase, TabelaResumo } from '../../../shared/api'
+import type { BackupBase, ModoBase, ResultadoImportacao, ResumoBaseResposta, TabelaResumo } from '../../../shared/api'
 import { base } from '../../api/base'
 import { ErroApi, mensagemDeErro } from '../../api/cliente'
 import { formatarBytes, formatarDataHora } from '../../util/formato'
+import { CardTurso } from './base/CardTurso'
 
 // Tabelas que resumem a base para quem usa (as demais aparecem só no detalhe da importação).
 const PRINCIPAIS: { tabela: string; um: string; varios: string }[] = [
@@ -20,6 +21,7 @@ type Estado =
   | { tipo: 'trabalhando'; texto: string }
   | { tipo: 'sucesso'; dados: Resultado }
   | { tipo: 'erro'; mensagem: string }
+  | { tipo: 'trocou'; modo: ModoBase }
 
 const contar = (tabelas: TabelaResumo[], nome: string) => tabelas.find((t) => t.nome === nome)?.registros ?? 0
 
@@ -41,7 +43,8 @@ const mensagemFalha = (e: unknown) => (e instanceof ErroApi ? e.message : mensag
 
 // Compartilhamento da base entre computadores, com backups automáticos para desfazer enganos.
 export function SecaoBase() {
-  const [resumo, setResumo] = useState<ResumoBase | null>(null)
+  const [resumo, setResumo] = useState<ResumoBaseResposta | null>(null)
+  const [aba, setAba] = useState<ModoBase>('LOCAL') // onde ficam os dados: aba escolhida na tela
   const [backups, setBackups] = useState<BackupBase[]>([])
   const [arquivo, setArquivo] = useState<File | null>(null)
   const [arrastando, setArrastando] = useState(false)
@@ -52,6 +55,7 @@ export function SecaoBase() {
     Promise.all([base.resumo(), base.backups()])
       .then(([r, b]) => {
         setResumo(r)
+        setAba(r.conexao.modo)
         setBackups(b.backups)
       })
       .catch((e) => setEstado({ tipo: 'erro', mensagem: mensagemFalha(e) }))
@@ -76,7 +80,8 @@ export function SecaoBase() {
   // Importar e restaurar terminam igual: dados trocados, sessões apagadas.
   async function substituir(origem: string, confirmacao: string, acao: () => Promise<ResultadoImportacao>) {
     const atual = resumo ? `\n\nHoje há: ${resumoPrincipal(resumo.tabelas)}.` : ''
-    if (!window.confirm(`${confirmacao}${atual}\n\nUm backup da base atual é gravado antes. Todos precisarão entrar de novo.`)) return
+    const paraEquipe = nuvem ? '\n\nOs dados estão na nuvem: a troca vale para toda a equipe.' : ''
+    if (!window.confirm(`${confirmacao}${atual}${paraEquipe}\n\nUm backup da base atual é gravado antes. Todos precisarão entrar de novo.`)) return
     const antes = resumo?.tabelas ?? []
     setEstado({ tipo: 'trabalhando', texto: 'Substituindo os dados…' })
     try {
@@ -90,6 +95,35 @@ export function SecaoBase() {
   }
 
   const ocupado = estado.tipo === 'trabalhando'
+  const conexao = resumo?.conexao
+  const nuvem = conexao?.modo === 'NUVEM'
+
+  // Trocar de base: a sessão atual não existe na outra base, então todos entram de novo.
+  async function trocar(modo: ModoBase, acao: () => Promise<unknown>) {
+    setEstado({ tipo: 'trabalhando', texto: 'Trocando de base…' })
+    try {
+      await acao()
+      setEstado({ tipo: 'trocou', modo })
+    } catch (e) {
+      setEstado({ tipo: 'erro', mensagem: mensagemFalha(e) })
+    }
+  }
+
+  if (estado.tipo === 'trocou') {
+    return (
+      <div className="pilha">
+        <div className="aviso aviso--sucesso" role="status">
+          <span>
+            <strong>{estado.modo === 'NUVEM' ? 'Agora os dados estão na nuvem.' : 'Agora os dados estão neste computador.'}</strong>{' '}
+            Entre de novo com uma conta que exista nessa base{estado.modo === 'NUVEM' ? ' (ou crie uma)' : ''}.
+          </span>
+        </div>
+        <a className="btn btn--primario base__entrar" href="/login">
+          Entrar de novo
+        </a>
+      </div>
+    )
+  }
 
   if (estado.tipo === 'sucesso') {
     const { origem, resultado, antes } = estado.dados
@@ -141,14 +175,86 @@ export function SecaoBase() {
         </p>
       ) : null}
 
+      {conexao?.erroNuvem ? (
+        <div className="aviso aviso--atencao linha linha--entre" role="alert">
+          <span>
+            <strong>A base na nuvem não abriu</strong> (sem internet ou token revogado). Por enquanto o sistema está usando a base
+            deste computador; o que for feito agora não vai para a nuvem.
+          </span>
+          <button type="button" className="btn btn--sm btn--primario" disabled={ocupado} onClick={() => trocar('NUVEM', base.reconectarNuvem)}>
+            Reconectar
+          </button>
+        </div>
+      ) : null}
+
+      <div className="campo">
+        <span className="campo__rotulo" id="onde_dados">Onde ficam os dados</span>
+        <div className="segmentado" role="radiogroup" aria-labelledby="onde_dados">
+          {(['LOCAL', 'NUVEM'] as const).map((m) => (
+            <button key={m} type="button" role="radio" aria-checked={aba === m} onClick={() => setAba(m)}>
+              {m === 'LOCAL' ? 'Neste computador' : 'Na nuvem (Turso)'}
+              {conexao?.modo === m ? ' · em uso' : ''}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {aba === 'NUVEM' && !nuvem && resumo ? (
+        <CardTurso
+          resumoLocal={resumoPrincipal(resumo.tabelas)}
+          resumir={resumoPrincipal}
+          onConectado={() => setEstado({ tipo: 'trocou', modo: 'NUVEM' })}
+        />
+      ) : null}
+
+      {aba === 'NUVEM' && nuvem ? (
+        <div className="card status-ia status-ia--ok">
+          <div className="card__corpo linha linha--entre">
+            <div className="pilha pilha--sm">
+              <strong className="status-ia__titulo">Conectado à nuvem</strong>
+              <span className="suave base__backup">{conexao?.url}</span>
+              <span className="discreto">Todos os computadores conectados a esta base veem os mesmos dados, na hora.</span>
+            </div>
+            <button
+              type="button"
+              className="btn"
+              disabled={ocupado}
+              onClick={() => {
+                if (window.confirm('Voltar a usar só a base deste computador? A base na nuvem continua lá, intacta.')) {
+                  trocar('LOCAL', base.usarLocal)
+                }
+              }}
+            >
+              Voltar a usar só este computador
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {aba === 'LOCAL' && nuvem ? (
+        <div className="aviso aviso--atencao linha linha--entre">
+          <span>Hoje os dados estão na nuvem. A base deste computador está guardada, como estava antes de conectar.</span>
+          <button
+            type="button"
+            className="btn btn--sm btn--primario"
+            disabled={ocupado}
+            onClick={() => {
+              if (window.confirm('Usar a base deste computador? A base na nuvem continua lá, intacta.')) trocar('LOCAL', base.usarLocal)
+            }}
+          >
+            Usar a base deste computador
+          </button>
+        </div>
+      ) : null}
+
       <div className="card">
         <div className="card__corpo base__atual">
           <div className="pilha pilha--sm">
-            <span className="campo__rotulo">Base atual</span>
+            <span className="campo__rotulo">Base em uso{nuvem ? ' · na nuvem' : ' · neste computador'}</span>
             <strong>{resumo ? resumoPrincipal(resumo.tabelas) : 'Carregando…'}</strong>
-            {resumo ? <span className="discreto base__backup">{resumo.arquivo}</span> : null}
+            {resumo ? <span className="discreto base__backup">{nuvem ? conexao?.url : resumo.arquivo}</span> : null}
           </div>
-          {resumo ? <span className="badge">{formatarBytes(resumo.tamanhoBytes)}</span> : null}
+          {resumo && !nuvem ? <span className="badge">{formatarBytes(resumo.tamanhoBytes)}</span> : null}
         </div>
       </div>
 
@@ -209,7 +315,15 @@ export function SecaoBase() {
               </button>
             )}
             <p className="aviso aviso--atencao">
-              Substitui <strong>todos</strong> os dados deste computador. Um backup é salvo antes.
+              {nuvem ? (
+                <>
+                  Substitui <strong>todos</strong> os dados da <strong>nuvem</strong>, para toda a equipe. Um backup é salvo antes.
+                </>
+              ) : (
+                <>
+                  Substitui <strong>todos</strong> os dados deste computador. Um backup é salvo antes.
+                </>
+              )}
             </p>
           </div>
           {arquivo ? (
@@ -224,7 +338,7 @@ export function SecaoBase() {
                   )
                 }
               >
-                {ocupado ? 'Substituindo…' : 'Substituir os dados deste computador'}
+                {ocupado ? 'Substituindo…' : nuvem ? 'Substituir os dados da nuvem' : 'Substituir os dados deste computador'}
               </button>
             </div>
           ) : null}

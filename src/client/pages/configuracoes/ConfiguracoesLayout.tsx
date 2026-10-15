@@ -27,7 +27,7 @@ export const gruposConfiguracoes: { grupo: string; secoes: Secao[] }[] = [
     grupo: 'Sistema',
     secoes: [
       { to: 'ia', rotulo: 'Inteligência artificial', descricao: 'Leitura automática dos editais e chat sobre cada edital.' },
-      { to: 'base', rotulo: 'Base de dados', descricao: 'Leve a base inteira de um computador para outro: exporte aqui e importe lá.' },
+      { to: 'base', rotulo: 'Base de dados', descricao: 'Onde ficam os dados (neste computador ou na nuvem), cópias entre computadores e backups.' },
     ],
   },
 ]

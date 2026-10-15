@@ -1,11 +1,31 @@
-import type { ListaBackupsResposta, ResultadoImportacao, ResumoBase } from '../../shared/api'
+import type {
+  ConectarNuvemEntrada,
+  ListaBackupsResposta,
+  ResultadoImportacao,
+  ResumoBaseResposta,
+  TesteNuvemEntrada,
+  TesteNuvemResposta,
+  TrocaBaseResposta,
+} from '../../shared/api'
 import { ErroApi, irParaLogin, requisicao } from './cliente'
 
 export const base = {
   // Link direto de download (usado como href).
   urlExportar: '/api/base/exportar',
 
-  resumo: () => requisicao<ResumoBase>('/api/base/resumo'),
+  resumo: () => requisicao<ResumoBaseResposta>('/api/base/resumo'),
+
+  testarNuvem: (dados: TesteNuvemEntrada) =>
+    requisicao<TesteNuvemResposta>('/api/base/nuvem/testar', { metodo: 'POST', corpo: dados }),
+
+  // Trocar de base encerra a sessão atual (ela não existe na outra base): entrar de novo depois.
+  conectarNuvem: (dados: ConectarNuvemEntrada) =>
+    requisicao<TrocaBaseResposta>('/api/base/nuvem/conectar', { metodo: 'POST', corpo: dados, redirecionarSe401: false }),
+
+  reconectarNuvem: () =>
+    requisicao<TrocaBaseResposta>('/api/base/nuvem/reconectar', { metodo: 'POST', redirecionarSe401: false }),
+
+  usarLocal: () => requisicao<TrocaBaseResposta>('/api/base/local', { metodo: 'POST', redirecionarSe401: false }),
 
   backups: () => requisicao<ListaBackupsResposta>('/api/base/backups'),
 
