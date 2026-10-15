@@ -1,14 +1,14 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import type { Criterio, Operador, ResultadoSimulacao, TipoCriterio } from '../../shared/tipos/criterios'
+import type { Criterio, Operador, ResultadoSimulacao, TipoCriterio } from '../../../shared/tipos/criterios'
 import {
   CAMPOS_CRITERIO_EDITAL,
   CAMPOS_CRITERIO_PERFIL,
   OPERADORES,
   camposPerfilCompativeis,
   operadoresDoCampo,
-} from '../../shared/catalogoCriterios'
-import { criterios, type EditalParaSimulacao } from '../api/criterios'
-import { mensagemDeErro } from '../api/cliente'
+} from '../../../shared/catalogoCriterios'
+import { criterios, type EditalParaSimulacao } from '../../api/criterios'
+import { mensagemDeErro } from '../../api/cliente'
 
 // Estado do formulário: campos opcionais e peso como texto editável; id '' = novo.
 type FormCriterio = {
@@ -64,7 +64,7 @@ function descreverRegra(c: Criterio): string {
   return [rotuloEdital(c.campo_edital), OPERADORES[c.operador], referencia].filter(Boolean).join(' ')
 }
 
-export function CriteriosPage() {
+export function SecaoCriterios() {
   const [eliminatorios, setEliminatorios] = useState<Criterio[]>([])
   const [pontuaveis, setPontuaveis] = useState<Criterio[]>([])
   const [editalId, setEditalId] = useState('')
@@ -188,13 +188,6 @@ export function CriteriosPage() {
 
   return (
     <section>
-      <header className="pagina-cabecalho">
-        <div>
-          <h1>Critérios e pesos</h1>
-          <p>Configuração do filtro dinâmico e simulação com edital analisado.</p>
-        </div>
-      </header>
-
       <div className="pilha">
         <div className="card">
           <div className="card__cabecalho"><h2>{form.id ? 'Editar critério' : 'Cadastro de critério'}</h2></div>

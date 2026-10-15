@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import type { FonteComExecucoes, TipoFonte } from '../../shared/tipos/fontes'
-import { mensagemDeErro } from '../api/cliente'
-import { fontes as apiFontes } from '../api/fontes'
-import { formatarDataHora } from '../util/formato'
+import type { FonteComExecucoes, TipoFonte } from '../../../shared/tipos/fontes'
+import { mensagemDeErro } from '../../api/cliente'
+import { fontes as apiFontes } from '../../api/fontes'
+import { formatarDataHora } from '../../util/formato'
 
 // Estado do formulário; id '' = nova fonte.
 type FormFonte = {
@@ -23,7 +23,7 @@ const fonteInicial: FormFonte = {
   ativo: true,
 }
 
-export function FontesPage() {
+export function SecaoFontes() {
   const [fontes, setFontes] = useState<FonteComExecucoes[]>([])
   const [form, setForm] = useState(fonteInicial)
   const [mensagem, setMensagem] = useState('')
@@ -78,13 +78,6 @@ export function FontesPage() {
 
   return (
     <section>
-      <header className="pagina-cabecalho">
-        <div>
-          <h1>Fontes monitoradas</h1>
-          <p>Gerenciamento dos portais e da coleta periódica.</p>
-        </div>
-      </header>
-
       <div className="pilha">
         <div className="card">
           <div className="card__cabecalho"><h2>Nova fonte</h2></div>

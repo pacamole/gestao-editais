@@ -4,6 +4,7 @@ import { rotasAlertas } from './alertas.js'
 import { rotasAuth } from './auth.js'
 import { rotasBase } from './base.js'
 import { rotasChat } from './chat.js'
+import { rotasConfigSistema } from './configSistema.js'
 import { rotasCriterios } from './criterios.js'
 import { rotasDashboard } from './dashboard.js'
 import { rotasEditais } from './editais.js'
@@ -27,6 +28,7 @@ rotasApi.use('/base', rotasBase)
 rotasApi.use(rotasPerfil)
 rotasApi.use(rotasCriterios)
 rotasApi.use(rotasAlertas)
+rotasApi.use(rotasConfigSistema)
 rotasApi.use(rotasFontes)
 rotasApi.use(rotasDashboard)
 rotasApi.use(rotasEditais)

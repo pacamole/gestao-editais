@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { PerfilEmpresa, Porte } from '../../shared/tipos/perfil'
-import { mensagemDeErro } from '../api/cliente'
-import { perfil as apiPerfil } from '../api/perfil'
+import type { PerfilEmpresa, Porte } from '../../../shared/tipos/perfil'
+import { mensagemDeErro } from '../../api/cliente'
+import { perfil as apiPerfil } from '../../api/perfil'
 
 // Estado do formulário: listas e números como texto editável.
 type FormPerfil = {
@@ -73,7 +73,7 @@ function paraFormulario(p: PerfilEmpresa): FormPerfil {
   }
 }
 
-export function PerfilPage() {
+export function SecaoPerfil() {
   const [perfil, setPerfil] = useState(perfilInicial)
   const [reavaliar, setReavaliar] = useState(true)
   const [carregando, setCarregando] = useState(true)
@@ -123,18 +123,11 @@ export function PerfilPage() {
   }
 
   if (carregando) {
-    return <section><header className="pagina-cabecalho"><h1>Perfil da empresa</h1></header><p>Carregando dados do perfil…</p></section>
+    return <p>Carregando dados do perfil…</p>
   }
 
   return (
     <section>
-      <header className="pagina-cabecalho">
-        <div>
-          <h1>Perfil da empresa</h1>
-          <p>Dados estratégicos usados para comparação com os editais ativos.</p>
-        </div>
-      </header>
-
       <div className="pilha">
         <div className="card">
           <div className="card__cabecalho"><h2>Dados cadastrais</h2></div>

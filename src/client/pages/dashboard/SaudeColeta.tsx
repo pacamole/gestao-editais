@@ -17,7 +17,7 @@ export function SaudeColeta({ fontes }: { fontes: SaudeFonte[] }) {
           <h2>Painel de saúde da coleta</h2>
           <p className="discreto">Última execução e status de cada fonte monitorada</p>
         </div>
-        <Link to="/fontes" className="btn btn--sm btn--fantasma">
+        <Link to="/configuracoes/fontes" className="btn btn--sm btn--fantasma">
           Gerenciar fontes →
         </Link>
       </div>

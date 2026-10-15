@@ -7,14 +7,6 @@ const linksOperacao = [
   { to: '/editais/novo', rotulo: 'Nova entrada', end: true },
 ]
 
-const linksGestor = [
-  { to: '/perfil', rotulo: 'Perfil da empresa' },
-  { to: '/criterios', rotulo: 'Critérios e pesos' },
-  { to: '/fontes', rotulo: 'Fontes monitoradas' },
-  { to: '/alertas', rotulo: 'Alertas' },
-  { to: '/base', rotulo: 'Base de dados' },
-]
-
 export function AppLayout() {
   const navigate = useNavigate()
 
@@ -43,16 +35,11 @@ export function AppLayout() {
             </li>
           ))}
         </ul>
-        <div>
-          <p className="app-menu__rotulo">Gestão</p>
-          <ul className="app-menu__grupo">
-            {linksGestor.map((link) => (
-              <li key={link.to}>
-                <NavLink to={link.to}>{link.rotulo}</NavLink>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ul className="app-menu__grupo">
+          <li>
+            <NavLink to="/configuracoes">Configurações</NavLink>
+          </li>
+        </ul>
            {/* Botão para encerrar a sessão */}
         <button
           type="button"

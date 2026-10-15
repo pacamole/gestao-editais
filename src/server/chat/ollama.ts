@@ -3,7 +3,7 @@ import type { Modalidade, PerfilEmpresa } from '../dominio/entidades.js'
 
 // Parâmetros fixos do modelo; só a URL do Ollama é configurável (tabela `config`).
 export const OLLAMA_URL_PADRAO = 'http://localhost:11434'
-const MODELO = 'gemma2:latest'
+export const MODELO = 'gemma2:latest'
 const TIMEOUT_MS = 600_000
 const CONTEXTO_TOKENS = 8192
 

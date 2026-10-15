@@ -1,16 +1,19 @@
-import { createBrowserRouter } from 'react-router'
+import { createBrowserRouter, Navigate } from 'react-router'
 import { RotaProtegida } from './components/RotaProtegida'
 import { AlertasPage } from './pages/AlertasPage'
-import { BasePage } from './pages/BasePage'
-import { CriteriosPage } from './pages/CriteriosPage'
+import { ConfiguracoesLayout } from './pages/configuracoes/ConfiguracoesLayout'
+import { SecaoBase } from './pages/configuracoes/SecaoBase'
+import { SecaoCriterios } from './pages/configuracoes/SecaoCriterios'
+import { SecaoEmail } from './pages/configuracoes/SecaoEmail'
+import { SecaoFontes } from './pages/configuracoes/SecaoFontes'
+import { SecaoIa } from './pages/configuracoes/SecaoIa'
+import { SecaoPerfil } from './pages/configuracoes/SecaoPerfil'
 import { DashboardPage } from './pages/DashboardPage'
 import { EditalDetalhePage } from './pages/EditalDetalhePage'
 import { EditaisPage } from './pages/EditaisPage'
 import { ErroPage } from './pages/ErroPage'
-import { FontesPage } from './pages/FontesPage'
 import { LoginPage } from './pages/LoginPage'
 import { NovaEntradaPage } from './pages/NovaEntradaPage'
-import { PerfilPage } from './pages/PerfilPage'
 
 // Mapa de páginas (§5 da especificação).
 export const router = createBrowserRouter([
@@ -19,17 +22,31 @@ export const router = createBrowserRouter([
     element: <RotaProtegida />,
     errorElement: <ErroPage />,
     children: [
-      // Analista e Gestor
+      // Operação
       { index: true, element: <DashboardPage /> }, // P02
       { path: 'editais', element: <EditaisPage /> }, // P03
       { path: 'editais/novo', element: <NovaEntradaPage /> }, // P05
       { path: 'editais/:id', element: <EditalDetalhePage /> }, // P04
-      // Somente Gestor
-      { path: 'perfil', element: <PerfilPage /> }, // P06
-      { path: 'criterios', element: <CriteriosPage /> }, // P07
-      { path: 'fontes', element: <FontesPage /> }, // P08
-      { path: 'alertas', element: <AlertasPage /> }, // P09
-      { path: 'base', element: <BasePage /> }, // compartilhamento da base
+      // Configurações: uma página, com menu de seções.
+      {
+        path: 'configuracoes',
+        element: <ConfiguracoesLayout />,
+        children: [
+          { index: true, element: <Navigate to="perfil" replace /> },
+          { path: 'perfil', element: <SecaoPerfil /> }, // P06
+          { path: 'criterios', element: <SecaoCriterios /> }, // P07
+          { path: 'fontes', element: <SecaoFontes /> }, // P08
+          { path: 'alertas', element: <AlertasPage /> }, // P09
+          { path: 'email', element: <SecaoEmail /> },
+          { path: 'ia', element: <SecaoIa /> },
+          { path: 'base', element: <SecaoBase /> }, // compartilhamento da base
+        ],
+      },
+      // Endereços antigos (links salvos e e-mails já enviados).
+      ...['perfil', 'criterios', 'fontes', 'alertas', 'base'].map((secao) => ({
+        path: secao,
+        element: <Navigate to={`/configuracoes/${secao}`} replace />,
+      })),
       { path: '*', element: <ErroPage /> },
     ],
   },

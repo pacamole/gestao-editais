@@ -7,6 +7,6 @@ export class Links {
   static dashboard = () => `${Links.base}/`
   static edital = (id: string) => `${Links.base}/editais/${id}`
   static novaEntrada = () => `${Links.base}/editais/novo`
-  static fontes = () => `${Links.base}/fontes`
-  static alertas = () => `${Links.base}/alertas`
+  static fontes = () => `${Links.base}/configuracoes/fontes`
+  static alertas = () => `${Links.base}/configuracoes/alertas`
 }

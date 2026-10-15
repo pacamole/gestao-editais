@@ -49,13 +49,6 @@ export function AlertasPage() {
 
   return (
     <section>
-      <header className="pagina-cabecalho">
-        <div>
-          <h1>Configurações de alerta</h1>
-          <p>Ativação, destinatários e parâmetros dos gatilhos do sistema.</p>
-        </div>
-      </header>
-
       <div className="pilha">
         {erro ? <p className="aviso aviso--erro" role="alert">{erro}</p> : null}
         {configs.map((config) => (
