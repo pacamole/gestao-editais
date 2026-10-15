@@ -26,8 +26,14 @@ export class Agendador {
 
   iniciar(): void {
     if (this.timer) return
-    this.timer = setInterval(() => void this.verificar(), this.intervaloMs)
-    void this.verificar()
+    this.timer = setInterval(() => this.verificarSemDerrubar(), this.intervaloMs)
+    this.verificarSemDerrubar()
+  }
+
+  // Uma falha ao ler o estado (ex.: base na nuvem fora do ar) não pode derrubar o servidor:
+  // registra e tenta de novo no próximo minuto.
+  private verificarSemDerrubar(): void {
+    this.verificar().catch((erro) => console.error('[agendador] verificação falhou; nova tentativa em 1 minuto.', erro))
   }
 
   parar(): void {
