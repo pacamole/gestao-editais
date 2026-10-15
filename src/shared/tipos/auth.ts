@@ -5,4 +5,5 @@ export type LoginEntrada = { email: string; senha: string }
 
 export type CadastroResposta = { ok: true; mensagem: string }
 export type OkResposta = { ok: true }
-export type SessaoResposta = { autenticado: boolean }
+export type UsuarioLogado = { nome: string; email: string }
+export type SessaoResposta = { autenticado: boolean; usuario?: UsuarioLogado }

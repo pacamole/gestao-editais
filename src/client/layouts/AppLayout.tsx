@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import type { UsuarioLogado } from '../../shared/tipos/auth'
 import { auth } from '../api/auth'
 
 const linksOperacao = [
@@ -7,7 +8,7 @@ const linksOperacao = [
   { to: '/editais/novo', rotulo: 'Nova entrada', end: true },
 ]
 
-export function AppLayout() {
+export function AppLayout({ usuario }: { usuario: UsuarioLogado }) {
   const navigate = useNavigate()
 
   // Encerra a sessão do usuário.
@@ -40,7 +41,11 @@ export function AppLayout() {
             <NavLink to="/configuracoes">Configurações</NavLink>
           </li>
         </ul>
-           {/* Botão para encerrar a sessão */}
+        <div className="app-menu__usuario">
+          <strong>{usuario.nome}</strong>
+          <span>{usuario.email}</span>
+        </div>
+        {/* Botão para encerrar a sessão */}
         <button
           type="button"
           onClick={sairDaConta}

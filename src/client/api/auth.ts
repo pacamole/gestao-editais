@@ -4,6 +4,7 @@ import type {
   LoginEntrada,
   OkResposta,
   SessaoResposta,
+  UsuarioLogado,
 } from '../../shared/tipos/auth'
 import { ErroApi, requisicao } from './cliente'
 
@@ -17,13 +18,13 @@ export const auth = {
 
   sair: () => requisicao<OkResposta>('/api/auth/sair', { metodo: 'POST', redirecionarSe401: false }),
 
-  // true/false conforme a sessão; outros erros (rede, 500) são propagados.
-  async autenticado(): Promise<boolean> {
+  // Usuário logado, ou null sem sessão; outros erros (rede, 500) são propagados.
+  async usuarioLogado(): Promise<UsuarioLogado | null> {
     try {
       const r = await requisicao<SessaoResposta>('/api/auth/sessao', { redirecionarSe401: false })
-      return r.autenticado
+      return r.autenticado ? (r.usuario ?? null) : null
     } catch (erro) {
-      if (erro instanceof ErroApi && erro.status === 401) return false
+      if (erro instanceof ErroApi && erro.status === 401) return null
       throw erro
     }
   },

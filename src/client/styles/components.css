@@ -125,6 +125,48 @@
   font-family: var(--fonte-mono);
 }
 
+/* Quem está logado, no pé do menu, logo acima de "Sair da conta". Nome e e-mail sempre inteiros. */
+.app-menu__usuario {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+  /* O menu separa os blocos com gap de --esp-6; aqui o usuário fica colado ao botão de sair. */
+  margin-bottom: calc(var(--esp-6) * -1 + var(--esp-2));
+  padding: var(--esp-3) var(--esp-3) 0;
+  border-top: 1px solid var(--cor-menu-ativo);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.app-menu__usuario strong {
+  color: var(--cor-menu-texto-ativo);
+  font-weight: 500;
+}
+
+.app-menu__usuario span {
+  color: var(--cor-menu-rotulo);
+  font-size: var(--texto-xs);
+}
+
+/* "Sair da conta": no pé do menu, discreto, com a mesma linguagem dos links. */
+.app-menu__sair {
+  min-height: 38px;
+  padding: 0 var(--esp-3);
+  border: 1px solid var(--cor-menu-ativo);
+  border-radius: var(--raio-2);
+  background: transparent;
+  color: var(--cor-menu-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-menu__sair:hover {
+  background: var(--cor-menu-ativo);
+  color: var(--cor-menu-texto-ativo);
+}
+
 .app-menu__rodape {
   margin-top: auto;
   padding: var(--esp-3);

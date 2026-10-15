@@ -1,22 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router'
+import type { UsuarioLogado } from '../../shared/tipos/auth'
 import { auth } from '../api/auth'
 import { AppLayout } from '../layouts/AppLayout'
 
 // Só mostra o app com sessão válida; sem sessão, manda para o login.
 export function RotaProtegida() {
-  const [estado, setEstado] = useState<'carregando' | 'sim' | 'nao'>('carregando')
+  // undefined = ainda verificando; null = sem sessão.
+  const [usuario, setUsuario] = useState<UsuarioLogado | null | undefined>(undefined)
 
   useEffect(() => {
     auth
-      .autenticado()
-      .then((ok) => setEstado(ok ? 'sim' : 'nao'))
-      .catch(() => setEstado('nao'))
+      .usuarioLogado()
+      .then(setUsuario)
+      .catch(() => setUsuario(null))
   }, [])
 
-  if (estado === 'carregando') {
+  if (usuario === undefined) {
     return <p>Verificando sessão...</p>
   }
 
-  return estado === 'sim' ? <AppLayout /> : <Navigate to="/login" replace />
+  return usuario ? <AppLayout usuario={usuario} /> : <Navigate to="/login" replace />
 }

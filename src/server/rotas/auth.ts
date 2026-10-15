@@ -119,12 +119,16 @@ rotasAuth.post('/login', async (req, res) => {
   res.json({ ok: true } satisfies OkResposta)
 })
 
+// Diz se há sessão e, havendo, quem está logado (mostrado na barra lateral).
 rotasAuth.get('/sessao', (req, res) => {
   const id = usuarioDaSessao(req)
+  const usuario = id ? repositorios.usuario.buscarPorId(id) : undefined
 
-  res.status(id ? 200 : 401).json({
-    autenticado: !!id
-  } satisfies SessaoResposta)
+  if (!usuario) {
+    res.status(401).json({ autenticado: false } satisfies SessaoResposta)
+    return
+  }
+  res.json({ autenticado: true, usuario: { nome: usuario.nome, email: usuario.email } } satisfies SessaoResposta)
 })
 
 rotasAuth.post('/sair', (req, res) => {
