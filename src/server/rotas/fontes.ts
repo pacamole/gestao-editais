@@ -2,7 +2,9 @@ import { Router } from 'express'
 import { db, novoId } from '../db/index.js'
 import { ColetaServico } from '../coleta/servico.js'
 import { repositorios } from '../repositorios/index.js'
-import type { FonteResposta, ListaFontesResposta } from '../../shared/tipos/fontes.js'
+import type { FonteResposta, ListaFontesResposta, TipoFonte } from '../../shared/tipos/fontes.js'
+
+const TIPOS_FONTE: readonly TipoFonte[] = ['SCRAPER', 'RSS', 'UPLOAD_MANUAL', 'URL_MANUAL']
 
 export const rotasFontes = Router()
 
@@ -16,11 +18,13 @@ rotasFontes.get('/fontes', (_req, res) => {
 
 rotasFontes.post('/fontes', (req, res) => {
   const dados = req.body ?? {}
+  const tipo = String(dados.tipo ?? 'URL_MANUAL') as TipoFonte
+  if (!TIPOS_FONTE.includes(tipo)) return res.status(400).json({ erro: 'Tipo de fonte inválido.' })
   const payload = {
-    id: dados.id ?? novoId(),
+    id: dados.id ? String(dados.id) : novoId(),
     nome: String(dados.nome ?? '').trim(),
     url_base: dados.url_base == null || dados.url_base === '' ? null : String(dados.url_base),
-    tipo: String(dados.tipo ?? 'URL_MANUAL'),
+    tipo,
     frequencia_cron: dados.frequencia_cron == null || dados.frequencia_cron === '' ? null : String(dados.frequencia_cron),
     ativo: dados.ativo !== false,
   }

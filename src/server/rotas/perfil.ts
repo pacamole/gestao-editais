@@ -3,7 +3,10 @@ import { transacao } from '../db/index.js'
 import { repositorios } from '../repositorios/index.js'
 import { reavaliarEditaisAtivos } from '../servicos/avaliacao.js'
 import { normalizarLista } from '../util/listas.js'
+import type { Porte } from '../../shared/tipos/dominio.js'
 import type { PerfilResposta, SalvarPerfilResposta } from '../../shared/tipos/perfil.js'
+
+const PORTES: readonly Porte[] = ['MEI', 'ME', 'EPP', 'MEDIA', 'GRANDE']
 
 export const rotasPerfil = Router()
 
@@ -13,6 +16,8 @@ rotasPerfil.get('/perfil-empresa', (_req, res) => {
 
 rotasPerfil.post('/perfil-empresa', (req, res) => {
   const payload = req.body ?? {}
+  const porte = String(payload.porte ?? 'ME') as Porte
+  if (!PORTES.includes(porte)) return res.status(400).json({ erro: 'Porte inválido.' })
   const perfil = {
     id: 1,
     razao_social: String(payload.razao_social ?? '').trim() || 'I9+ Consultoria e Inovação',
@@ -20,7 +25,7 @@ rotasPerfil.post('/perfil-empresa', (req, res) => {
     cnpj: String(payload.cnpj ?? '').trim() || '00.000.000/0000-00',
     cnae_principal: String(payload.cnae_principal ?? '').trim() || '0000-0/00',
     cnaes_secundarios: normalizarLista(payload.cnaes_secundarios),
-    porte: String(payload.porte ?? 'ME'),
+    porte,
     natureza_juridica: String(payload.natureza_juridica ?? '').trim() || 'Sociedade Empresária Limitada',
     data_fundacao: String(payload.data_fundacao ?? '').trim() || '2020-01-01',
     faturamento_anual: payload.faturamento_anual == null || payload.faturamento_anual === '' ? null : Number(payload.faturamento_anual),
