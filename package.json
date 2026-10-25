@@ -13,7 +13,8 @@
     "db:seed-editais": "tsx --disable-warning=ExperimentalWarning src/server/db/cli-seed-editais.ts",
     "email:teste": "tsx --disable-warning=ExperimentalWarning src/server/notificacao/cli-teste.ts",
     "db:exportar": "tsx --disable-warning=ExperimentalWarning src/server/base/cli-exportar.ts",
-    "db:importar": "tsx --disable-warning=ExperimentalWarning src/server/base/cli-importar.ts"
+    "db:importar": "tsx --disable-warning=ExperimentalWarning src/server/base/cli-importar.ts",
+    "empacotar": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/empacotar.ps1"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
@@ -23,7 +24,9 @@
     "pdfjs-dist": "^6.4.299",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-router": "^8.4.0"
+    "react-markdown": "^10.1.0",
+    "react-router": "^8.4.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

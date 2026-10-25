@@ -4,13 +4,15 @@ Sistema web que capta, analisa e prioriza editais de fomento para a I9+.
 Um único servidor Node (Express) entrega a API e a interface React; o banco é SQLite
 (`data/editais.db`) ou, opcionalmente, Turso na nuvem.
 
+# Desenvolvimento
+
 ## 1. Pré-requisitos
 
-| Ferramenta | Versão | Para quê |
-| --- | --- | --- |
+| Ferramenta                    | Versão         | Para quê                          |
+| ----------------------------- | -------------- | --------------------------------- |
 | [Node.js](https://nodejs.org) | 24 ou superior | Rodar o sistema (o npm vem junto) |
-| [Git](https://git-scm.com) | qualquer | Baixar o código |
-| [Ollama](https://ollama.com) | opcional | Chat e leitura de editais com IA |
+| [Git](https://git-scm.com)    | qualquer       | Baixar o código                   |
+| [Ollama](https://ollama.com)  | opcional       | Chat e leitura de editais com IA  |
 
 Confira as versões:
 
@@ -37,10 +39,10 @@ Copy-Item .env.example .env          # Windows (PowerShell)
 
 Os valores padrão já funcionam. Ajuste se precisar:
 
-| Variável | Padrão | Uso |
-| --- | --- | --- |
-| `DATABASE_PATH` | `data/editais.db` | Caminho do banco |
-| `APP_URL` | `http://localhost:3000` | Endereço do sistema: a porta do servidor vem daqui, e é usado nos links dos e-mails |
+| Variável        | Padrão                  | Uso                                                                                 |
+| --------------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| `DATABASE_PATH` | `data/editais.db`       | Caminho do banco                                                                    |
+| `APP_URL`       | `http://localhost:3000` | Endereço do sistema: a porta do servidor vem daqui, e é usado nos links dos e-mails |
 
 ## 4. Criar o banco
 
@@ -88,25 +90,25 @@ Sem SMTP configurado, os e-mails são apenas impressos no terminal.
 
 ## Comandos
 
-| Comando | O que faz |
-| --- | --- |
-| `npm run dev` | Sobe em modo desenvolvimento, com recarga automática |
-| `npm run build` e `npm start` | Gera e sobe a versão de produção |
-| `npm run typecheck` | Checa os tipos do TypeScript |
-| `npm run db:reset` | **Apaga** o banco e recria a partir de `db/schema.sql` |
-| `npm run db:seed-editais` | Insere editais fictícios numa base sem editais |
-| `npm run db:exportar` | Exporta a base para `exportacoes/*.db` |
-| `npm run db:importar -- arquivo.db` | Substitui a base local pela do arquivo |
-| `npm run coleta [-- FINEP]` | Roda a coleta de todas as fontes (ou de uma) |
-| `npm run email:teste -- email` | Envia um e-mail de teste |
+| Comando                             | O que faz                                              |
+| ----------------------------------- | ------------------------------------------------------ |
+| `npm run dev`                       | Sobe em modo desenvolvimento, com recarga automática   |
+| `npm run build` e `npm start`       | Gera e sobe a versão de produção                       |
+| `npm run typecheck`                 | Checa os tipos do TypeScript                           |
+| `npm run db:reset`                  | **Apaga** o banco e recria a partir de `db/schema.sql` |
+| `npm run db:seed-editais`           | Insere editais fictícios numa base sem editais         |
+| `npm run db:exportar`               | Exporta a base para `exportacoes/*.db`                 |
+| `npm run db:importar -- arquivo.db` | Substitui a base local pela do arquivo                 |
+| `npm run coleta [-- FINEP]`         | Roda a coleta de todas as fontes (ou de uma)           |
+| `npm run email:teste -- email`      | Envia um e-mail de teste                               |
 
 ## Problemas comuns
 
-| Sintoma | Solução |
-| --- | --- |
-| "Banco não criado" ao rodar `npm run dev` | Rode o passo 4. |
-| Chat não responde | Verifique se o Ollama está rodando e se o modelo `gemma2:latest` foi baixado. |
-| Porta 3000 em uso | Troque a porta no `APP_URL` do `.env` (ex.: `http://localhost:3001`). |
+| Sintoma                                   | Solução                                                                       |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| "Banco não criado" ao rodar `npm run dev` | Rode o passo 4.                                                               |
+| Chat não responde                         | Verifique se o Ollama está rodando e se o modelo `gemma2:latest` foi baixado. |
+| Porta 3000 em uso                         | Troque a porta no `APP_URL` do `.env` (ex.: `http://localhost:3001`).         |
 
 ## Mais documentação
 

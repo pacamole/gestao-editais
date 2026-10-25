@@ -94,28 +94,54 @@
   line-height: 1.6;
 }
 
-.texto-formatado p {
+.texto-formatado p,
+.texto-formatado ul,
+.texto-formatado ol,
+.texto-formatado pre,
+.texto-formatado blockquote,
+.texto-formatado__tabela {
   margin: 0 0 var(--esp-2);
-  white-space: pre-wrap;
 }
 
-.texto-formatado p:last-child,
-.texto-formatado ul:last-child,
-.texto-formatado ol:last-child {
+.texto-formatado > :last-child {
   margin-bottom: 0;
 }
 
 .texto-formatado ul,
 .texto-formatado ol {
-  margin: 0 0 var(--esp-2);
   padding-left: var(--esp-6);
+}
+
+/* Lista dentro de lista não ganha margem extra. */
+.texto-formatado li > ul,
+.texto-formatado li > ol {
+  margin-bottom: 0;
+}
+
+.texto-formatado li > p {
+  margin-bottom: 0;
 }
 
 .texto-formatado h3,
 .texto-formatado h4,
-.texto-formatado h5 {
-  margin: 0 0 var(--esp-2);
+.texto-formatado h5,
+.texto-formatado h6 {
+  margin: var(--esp-3) 0 var(--esp-2);
   font-size: var(--texto-lg);
+}
+
+.texto-formatado h5,
+.texto-formatado h6 {
+  font-size: inherit;
+}
+
+.texto-formatado > :is(h3, h4, h5, h6):first-child {
+  margin-top: 0;
+}
+
+.texto-formatado a {
+  color: var(--cor-primaria);
+  text-decoration: underline;
 }
 
 .texto-formatado code {
@@ -123,6 +149,52 @@
   border-radius: var(--raio-1);
   background: var(--cor-superficie);
   font-family: var(--fonte-mono);
+}
+
+.texto-formatado pre {
+  padding: var(--esp-2) var(--esp-3);
+  border-radius: var(--raio-2);
+  background: var(--cor-superficie);
+  overflow-x: auto;
+}
+
+.texto-formatado pre code {
+  padding: 0;
+  background: none;
+}
+
+.texto-formatado blockquote {
+  padding-left: var(--esp-3);
+  border-left: 3px solid var(--cor-linha-forte);
+  color: var(--cinza-texto);
+}
+
+.texto-formatado hr {
+  margin: var(--esp-3) 0;
+  border: 0;
+  border-top: 1px solid var(--cor-linha);
+}
+
+.texto-formatado__tabela {
+  overflow-x: auto;
+}
+
+.texto-formatado table {
+  border-collapse: collapse;
+  font-size: var(--texto-sm);
+}
+
+.texto-formatado th,
+.texto-formatado td {
+  padding: 4px var(--esp-2);
+  border: 1px solid var(--cor-linha);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: normal;
+}
+
+.texto-formatado th {
+  background: var(--cor-superficie);
 }
 
 /* Quem está logado, no pé do menu, logo acima de "Sair da conta". Nome e e-mail sempre inteiros. */
