@@ -3,7 +3,7 @@
 // o comportamento de um critério sai do tipo dos campos e do operador, nunca do nome.
 
 import type { Operador } from './tipos/dominio.js'
-import { CAMPOS_EDITAL, type TipoCampo } from './rotulos.js'
+import { CAMPOS_EDITAL, type CampoEdital, type TipoCampo } from './rotulos.js'
 
 // Tipo de valor, do ponto de vista da comparação.
 // 'dias' só existe no perfil: quantidade de dias que, contra uma data do edital, vira "hoje + N dias".
@@ -18,7 +18,6 @@ const TIPO_COMPARAVEL: Record<TipoCampo, TipoComparavel> = {
   percentual: 'numero',
   inteiro: 'numero',
   data: 'data',
-  dataHora: 'data',
   booleano: 'booleano',
   lista: 'lista',
 }
@@ -26,7 +25,9 @@ const TIPO_COMPARAVEL: Record<TipoCampo, TipoComparavel> = {
 // Campos do edital (§6) comparáveis, mais o texto bruto (busca de palavras-chave).
 export const CAMPOS_CRITERIO_EDITAL: Record<string, CampoCriterio> = {
   ...Object.fromEntries(
-    Object.entries(CAMPOS_EDITAL).map(([campo, def]) => [campo, { rotulo: def.rotulo, tipo: TIPO_COMPARAVEL[def.tipo] }]),
+    Object.entries(CAMPOS_EDITAL)
+      .filter(([, def]) => !(def as CampoEdital).somenteDetalhe)
+      .map(([campo, def]) => [campo, { rotulo: def.rotulo, tipo: TIPO_COMPARAVEL[def.tipo] }]),
   ),
   texto_extraido: { rotulo: 'Texto do documento', tipo: 'texto' },
 }

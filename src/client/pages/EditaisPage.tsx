@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import type { FiltrosEditais as Filtros, ListaEditaisResposta } from '../../shared/tipos/editais'
+import type { FiltrosEditais as Filtros, ListaEditaisResposta, LoteResposta } from '../../shared/tipos/editais'
 import type { FonteComExecucoes } from '../../shared/tipos/fontes'
 import { ErroApi, mensagemDeErro } from '../api/cliente'
 import { editais } from '../api/editais'
@@ -87,13 +87,21 @@ export function EditaisPage() {
     setSelecionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
+  // Mostra quantos foram aplicados e, se houver, por que os demais foram ignorados.
+  function resumirLote(resposta: LoteResposta, verbo: string) {
+    if (resposta.aplicados) avisarSucesso(`${resposta.aplicados} edital(is) ${verbo} com sucesso.`)
+    if (resposta.ignorados.length) {
+      const motivos = [...new Set(resposta.ignorados.map((i) => i.motivo))].join(' ')
+      setErro(`${resposta.ignorados.length} edital(is) ignorado(s). ${motivos}`)
+    }
+  }
+
   async function aprovarLote() {
     if (!selecionados.length || executandoLote) return
     try {
       setExecutandoLote(true)
       setErro(null)
-      await editais.lote({ ids: selecionados, acao: 'APROVAR' })
-      avisarSucesso(`${selecionados.length} edital(is) aprovado(s) com sucesso.`)
+      resumirLote(await editais.lote({ ids: selecionados, acao: 'APROVAR' }), 'aprovado(s)')
       await carregarEditais()
     } catch (err) {
       setErro(mensagemDeErro(err, 'Erro ao aprovar editais em lote.'))
@@ -111,8 +119,7 @@ export function EditaisPage() {
     try {
       setExecutandoLote(true)
       setErro(null)
-      await editais.lote({ ids: selecionados, acao: 'DESCARTAR', comentario: justificativa.trim() })
-      avisarSucesso(`${selecionados.length} edital(is) descartado(s) com sucesso.`)
+      resumirLote(await editais.lote({ ids: selecionados, acao: 'DESCARTAR', comentario: justificativa.trim() }), 'descartado(s)')
       await carregarEditais()
       return true
     } catch (err) {

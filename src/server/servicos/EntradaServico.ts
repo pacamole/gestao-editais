@@ -1,0 +1,194 @@
+import { createHash } from 'node:crypto'
+import { ehMarcadorDeTextoPdf, extrairPdf } from '../integracoes/pdf.js'
+import type { Edital } from '../dominio/entidades.js'
+import { ErroRegraNegocio, ErroValidacao } from '../dominio/erros.js'
+import type { Repositorios } from '../repositorios/index.js'
+import { CAMPOS_EDITAVEIS, type CampoEditavel } from '../../shared/camposEditaveis.js'
+import { CAMPOS_EDITAL } from '../../shared/rotulos.js'
+import type { CriarEditalResposta } from '../../shared/tipos/editais.js'
+import { normalizarValor } from '../../shared/valoresCampo.js'
+
+type RepositoriosEntrada = Pick<Repositorios, 'edital' | 'fonte' | 'avaliacao'>
+
+const LIMITE_UPLOAD_BYTES = 20 * 1024 * 1024
+const AVISO_PAGINAS_SEM_TEXTO = 'Requer leitura manual: uma ou mais páginas não têm camada de texto.'
+
+export type EntradaUpload = { arquivo_base64?: unknown; nome_arquivo?: unknown; fonte_id?: unknown }
+export type EntradaUrl = { url?: unknown; fonte_id?: unknown }
+
+// Cadastro de editais pelo usuário: PDF enviado, link colado ou campos digitados.
+export class EntradaServico {
+  constructor(
+    private readonly repos: RepositoriosEntrada,
+    private readonly lerPdf: typeof extrairPdf = extrairPdf,
+  ) {}
+
+  async criarPorUpload({ arquivo_base64, nome_arquivo, fonte_id }: EntradaUpload): Promise<CriarEditalResposta> {
+    if (!arquivo_base64 || typeof arquivo_base64 !== 'string') throw new ErroValidacao('Arquivo PDF não fornecido.')
+
+    const buffer = Buffer.from(arquivo_base64, 'base64')
+    if (buffer.length > LIMITE_UPLOAD_BYTES) {
+      throw new ErroValidacao(
+        `O arquivo enviado (${(buffer.length / (1024 * 1024)).toFixed(1)} MB) excede o limite máximo permitido de 20 MB.`,
+      )
+    }
+
+    let textoPdf
+    try {
+      textoPdf = await this.lerPdf(buffer)
+    } catch {
+      throw new ErroValidacao('Não foi possível ler este PDF. Verifique se o arquivo está íntegro e tente novamente.')
+    }
+    if (!textoPdf.paginas.some((pagina) => pagina.texto.trim())) {
+      throw new ErroRegraNegocio(
+        'Este PDF não contém texto selecionável. Aplique OCR ao documento e envie novamente para habilitar o chat.',
+      )
+    }
+
+    const hash = createHash('sha256').update(buffer).digest('hex')
+    const erroProcessamento = textoPdf.requerLeituraManual ? AVISO_PAGINAS_SEM_TEXTO : null
+
+    const duplicado = this.repos.edital.buscarDuplicado({
+      hash_documento: hash,
+      url_documento: null,
+      numero_edital: null,
+      orgao_financiador: null,
+    })
+    if (duplicado) {
+      if (!duplicado.texto_extraido?.trim() || ehMarcadorDeTextoPdf(duplicado.texto_extraido)) {
+        this.repos.edital.atualizar(duplicado.id, { texto_extraido: textoPdf.texto, erro_processamento: erroProcessamento })
+        return { ok: true, id: duplicado.id, duplicado: true, mensagem: 'O edital existente foi atualizado com o texto extraído do PDF.' }
+      }
+      return { ok: true, id: duplicado.id, duplicado: true, mensagem: 'Edital já cadastrado com o mesmo documento.' }
+    }
+
+    const nome = (typeof nome_arquivo === 'string' && nome_arquivo ? nome_arquivo : 'Edital Importado')
+      .replace(/\.pdf$/i, '')
+      .replace(/[_-]+/g, ' ')
+      .trim()
+
+    const edital = this.repos.edital.inserir({
+      titulo: nome.length > 5 ? nome : `Edital via Upload - ${nome}`,
+      fonte_id: this.fonteDe(fonte_id, 'Upload manual'),
+      hash_documento: hash,
+      status: 'COLETADO',
+      texto_extraido: textoPdf.texto,
+      erro_processamento: erroProcessamento,
+      retificado: false,
+    })
+
+    // FASE 1: trocar esta avaliação provisória pelo processamento real (extração + critérios).
+    this.repos.avaliacao.inserir({
+      edital_id: edital.id,
+      status_elegibilidade: 'INDETERMINADO',
+      nota_fit: 50,
+      classificacao: 'MEDIO',
+      criterios_violados: null,
+      criterios_indeterminados: [
+        { criterio_id: 'leitura_pendente', nome: 'Análise de documento em processamento', campo_faltante: 'Dados em extração' },
+      ],
+      detalhamento_pontuacao: null,
+      nota_ajustada_manual: null,
+      ajustada_por: null,
+      perfil_atualizado_em: null,
+    })
+
+    return { ok: true, id: edital.id }
+  }
+
+  criarPorUrl({ url, fonte_id }: EntradaUrl): CriarEditalResposta {
+    if (typeof url !== 'string' || !url.trim()) throw new ErroValidacao('Endereço URL do edital é obrigatório.')
+    const endereco = url.trim()
+    if (!/^https?:\/\//i.test(endereco)) throw new ErroValidacao('Informe uma URL válida iniciando com http:// ou https://.')
+
+    const duplicado = this.repos.edital.buscarDuplicado({
+      hash_documento: null,
+      url_documento: endereco,
+      numero_edital: null,
+      orgao_financiador: null,
+    })
+    if (duplicado) return { ok: true, id: duplicado.id, duplicado: true, mensagem: 'Edital já cadastrado com esta URL de origem.' }
+
+    let dominio = 'Portal de Fomento'
+    try {
+      dominio = new URL(endereco).hostname.replace(/^www\./i, '')
+    } catch {
+      // mantém o nome genérico
+    }
+
+    const edital = this.repos.edital.inserir({
+      titulo: `Chamada Pública identificada em ${dominio}`,
+      fonte_id: this.fonteDe(fonte_id, 'URL manual'),
+      url_original: endereco,
+      url_documento: endereco,
+      status: 'COLETADO',
+      retificado: false,
+    })
+
+    // FASE 1: trocar esta avaliação provisória pelo processamento real.
+    this.repos.avaliacao.inserir({
+      edital_id: edital.id,
+      status_elegibilidade: 'INDETERMINADO',
+      nota_fit: 50,
+      classificacao: 'MEDIO',
+      criterios_violados: null,
+      criterios_indeterminados: null,
+      detalhamento_pontuacao: null,
+      nota_ajustada_manual: null,
+      ajustada_por: null,
+      perfil_atualizado_em: null,
+    })
+
+    return { ok: true, id: edital.id }
+  }
+
+  criarManual(dados: Record<string, unknown>): CriarEditalResposta {
+    const titulo = typeof dados.titulo === 'string' ? dados.titulo.trim() : ''
+    if (!titulo) throw new ErroValidacao('O título do edital é obrigatório.')
+
+    // Cada campo é convertido pelo tipo do catálogo; valor inválido recusa o cadastro em vez de gravar lixo.
+    const campos: Partial<Edital> = {}
+    for (const campo of CAMPOS_EDITAVEIS as readonly CampoEditavel[]) {
+      if (dados[campo] === undefined) continue
+      const { rotulo, tipo } = CAMPOS_EDITAL[campo]
+      const resultado = normalizarValor(tipo, dados[campo], { separarTexto: true })
+      if (!resultado.ok) throw new ErroValidacao(`${rotulo}: ${resultado.motivo}`)
+      Object.assign(campos, { [campo]: resultado.valor })
+    }
+
+    const edital = this.repos.edital.inserir({
+      ...campos,
+      titulo,
+      fonte_id: this.fonteDe(dados.fonte_id),
+      status: 'ANALISADO',
+      retificado: false,
+    })
+
+    // FASE 1: trocar esta nota provisória pela avaliação real dos critérios.
+    const nota = edital.areas_tematicas?.some((a) => /esg|bateria|energia|sustentabilidade/i.test(a)) ? 85 : 75
+    this.repos.avaliacao.inserir({
+      edital_id: edital.id,
+      status_elegibilidade: 'ELEGIVEL',
+      nota_fit: nota,
+      classificacao: 'ALTO',
+      criterios_violados: null,
+      criterios_indeterminados: null,
+      detalhamento_pontuacao: [{ criterio_id: 'cadastro_manual', peso: 10, pontuacao: 0.8, contribuicao: nota }],
+      nota_ajustada_manual: null,
+      ajustada_por: null,
+      perfil_atualizado_em: null,
+    })
+
+    return { ok: true, id: edital.id }
+  }
+
+  // A fonte informada, ou a padrão do tipo de entrada, ou a primeira cadastrada.
+  private fonteDe(informada: unknown, nomePadrao?: string): string {
+    const id =
+      (typeof informada === 'string' && informada) ||
+      (nomePadrao ? this.repos.fonte.buscarPorNome(nomePadrao)?.id : undefined) ||
+      this.repos.fonte.listar()[0]?.id
+    if (!id) throw new ErroRegraNegocio('Nenhuma fonte cadastrada. Cadastre uma fonte em Configurações antes de criar editais.')
+    return id
+  }
+}

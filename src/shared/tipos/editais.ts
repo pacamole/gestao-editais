@@ -57,9 +57,12 @@ export type LoteEntrada = {
   comentario?: string // obrigatório para DESCARTAR
 }
 
+export type LoteIgnorado = { id: string; titulo: string | null; motivo: string }
+
 export type LoteResposta = {
   ok: true
-  total: number
+  aplicados: number
+  ignorados: LoteIgnorado[]
   status: 'APROVADO' | 'DESCARTADO'
 }
 

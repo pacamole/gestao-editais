@@ -76,7 +76,7 @@ export function EditalDetalhePage() {
         aoErro={setErro}
         aoAtualizar={carregar}
       />
-      <RevisaoHistorico id={id} revisoes={revisoes} aoErro={setErro} aoAtualizar={carregar} />
+      <RevisaoHistorico id={id} status={e.status} revisoes={revisoes} aoErro={setErro} aoAtualizar={carregar} />
       <ChatEdital id={id} textoDisponivel={textoDisponivel} aoErro={setErro} />
     </section>
   )

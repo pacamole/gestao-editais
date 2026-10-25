@@ -1,0 +1,97 @@
+import type { Repositorios } from '../repositorios/index.js'
+import type { Destinatario, Notificacao } from './notificacao/Notificacao.js'
+import type { EmailPorta } from '../portas/EmailPorta.js'
+
+export type ResultadoDisparo =
+  | 'ENVIADO'
+  | 'PARCIAL' // parte dos destinatários falhou
+  | 'FALHOU'
+  | 'DESATIVADO' // tipo desligado em config_alerta
+  | 'DUPLICADO' // já enviado (regra anti-spam)
+  | 'SEM_DESTINATARIOS'
+
+const AVISO_SIMULACAO = [
+  '*** SIMULAÇÃO — Este e-mail foi enviado pelo botão "Simular envio" da tela de alertas.',
+  '*** Todos os dados abaixo são FICTÍCIOS e não correspondem a nenhum edital real.',
+].join('\n')
+
+type RepositoriosServico = Pick<Repositorios, 'configAlerta' | 'usuario' | 'notificacaoLog' | 'destinatario'>
+
+// Envia uma notificação: checa configuração e anti-spam, envia um e-mail por destinatário e registra no log.
+export class NotificacaoServico {
+  // Disparos em fila: dois disparos iguais simultâneos não passam juntos pela checagem anti-spam.
+  private fila: Promise<unknown> = Promise.resolve()
+
+  constructor(
+    private readonly email: EmailPorta,
+    private readonly repositorios: RepositoriosServico,
+  ) {}
+
+  disparar(notificacao: Notificacao): Promise<ResultadoDisparo> {
+    const resultado = this.fila.then(() => this.executar(notificacao))
+    this.fila = resultado.catch(() => undefined)
+    return resultado
+  }
+
+  private async executar(notificacao: Notificacao): Promise<ResultadoDisparo> {
+    const { tipo, editalId, marco } = notificacao
+    const config = this.repositorios.configAlerta.obter(tipo)
+    if (!config.ativo) return 'DESATIVADO'
+    if (this.repositorios.notificacaoLog.jaEnviada(tipo, editalId, marco)) return 'DUPLICADO'
+
+    const destinatarios = this.destinatarios(config.destinatarios)
+    if (!destinatarios.length) return 'SEM_DESTINATARIOS'
+
+    const assunto = notificacao.assunto()
+    const enviados: string[] = []
+    const falhas: string[] = []
+
+    for (const destinatario of destinatarios) {
+      try {
+        await this.email.enviar({ para: destinatario.email, assunto, texto: notificacao.corpo(destinatario) })
+        enviados.push(destinatario.email)
+      } catch (erro) {
+        console.error(`[notificação ${tipo}] falha ao enviar para ${destinatario.email}:`, erro)
+        falhas.push(destinatario.email)
+      }
+    }
+
+    const base = { tipo, edital_id: editalId, marco, assunto }
+    if (enviados.length) this.repositorios.notificacaoLog.inserir({ ...base, destinatarios: enviados, status_envio: 'ENVIADO' })
+    if (falhas.length) this.repositorios.notificacaoLog.inserir({ ...base, destinatarios: falhas, status_envio: 'FALHOU' })
+
+    if (!falhas.length) return 'ENVIADO'
+    return enviados.length ? 'PARCIAL' : 'FALHOU'
+  }
+
+  // E-mails escolhidos no alerta que ainda estão na lista de destinatários; nenhum escolhido = toda a lista.
+  destinatarios(escolhidos: string[]): Destinatario[] {
+    const lista = this.repositorios.destinatario.emails()
+    const naLista = new Set(lista.map((e) => e.toLowerCase()))
+    const emails = escolhidos.length ? escolhidos.filter((e) => naLista.has(e.toLowerCase())) : lista
+    return emails.map((email) => this.comNome(email))
+  }
+
+  // Nome para o "Olá, …": o do usuário com esse e-mail, ou "equipe" para e-mails externos.
+  comNome(email: string): Destinatario {
+    return { email, nome: this.repositorios.usuario.buscarPorEmail(email)?.nome ?? 'equipe' }
+  }
+
+  // Envia uma notificação de teste (dados fictícios): ignora ativação e anti-spam e não grava no log.
+  async simular(notificacao: Notificacao, emails: string[]): Promise<{ enviados: string[]; falhas: string[] }> {
+    const enviados: string[] = []
+    const falhas: string[] = []
+    const assunto = `[SIMULAÇÃO] ${notificacao.assunto()}`
+    for (const destinatario of emails.map((e) => this.comNome(e))) {
+      try {
+        const texto = `${AVISO_SIMULACAO}\n\n${notificacao.corpo(destinatario)}`
+        await this.email.enviar({ para: destinatario.email, assunto, texto })
+        enviados.push(destinatario.email)
+      } catch (erro) {
+        console.error(`[simulação ${notificacao.tipo}] falha ao enviar para ${destinatario.email}:`, erro)
+        falhas.push(destinatario.email)
+      }
+    }
+    return { enviados, falhas }
+  }
+}

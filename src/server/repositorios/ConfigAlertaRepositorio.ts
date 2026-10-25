@@ -1,5 +1,5 @@
 import type { ConfigAlerta, TipoNotificacao } from '../dominio/entidades.js'
-import { normalizarParametros, PARAMETROS_PADRAO, type ParametrosAlerta } from '../notificacao/parametros.js'
+import { normalizarParametros, PARAMETROS_PADRAO, type ParametrosAlerta } from '../../shared/catalogoAlertas.js'
 import { Repositorio } from './repositorio.js'
 
 export type ConfigAlertaTipada<T extends TipoNotificacao> = Omit<ConfigAlerta, 'parametros'> & {

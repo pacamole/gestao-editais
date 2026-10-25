@@ -1,6 +1,7 @@
 // Contratos da API de detalhe do edital (/api/editais/:id e ações sobre ele).
 
 import type { CampoEditavel } from '../camposEditaveis.js'
+import type { AcaoTransicao } from '../statusEdital.js'
 import type { Avaliacao, Edital, Evidencia, Revisao } from './dominio.js'
 
 export type {
@@ -23,7 +24,7 @@ export type { CampoEditavel } from '../camposEditaveis.js'
 export type EditalDetalhado = Edital
 
 // Ações aceitas por POST /editais/:id/revisao.
-export type AcaoRevisaoManual = 'APROVOU' | 'DESCARTOU' | 'MARCOU_INSCRITO' | 'REGISTROU_RESULTADO' | 'AJUSTOU_NOTA'
+export type AcaoRevisaoManual = AcaoTransicao
 
 export type RevisarEntrada = { acao: AcaoRevisaoManual; comentario: string }
 

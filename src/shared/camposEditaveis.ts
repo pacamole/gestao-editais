@@ -1,24 +1,11 @@
-// Campos do edital que a edição manual e a extração por IA podem preencher.
-export const CAMPOS_EDITAVEIS = [
-  'orgao_financiador',
-  'numero_edital',
-  'modalidade',
-  'data_publicacao',
-  'prazo_inscricao',
-  'data_resultado_prevista',
-  'valor_total_disponivel',
-  'valor_maximo_por_projeto',
-  'exige_contrapartida',
-  'percentual_contrapartida',
-  'publico_alvo',
-  'cnaes_aceitos',
-  'portes_aceitos',
-  'abrangencia_geografica',
-  'areas_tematicas',
-  'resumo_executivo',
-] as const
+// Campos do edital que a edição manual e a extração por IA podem preencher: todos os do catálogo, menos o título.
+import { CAMPOS_EDITAL, type NomeCampoEdital } from './rotulos.js'
 
-export type CampoEditavel = typeof CAMPOS_EDITAVEIS[number]
+export type CampoEditavel = Exclude<NomeCampoEdital, 'titulo'>
+
+export const CAMPOS_EDITAVEIS = (Object.keys(CAMPOS_EDITAL) as NomeCampoEdital[]).filter(
+  (campo): campo is CampoEditavel => campo !== 'titulo',
+)
 
 // Trecho gravado como evidência quando o campo foi editado à mão.
 export const MARCADOR_EDICAO_MANUAL = 'Editado manualmente; sem evidência extraída do documento.'

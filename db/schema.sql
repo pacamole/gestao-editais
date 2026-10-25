@@ -188,7 +188,7 @@ CREATE TABLE revisao (
   usuario_id      TEXT NOT NULL REFERENCES usuario(id),
   acao            TEXT NOT NULL CHECK (acao IN (
                     'APROVOU', 'DESCARTOU', 'CORRIGIU_CAMPO', 'AJUSTOU_NOTA', 'REPROCESSOU',
-                    'MARCOU_INSCRITO', 'REGISTROU_RESULTADO')),
+                    'MARCOU_INSCRITO', 'REGISTROU_RESULTADO', 'REABRIU')),
   campo_alterado  TEXT,
   valor_anterior  TEXT,
   valor_novo      TEXT,

@@ -4,16 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "coleta": "tsx src/server/coleta/cli.ts",
+    "coleta": "tsx src/server/cli/coleta.ts",
     "dev": "tsx watch --disable-warning=ExperimentalWarning --ignore ./src/client src/server/index.ts",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "cross-env NODE_ENV=production node --disable-warning=ExperimentalWarning dist/server/index.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
-    "db:reset": "tsx --disable-warning=ExperimentalWarning src/server/db/reset.ts",
-    "db:seed-editais": "tsx --disable-warning=ExperimentalWarning src/server/db/cli-seed-editais.ts",
-    "email:teste": "tsx --disable-warning=ExperimentalWarning src/server/notificacao/cli-teste.ts",
-    "db:exportar": "tsx --disable-warning=ExperimentalWarning src/server/base/cli-exportar.ts",
-    "db:importar": "tsx --disable-warning=ExperimentalWarning src/server/base/cli-importar.ts",
+    "db:reset": "tsx --disable-warning=ExperimentalWarning src/server/cli/db-reset.ts",
+    "db:seed-editais": "tsx --disable-warning=ExperimentalWarning src/server/cli/seed-editais.ts",
+    "email:teste": "tsx --disable-warning=ExperimentalWarning src/server/cli/email-teste.ts",
+    "db:exportar": "tsx --disable-warning=ExperimentalWarning src/server/cli/base-exportar.ts",
+    "db:importar": "tsx --disable-warning=ExperimentalWarning src/server/cli/base-importar.ts",
     "empacotar": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/empacotar.ps1"
   },
   "dependencies": {

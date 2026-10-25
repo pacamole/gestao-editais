@@ -5,22 +5,28 @@ db/schema.sql          estrutura do banco (sem migrações: altere e rode db:res
 src/client/            interface React (páginas em pages/, rotas em router.tsx)
   styles/              design system em CSS (guia em docs/DESIGN.md)
 src/server/            servidor Express (index.ts monta a API em /api)
-  rotas/               endpoints HTTP, um arquivo por assunto (index.ts reúne todos)
-  servicos/            regras de negócio usadas pelas rotas (avaliação, extração, bootstrap)
-  auth/                senha e sessão (cookie)
-  dominio/             entidades e validações do domínio
-  repositorios/        acesso ao banco, um repositório por tabela
-  db/                  conexão, reset e seeds
-  coleta/              coleta de editais nas fontes
-  chat/                integração com o Ollama
-  notificacao/         e-mails E01–E06 e seus gatilhos
-  base/                exportação e importação da base
-  infra/               agendador de rotinas
+  controllers/         camada HTTP: lê a requisição, chama um service e devolve a resposta (sem SQL nem regra)
+  servicos/            regras de negócio e casos de uso, um service por assunto
+    coleta/            fontes padrão e portais/ (uma classe por portal: FINEP, CNPq, Embrapii)
+    ia/                prompts, leitura da resposta do modelo e índice de busca por trechos
+    notificacao/       textos dos e-mails E01–E06 (uma classe por tipo), formatação e simulação
+  repositorios/        acesso a dados: todo o SQL (um repositório por agregado), arquivos de PDF e backup da base
+  dominio/             entidades, motor de critérios, cálculo da avaliação, validações e erros de negócio
+  portas/              interfaces do que vem de fora (modelo de linguagem, e-mail)
+  adaptadores/         implementações das portas (Ollama, SMTP, console)
+  integracoes/         clientes de recursos externos usados pelos services: download HTTP, leitura de PDF e de páginas
+  agendamento/         agendador e tarefas agendadas (coleta, expiração, alertas)
+  cli/                 comandos do terminal (db:reset, db:exportar, coleta, e-mail de teste…), um arquivo por comando
+  db/                  conexão com o banco (local ou nuvem) e transações
   config/              variáveis de ambiente (.env) e caminhos do projeto
+  composicao.ts        liga repositórios, adaptadores e services (único lugar com new)
   util/                funções utilitárias
-src/shared/            tipos e rótulos usados pelos dois lados
+src/shared/            tipos, rótulos e regras puras usadas pelos dois lados (datas, status, campos)
 docs/                  especificação e guia de design
 ```
+
+Fluxo de uma requisição: `controller → service → repository` (e `service → porta ← adaptador` para Ollama e e-mail).
+As dependências sempre apontam para dentro: um service nunca importa `express`, e só os adaptadores falam com serviços externos.
 
 ## Configurações do sistema (tabela `config`)
 

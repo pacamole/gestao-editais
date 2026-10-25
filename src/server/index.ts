@@ -2,14 +2,15 @@ import "./config/env.js";
 import express, { type ErrorRequestHandler } from "express";
 import path from "node:path";
 import type { ErroApi, HealthResponse } from "../shared/api.js";
-import { Agendador } from "./infra/agendador.js";
-import { registroRotinas, tarefasColeta } from "./coleta/rotinas.js";
+import { Agendador } from "./agendamento/agendador.js";
+import { registroRotinas, tarefasColeta, tarefasNotificacao } from "./agendamento/tarefas.js";
+import { ErroModeloLinguagem } from './portas/ModeloLinguagemPorta.js';
+import { ErroNegocio } from "./dominio/erros.js";
 import { ehErroDeConexaoNuvem } from "./db/conexao.js";
 import { bancoVazio } from "./db/index.js";
-import { tarefasNotificacao } from "./notificacao/index.js";
 import { appUrl, porta } from "./config/app.js";
 import { root } from "./config/paths.js";
-import { rotasApi } from "./rotas/index.js";
+import { rotasApi } from "./controllers/index.js";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -32,6 +33,14 @@ app.get("/api/health", (_req, res) => {
 app.use("/api", rotasApi);
 
 const tratarErro: ErrorRequestHandler = (erro, _req, res, _next) => {
+  if (erro instanceof ErroNegocio) {
+    res.status(erro.status).json({ erro: erro.message, ...erro.dados });
+    return;
+  }
+  if (erro instanceof ErroModeloLinguagem) {
+    res.status(erro.statusCode).json({ erro: erro.message });
+    return;
+  }
   console.error(erro);
   if (ehErroDeConexaoNuvem(erro)) {
     const corpo: ErroApi = { erro: "Sem conexão com a base na nuvem. Confira a internet e tente de novo." };

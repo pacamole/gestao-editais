@@ -1,3 +1,5 @@
+import { diasAte as diasAteCivil } from '../../shared/datas'
+
 // Formatadores de exibição usados pelas páginas. `vazio` é o texto para valor ausente.
 
 // 'AAAA-MM-DD' é lido como data local (new Date() o trataria como UTC e mostraria o dia anterior).
@@ -40,10 +42,6 @@ export function rotuloValor(valor: unknown, vazio = '—', semLista = 'Sem restr
 // Dias inteiros de hoje até a data (negativo = já passou).
 export function diasAte(valor: string | null | undefined): number | null {
   if (!valor) return null
-  const alvo = paraData(valor)
-  if (Number.isNaN(alvo.getTime())) return null
-  const hoje = new Date()
-  hoje.setHours(0, 0, 0, 0)
-  alvo.setHours(0, 0, 0, 0)
-  return Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000)
+  const dias = diasAteCivil(valor)
+  return Number.isNaN(dias) ? null : dias
 }

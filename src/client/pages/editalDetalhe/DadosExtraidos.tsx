@@ -9,35 +9,32 @@ import type {
   Evidencia,
   ValorCampoEditavel,
 } from '../../../shared/tipos/edital'
-import { MARCADOR_EDICAO_MANUAL } from '../../../shared/camposEditaveis'
+import { CAMPOS_EDITAVEIS, MARCADOR_EDICAO_MANUAL } from '../../../shared/camposEditaveis'
+import { CAMPOS_EDITAL, MODALIDADES } from '../../../shared/rotulos'
 import { NAO_LOCALIZADO, SEM_CONEXAO, type AoErro } from './util'
 
 // Linha da tabela: rótulo, campo do edital (url_origem é só exibição) e valor já formatado.
 type Linha = [nome: string, campo: CampoEditavel | 'url_origem', valor: unknown]
 
-const CAMPOS_NUMERICOS: CampoEditavel[] = ['valor_total_disponivel', 'valor_maximo_por_projeto', 'percentual_contrapartida']
-const CAMPOS_LISTA: CampoEditavel[] = ['publico_alvo', 'cnaes_aceitos', 'portes_aceitos', 'abrangencia_geografica', 'areas_tematicas']
+// Valor como aparece na tabela: datas e moedas formatadas, o resto como veio.
+function valorExibido(campo: CampoEditavel, valor: unknown): unknown {
+  switch (CAMPOS_EDITAL[campo].tipo) {
+    case 'data':
+      return formatarData(valor as string | null, NAO_LOCALIZADO)
+    case 'moeda':
+      return formatarMoeda(valor as number | null, NAO_LOCALIZADO)
+    case 'booleano':
+      return rotuloValor(valor as boolean | null, NAO_LOCALIZADO)
+    default:
+      return valor
+  }
+}
 
-const ehCampoData = (campo: string) => campo.startsWith('data_') || campo === 'prazo_inscricao'
-
+// A tabela e o editor saem do catálogo de campos: campo novo no catálogo aparece aqui sozinho.
 function linhasDoEdital(e: EditalDetalhado): Linha[] {
   return [
     ['URL de origem', 'url_origem', e.url_original || e.url_documento],
-    ['Órgão financiador', 'orgao_financiador', e.orgao_financiador],
-    ['Número', 'numero_edital', e.numero_edital],
-    ['Modalidade', 'modalidade', e.modalidade],
-    ['Publicação', 'data_publicacao', formatarData(e.data_publicacao, NAO_LOCALIZADO)],
-    ['Prazo', 'prazo_inscricao', formatarData(e.prazo_inscricao, NAO_LOCALIZADO)],
-    ['Valor total', 'valor_total_disponivel', formatarMoeda(e.valor_total_disponivel, NAO_LOCALIZADO)],
-    ['Valor máximo/projeto', 'valor_maximo_por_projeto', formatarMoeda(e.valor_maximo_por_projeto, NAO_LOCALIZADO)],
-    ['Exige contrapartida', 'exige_contrapartida', rotuloValor(e.exige_contrapartida, NAO_LOCALIZADO)],
-    ['Contrapartida (%)', 'percentual_contrapartida', e.percentual_contrapartida],
-    ['Público-alvo', 'publico_alvo', e.publico_alvo],
-    ['CNAEs aceitos', 'cnaes_aceitos', e.cnaes_aceitos],
-    ['Portes aceitos', 'portes_aceitos', e.portes_aceitos],
-    ['Abrangência', 'abrangencia_geografica', e.abrangencia_geografica],
-    ['Áreas temáticas', 'areas_tematicas', e.areas_tematicas],
-    ['Resumo executivo', 'resumo_executivo', e.resumo_executivo],
+    ...CAMPOS_EDITAVEIS.map((campo): Linha => [CAMPOS_EDITAL[campo].rotulo, campo, valorExibido(campo, e[campo])]),
   ]
 }
 
@@ -94,7 +91,7 @@ export function DadosExtraidos({ id, edital: e, evidencias, textoDisponivel, aoE
           ? valor.join(', ')
           : typeof valor === 'boolean'
             ? String(valor)
-            : ehCampoData(campo)
+            : CAMPOS_EDITAL[campo].tipo === 'data'
               ? String(valor).slice(0, 10)
               : String(valor)
     }
@@ -114,14 +111,16 @@ export function DadosExtraidos({ id, edital: e, evidencias, textoDisponivel, aoE
       if (texto === (camposOriginaisEdicao[campo] ?? '')) continue
       if (!texto.trim()) {
         valores[campo] = null
-      } else if (campo === 'exige_contrapartida') {
-        valores[campo] = texto === 'true'
-      } else if (CAMPOS_NUMERICOS.includes(campo)) {
-        valores[campo] = Number(texto)
-      } else if (CAMPOS_LISTA.includes(campo)) {
-        valores[campo] = texto.split(',').map((item) => item.trim()).filter(Boolean)
       } else {
-        valores[campo] = texto.trim()
+        const tipo = CAMPOS_EDITAL[campo].tipo
+        valores[campo] =
+          tipo === 'booleano'
+            ? texto === 'true'
+            : tipo === 'moeda' || tipo === 'percentual' || tipo === 'inteiro'
+              ? Number(texto)
+              : tipo === 'lista'
+                ? texto.split(',').map((item) => item.trim()).filter(Boolean)
+                : texto.trim()
       }
     }
 
@@ -142,56 +141,55 @@ export function DadosExtraidos({ id, edital: e, evidencias, textoDisponivel, aoE
     }
   }
 
-  // Campo de edição adequado ao tipo do campo.
+  // Campo de edição adequado ao tipo do campo (definido no catálogo).
   function editor(campo: CampoEditavel) {
     const valor = rascunhoCampos[campo] ?? ''
     const alterar = (novo: string) => setRascunhoCampos({ ...rascunhoCampos, [campo]: novo })
+    const tipo = CAMPOS_EDITAL[campo].tipo
 
-    if (campo === 'resumo_executivo') {
-      return <textarea className="textarea" rows={3} value={valor} onChange={(evento) => alterar(evento.target.value)} />
+    switch (tipo) {
+      case 'modalidade':
+        return (
+          <select className="input" value={valor} onChange={(evento) => alterar(evento.target.value)}>
+            <option value="">Não localizado</option>
+            {Object.entries(MODALIDADES).map(([codigo, rotulo]) => (
+              <option key={codigo} value={codigo}>{rotulo}</option>
+            ))}
+          </select>
+        )
+      case 'booleano':
+        return (
+          <select className="input" value={valor} onChange={(evento) => alterar(evento.target.value)}>
+            <option value="">Não localizado</option>
+            <option value="true">Sim</option>
+            <option value="false">Não</option>
+          </select>
+        )
+      case 'data':
+        return <input className="input" type="date" value={valor} onChange={(evento) => alterar(evento.target.value)} />
+      case 'moeda':
+      case 'percentual':
+      case 'inteiro':
+        return (
+          <input
+            className="input"
+            type="number"
+            min="0"
+            max={tipo === 'percentual' ? 100 : undefined}
+            step={tipo === 'inteiro' ? 1 : 'any'}
+            value={valor}
+            onChange={(evento) => alterar(evento.target.value)}
+          />
+        )
+      case 'lista':
+        return <textarea className="textarea" rows={2} value={valor} onChange={(evento) => alterar(evento.target.value)} />
+      default:
+        return campo === 'resumo_executivo' ? (
+          <textarea className="textarea" rows={3} value={valor} onChange={(evento) => alterar(evento.target.value)} />
+        ) : (
+          <input className="input" value={valor} onChange={(evento) => alterar(evento.target.value)} />
+        )
     }
-    if (campo === 'modalidade') {
-      return (
-        <select className="input" value={valor} onChange={(evento) => alterar(evento.target.value)}>
-          <option value="">Não localizado</option>
-          <option value="SUBVENCAO">Subvenção</option>
-          <option value="CREDITO">Crédito</option>
-          <option value="PREMIO">Prêmio</option>
-          <option value="LICITACAO">Licitação</option>
-          <option value="CHAMADA_PUBLICA">Chamada pública</option>
-          <option value="OUTRO">Outro</option>
-        </select>
-      )
-    }
-    if (campo === 'exige_contrapartida') {
-      return (
-        <select className="input" value={valor} onChange={(evento) => alterar(evento.target.value)}>
-          <option value="">Não localizado</option>
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
-        </select>
-      )
-    }
-    if (ehCampoData(campo)) {
-      return <input className="input" type="date" value={valor} onChange={(evento) => alterar(evento.target.value)} />
-    }
-    if (CAMPOS_NUMERICOS.includes(campo)) {
-      return (
-        <input
-          className="input"
-          type="number"
-          min="0"
-          max={campo === 'percentual_contrapartida' ? 100 : undefined}
-          step="any"
-          value={valor}
-          onChange={(evento) => alterar(evento.target.value)}
-        />
-      )
-    }
-    if (CAMPOS_LISTA.includes(campo)) {
-      return <textarea className="textarea" rows={2} value={valor} onChange={(evento) => alterar(evento.target.value)} />
-    }
-    return <input className="input" value={valor} onChange={(evento) => alterar(evento.target.value)} />
   }
 
   return (

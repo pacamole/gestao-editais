@@ -158,6 +158,7 @@ export type AcaoRevisao =
   | 'REPROCESSOU'
   | 'MARCOU_INSCRITO'
   | 'REGISTROU_RESULTADO'
+  | 'REABRIU'
 
 export type Revisao = {
   id: string

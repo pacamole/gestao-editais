@@ -1,18 +1,29 @@
 import { useState } from 'react'
 import { edital as apiEdital } from '../../api/edital'
 import { formatarDataHora } from '../../util/formato'
-import type { AcaoRevisaoManual, Revisao } from '../../../shared/tipos/edital'
+import { acoesPermitidas } from '../../../shared/statusEdital'
+import type { AcaoRevisaoManual, Revisao, StatusEdital } from '../../../shared/tipos/edital'
 import { mensagemDoServidor, type AoErro } from './util'
+
+const BOTOES: Record<AcaoRevisaoManual, { texto: string; classe: string }> = {
+  APROVOU: { texto: '✓ Aprovar', classe: 'btn btn--sucesso' },
+  DESCARTOU: { texto: '✕ Descartar', classe: 'btn btn--perigo' },
+  MARCOU_INSCRITO: { texto: 'Marcar como inscrito', classe: 'btn' },
+  REGISTROU_RESULTADO: { texto: 'Registrar resultado', classe: 'btn' },
+  REABRIU: { texto: 'Reabrir', classe: 'btn' },
+}
 
 type Props = {
   id: string
+  status: StatusEdital
   revisoes: Revisao[]
   aoErro: AoErro
   aoAtualizar: () => Promise<void>
 }
 
-export function RevisaoHistorico({ id, revisoes, aoErro, aoAtualizar }: Props) {
+export function RevisaoHistorico({ id, status, revisoes, aoErro, aoAtualizar }: Props) {
   const [comentario, setComentario] = useState('')
+  const acoes = acoesPermitidas(status)
 
   async function revisar(acao: AcaoRevisaoManual) {
     if (acao === 'DESCARTOU' && !comentario.trim()) {
@@ -35,20 +46,17 @@ export function RevisaoHistorico({ id, revisoes, aoErro, aoAtualizar }: Props) {
       </div>
       <div className="card__corpo">
         <div className="pilha">
-          <div className="linha" style={{ gap: 'var(--esp-2)' }}>
-            <button type="button" className="btn btn--sucesso" onClick={() => revisar('APROVOU')}>
-              ✓ Aprovar
-            </button>
-            <button type="button" className="btn btn--perigo" onClick={() => revisar('DESCARTOU')}>
-              ✕ Descartar
-            </button>
-            <button type="button" className="btn" onClick={() => revisar('MARCOU_INSCRITO')}>
-              Marcar como inscrito
-            </button>
-            <button type="button" className="btn" onClick={() => revisar('REGISTROU_RESULTADO')}>
-              Registrar resultado
-            </button>
-          </div>
+          {acoes.length ? (
+            <div className="linha" style={{ gap: 'var(--esp-2)' }}>
+              {acoes.map((acao) => (
+                <button key={acao} type="button" className={BOTOES[acao].classe} onClick={() => revisar(acao)}>
+                  {BOTOES[acao].texto}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="discreto">Este edital está encerrado: não há novas decisões a registrar.</p>
+          )}
 
           <div className="campo">
             <label htmlFor="comentario-revisao">
