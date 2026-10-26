@@ -1,6 +1,6 @@
 import type { EstadoRotina, RegistroRotinas, Tarefa } from "./agendador.js";
 import { repositorios } from "../repositorios/index.js";
-import { coletaServico, editalServico, fonteServico, gatilhosNotificacao } from "../composicao.js";
+import { coletaServico, editalServico, fonteServico, gatilhosNotificacao, processamentoEditalServico } from "../composicao.js";
 import { portalDaFonte } from "../servicos/coleta/portais/index.js";
 
 export const registroRotinas: RegistroRotinas = {
@@ -77,5 +77,15 @@ export const tarefasNotificacao: Tarefa[] = [
       return agora.diaSemana === dia_semana && agora.hora >= hora;
     },
     executar: () => gatilhosNotificacao.resumoSemanal(),
+  },
+];
+
+// Lê com a IA e avalia os editais que chegaram (coletados, enviados ou com falha antiga). Roda em segundo plano.
+export const tarefasProcessamento: Tarefa[] = [
+  {
+    nome: "Processar editais pendentes",
+    aCadaMinutos: 1,
+    deveRodar: () => true,
+    executar: () => processamentoEditalServico.processarPendentes(),
   },
 ];

@@ -53,6 +53,8 @@ export type Edital = {
   status: StatusEdital
   retificado: boolean
   erro_processamento: string | null
+  tentativas_processamento: number
+  processado_em: string | null
   criado_em: string
   atualizado_em: string
 }

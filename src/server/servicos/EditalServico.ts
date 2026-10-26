@@ -40,7 +40,11 @@ const preenchido = (valor: string | undefined, semFiltro: string): string | unde
 }
 
 export class EditalServico {
-  constructor(private readonly repos: RepositoriosEdital) {}
+  constructor(
+    private readonly repos: RepositoriosEdital,
+    // Depois de editar campos à mão, a avaliação é refeita na hora (sem chamar a IA).
+    private readonly aoEditarCampos: (editalId: string) => void = () => {},
+  ) {}
 
   listar(consulta: ConsultaEditais, instante = new Date()): ListaEditaisResposta {
     const pagina = Math.max(1, Number(consulta.pagina ?? 1) || 1)
@@ -121,8 +125,8 @@ export class EditalServico {
     }
 
     const atualizados = Object.keys(alteracoes) as CampoEditavel[]
-    const registro = transacao(() => {
-      const salvo = this.repos.edital.atualizar(edital.id, alteracoes)
+    transacao(() => {
+      this.repos.edital.atualizar(edital.id, alteracoes)
       for (const campo of atualizados) {
         this.repos.evidencia.excluirDoCampo(edital.id, campo)
         this.repos.evidencia.inserir({
@@ -134,10 +138,10 @@ export class EditalServico {
           confianca: null,
         })
       }
-      return salvo
     })
 
-    return { edital: registro!, campos: atualizados, mensagem: 'Dados atualizados manualmente.' }
+    this.aoEditarCampos(edital.id)
+    return { edital: this.repos.edital.buscarPorId(edital.id)!, campos: atualizados, mensagem: 'Dados atualizados manualmente.' }
   }
 
   // Traduz o que a tela pede nos critérios do repositório, resolvendo as datas de referência.

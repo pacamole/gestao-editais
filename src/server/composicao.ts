@@ -28,6 +28,7 @@ import { EntradaServico } from './servicos/EntradaServico.js'
 import { ExtracaoServico } from './servicos/ExtracaoServico.js'
 import { FonteServico } from './servicos/FonteServico.js'
 import { PerfilServico } from './servicos/PerfilServico.js'
+import { ProcessamentoEditalServico } from './servicos/ProcessamentoEditalServico.js'
 import { RegistroDocumentoServico } from './servicos/RegistroDocumentoServico.js'
 import { RevisaoServico } from './servicos/RevisaoServico.js'
 
@@ -44,17 +45,18 @@ export const gatilhosNotificacao = new GatilhosNotificacaoServico(notificacaoSer
 
 // ---- Services ----
 export const avaliacaoServico = new AvaliacaoServico(repositorios)
-export const editalServico = new EditalServico(repositorios)
 export const revisaoServico = new RevisaoServico(repositorios)
-export const entradaServico = new EntradaServico(repositorios)
 export const extracaoServico = new ExtracaoServico(repositorios, modeloLinguagem)
+export const processamentoEditalServico = new ProcessamentoEditalServico(repositorios, extracaoServico, avaliacaoServico, gatilhosNotificacao)
+export const editalServico = new EditalServico(repositorios, (id) => processamentoEditalServico.reavaliar(id))
+export const entradaServico = new EntradaServico(repositorios, (id) => processamentoEditalServico.processar(id))
 export const chatServico = new ChatServico(repositorios, modeloLinguagem, () => configSistemaServico.chatLimiteDiario())
 export const dashboardServico = new DashboardServico(new DashboardRepositorio())
 const registroDocumento = new RegistroDocumentoServico(repositorios, new DocumentoRepositorio())
 export const coletaServico = new ColetaServico(repositorios, registroDocumento)
 export const fonteServico = new FonteServico(repositorios, coletaServico)
 export const authServico = new AuthServico(repositorios)
-export const perfilServico = new PerfilServico(repositorios, () => avaliacaoServico.reavaliarAtivos())
+export const perfilServico = new PerfilServico(repositorios, () => processamentoEditalServico.reavaliarAtivos())
 export const criterioServico = new CriterioServico(repositorios, (id) => avaliacaoServico.simular(id))
 export const alertaServico = new AlertaServico(repositorios, notificacaoServico, () => configSistemaServico.configSmtp() !== null)
 export const destinatarioServico = new DestinatarioServico(repositorios)

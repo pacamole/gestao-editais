@@ -112,7 +112,7 @@ function montarWhere(filtro: FiltroListaEditais): { where: string; params: Valor
 export class EditalRepositorio extends Repositorio<
   Edital,
   string,
-  'id' | 'status' | 'retificado' | 'criado_em' | 'atualizado_em'
+  'id' | 'status' | 'retificado' | 'criado_em' | 'atualizado_em' | 'tentativas_processamento'
 > {
   protected readonly tabela = 'edital'
   protected readonly colunasJson = [
@@ -156,6 +156,25 @@ export class EditalRepositorio extends Repositorio<
        ${JUNCOES_LISTA} ${where} ${ORDEM_LISTA}`,
       ...params,
     ) as LinhaListaEdital[]
+  }
+
+  /** Fila do processamento automático: os editais coletados, do mais antigo ao mais novo. */
+  listarParaProcessar(limite: number): Edital[] {
+    return this.consultar("SELECT * FROM edital WHERE status = 'COLETADO' ORDER BY criado_em LIMIT ?", limite)
+  }
+
+  /** Editais que falharam, ainda com tentativas sobrando e parados desde antes de `antesDe`. */
+  listarFalhasParaRepetir(maximoTentativas: number, antesDe: string): Edital[] {
+    return this.consultar(
+      "SELECT * FROM edital WHERE status = 'FALHA' AND tentativas_processamento < ? AND atualizado_em <= ? ORDER BY atualizado_em",
+      maximoTentativas,
+      antesDe,
+    )
+  }
+
+  /** Editais presos em análise (o servidor reiniciou ou travou no meio do processamento). */
+  listarEmAnaliseDesde(antesDe: string): Edital[] {
+    return this.consultar("SELECT * FROM edital WHERE status = 'EM_ANALISE' AND atualizado_em <= ?", antesDe)
   }
 
   listarPorStatus(status: readonly StatusEdital[]): Edital[] {

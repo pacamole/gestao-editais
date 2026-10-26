@@ -95,6 +95,9 @@ CREATE TABLE edital (
   retificado                   INTEGER NOT NULL DEFAULT 0 CHECK (retificado IN (0, 1)),
   -- Mensagem do último erro de processamento (status FALHA, "requer leitura manual")
   erro_processamento           TEXT,
+  -- Falhas seguidas ao ler o edital com a IA (zera ao concluir) e quando o processamento terminou
+  tentativas_processamento     INTEGER NOT NULL DEFAULT 0,
+  processado_em                TEXT,
   criado_em                    TEXT NOT NULL,
   atualizado_em                TEXT NOT NULL
 );

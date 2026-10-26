@@ -12,6 +12,6 @@ rotasEntrada.post('/editais', async (req, res) => {
     case 'URL':
       return res.json(entradaServico.criarPorUrl(corpo))
     default:
-      return res.json(entradaServico.criarManual(corpo))
+      return res.json(await entradaServico.criarManual(corpo))
   }
 })

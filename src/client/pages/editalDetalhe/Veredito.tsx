@@ -1,17 +1,30 @@
-import type { Avaliacao } from '../../../shared/tipos/edital'
+import type { Avaliacao, StatusEdital } from '../../../shared/tipos/edital'
 
-type Props = { avaliacao: Avaliacao | null }
+type Props = {
+  avaliacao: Avaliacao | null
+  status: StatusEdital
+  // Mensagem do processamento automático (perfil provisório, leitura por IA que falhou…).
+  aviso: string | null
+}
 
-export function Veredito({ avaliacao: a }: Props) {
+export function Veredito({ avaliacao: a, status, aviso }: Props) {
+  const emProcessamento = status === 'COLETADO' || status === 'EM_ANALISE'
   return (
     <div className="card detalhe-bloco">
       <div className="card__cabecalho">
         <h2>Veredito</h2>
       </div>
       <div className="card__corpo">
+        {aviso && (
+          <p className="aviso aviso--atencao" role="status">
+            {aviso}
+          </p>
+        )}
         {!a ? (
           <p className="discreto">
-            A avaliação automática ainda não foi registrada.
+            {emProcessamento
+              ? 'Em processamento: o sistema está lendo o edital e calculando a nota. Esta tela se atualiza sozinha.'
+              : 'A avaliação automática ainda não foi registrada.'}
           </p>
         ) : (
           <div className="pilha">

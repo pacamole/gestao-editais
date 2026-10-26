@@ -8,7 +8,7 @@ import { CAMPOS_EDITAL } from '../../shared/rotulos.js'
 import type { CriarEditalResposta } from '../../shared/tipos/editais.js'
 import { normalizarValor } from '../../shared/valoresCampo.js'
 
-type RepositoriosEntrada = Pick<Repositorios, 'edital' | 'fonte' | 'avaliacao'>
+type RepositoriosEntrada = Pick<Repositorios, 'edital' | 'fonte'>
 
 const LIMITE_UPLOAD_BYTES = 20 * 1024 * 1024
 const AVISO_PAGINAS_SEM_TEXTO = 'Requer leitura manual: uma ou mais páginas não têm camada de texto.'
@@ -20,6 +20,8 @@ export type EntradaUrl = { url?: unknown; fonte_id?: unknown }
 export class EntradaServico {
   constructor(
     private readonly repos: RepositoriosEntrada,
+    // Leva o edital recém-criado até a decisão (leitura por IA, avaliação, status e avisos).
+    private readonly processar: (editalId: string) => Promise<unknown>,
     private readonly lerPdf: typeof extrairPdf = extrairPdf,
   ) {}
 
@@ -77,22 +79,7 @@ export class EntradaServico {
       retificado: false,
     })
 
-    // FASE 1: trocar esta avaliação provisória pelo processamento real (extração + critérios).
-    this.repos.avaliacao.inserir({
-      edital_id: edital.id,
-      status_elegibilidade: 'INDETERMINADO',
-      nota_fit: 50,
-      classificacao: 'MEDIO',
-      criterios_violados: null,
-      criterios_indeterminados: [
-        { criterio_id: 'leitura_pendente', nome: 'Análise de documento em processamento', campo_faltante: 'Dados em extração' },
-      ],
-      detalhamento_pontuacao: null,
-      nota_ajustada_manual: null,
-      ajustada_por: null,
-      perfil_atualizado_em: null,
-    })
-
+    this.processarEmSegundoPlano(edital.id)
     return { ok: true, id: edital.id }
   }
 
@@ -125,24 +112,11 @@ export class EntradaServico {
       retificado: false,
     })
 
-    // FASE 1: trocar esta avaliação provisória pelo processamento real.
-    this.repos.avaliacao.inserir({
-      edital_id: edital.id,
-      status_elegibilidade: 'INDETERMINADO',
-      nota_fit: 50,
-      classificacao: 'MEDIO',
-      criterios_violados: null,
-      criterios_indeterminados: null,
-      detalhamento_pontuacao: null,
-      nota_ajustada_manual: null,
-      ajustada_por: null,
-      perfil_atualizado_em: null,
-    })
-
+    this.processarEmSegundoPlano(edital.id)
     return { ok: true, id: edital.id }
   }
 
-  criarManual(dados: Record<string, unknown>): CriarEditalResposta {
+  async criarManual(dados: Record<string, unknown>): Promise<CriarEditalResposta> {
     const titulo = typeof dados.titulo === 'string' ? dados.titulo.trim() : ''
     if (!titulo) throw new ErroValidacao('O título do edital é obrigatório.')
 
@@ -160,26 +134,18 @@ export class EntradaServico {
       ...campos,
       titulo,
       fonte_id: this.fonteDe(dados.fonte_id),
-      status: 'ANALISADO',
+      status: 'COLETADO',
       retificado: false,
     })
 
-    // FASE 1: trocar esta nota provisória pela avaliação real dos critérios.
-    const nota = edital.areas_tematicas?.some((a) => /esg|bateria|energia|sustentabilidade/i.test(a)) ? 85 : 75
-    this.repos.avaliacao.inserir({
-      edital_id: edital.id,
-      status_elegibilidade: 'ELEGIVEL',
-      nota_fit: nota,
-      classificacao: 'ALTO',
-      criterios_violados: null,
-      criterios_indeterminados: null,
-      detalhamento_pontuacao: [{ criterio_id: 'cadastro_manual', peso: 10, pontuacao: 0.8, contribuicao: nota }],
-      nota_ajustada_manual: null,
-      ajustada_por: null,
-      perfil_atualizado_em: null,
-    })
-
+    // Sem documento para ler: a avaliação usa os campos digitados e o status já sai definido.
+    await this.processar(edital.id)
     return { ok: true, id: edital.id }
+  }
+
+  // A leitura por IA pode levar minutos: o usuário não espera; a tela mostra o edital "em processamento".
+  private processarEmSegundoPlano(editalId: string): void {
+    this.processar(editalId).catch((erro) => console.error('[entrada] falha ao processar o edital:', erro))
   }
 
   // A fonte informada, ou a padrão do tipo de entrada, ou a primeira cadastrada.

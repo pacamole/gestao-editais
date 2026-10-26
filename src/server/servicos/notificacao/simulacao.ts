@@ -48,6 +48,8 @@ export const EDITAL_FICTICIO: Edital = {
   status: 'ANALISADO',
   retificado: false,
   erro_processamento: null,
+  tentativas_processamento: 0,
+  processado_em: null,
   criado_em: diasAPartirDeHoje(-1),
   atualizado_em: diasAPartirDeHoje(-1),
 }

@@ -4,6 +4,7 @@ import { lerPaginaPublica } from '../integracoes/pagina.js'
 import { ehMarcadorDeTextoPdf } from '../integracoes/pdf.js'
 import { novoId, transacao } from '../db/index.js'
 import type { Edital } from '../dominio/entidades.js'
+import { MARCADOR_EDICAO_MANUAL } from '../../shared/camposEditaveis.js'
 import { ErroNaoEncontrado, ErroRegraNegocio, ErroServicoExterno } from '../dominio/erros.js'
 import { ErroModeloLinguagem, type ModeloLinguagemPorta } from '../portas/ModeloLinguagemPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
@@ -35,7 +36,11 @@ export class ExtracaoServico {
     private readonly lerPagina: typeof lerPaginaPublica = lerPaginaPublica,
   ) {}
 
-  async extrairDados(editalId: string): Promise<ExtracaoResposta> {
+  /**
+   * Lê o texto do edital com a IA e preenche os campos. Só os campos vazios, a menos que `refazCamposDaIa`
+   * (retificação): aí também refaz os que a própria IA preencheu antes, nunca os editados à mão.
+   */
+  async extrairDados(editalId: string, opcoes: { refazCamposDaIa?: boolean } = {}): Promise<ExtracaoResposta> {
     const edital = this.buscar(editalId)
     if (!edital.texto_extraido?.trim() || ehMarcadorDeTextoPdf(edital.texto_extraido)) {
       throw new ErroRegraNegocio(
@@ -44,7 +49,7 @@ export class ExtracaoServico {
     }
 
     const extracao = await this.extrairCampos(edital.id, edital.texto_extraido)
-    const campos = this.salvarCampos(edital, extracao)
+    const campos = this.salvarCampos(edital, extracao, opcoes.refazCamposDaIa)
     return {
       edital: this.repos.edital.buscarPorId(edital.id)!,
       atualizados: campos.length,
@@ -65,7 +70,9 @@ export class ExtracaoServico {
       pagina = await this.lerPagina(url)
     } catch (erro) {
       const mensagem = erro instanceof Error ? erro.message : 'Não foi possível ler o conteúdo da URL.'
-      throw /HTTP \d+/.test(mensagem) ? new ErroServicoExterno(mensagem) : new ErroRegraNegocio(mensagem)
+      // Servidor fora do ar ou rede caindo passa sozinho (vale tentar de novo); página inexistente ou sem texto, não.
+      const passageira = /HTTP 5\d\d|fetch failed|timeout|aborted|ECONN|ENOTFOUND|EAI_AGAIN/i.test(mensagem)
+      throw passageira ? new ErroServicoExterno(mensagem) : new ErroRegraNegocio(mensagem)
     }
 
     const textoAnterior = edital.texto_extraido?.trim() ? semConteudoWebAnterior(edital.texto_extraido) : ''
@@ -121,12 +128,19 @@ export class ExtracaoServico {
   }
 
   // Grava só os campos ainda vazios, com a evidência literal do documento.
-  private salvarCampos(edital: Edital, extracao: ResultadoExtracaoEdital): CampoEditalExtraido[] {
+  private salvarCampos(edital: Edital, extracao: ResultadoExtracaoEdital, refazCamposDaIa = false): CampoEditalExtraido[] {
     const alteracoes: Partial<Edital> = {}
     const atualizados: CampoEditalExtraido[] = []
+    // Campo com evidência literal veio da IA; com o marcador de edição manual, foi o usuário.
+    const daIa = new Set(
+      refazCamposDaIa
+        ? this.repos.evidencia.listarDoEdital(edital.id).filter((ev) => ev.trecho_literal !== MARCADOR_EDICAO_MANUAL).map((ev) => ev.campo)
+        : [],
+    )
     for (const [campo, valor] of Object.entries(extracao.campos) as [CampoEditalExtraido, ValorCampoEditalExtraido][]) {
       const valorAtual = edital[campo]
-      if (valor == null || (valorAtual != null && valorAtual !== '')) continue
+      const preenchido = valorAtual != null && valorAtual !== ''
+      if (valor == null || (preenchido && !daIa.has(campo))) continue
       Object.assign(alteracoes, { [campo]: valor })
       atualizados.push(campo)
     }

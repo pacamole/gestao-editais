@@ -28,6 +28,20 @@ docs/                  especificação e guia de design
 Fluxo de uma requisição: `controller → service → repository` (e `service → porta ← adaptador` para Ollama e e-mail).
 As dependências sempre apontam para dentro: um service nunca importa `express`, e só os adaptadores falam com serviços externos.
 
+## Ciclo de vida de um edital
+
+```
+COLETADO ──► EM_ANALISE ──► ANALISADO   (elegível ou não, com nota)
+   ▲             │       └─► EM_REVISAO  (faltou dado para decidir)
+   │             └─────────► FALHA       (IA fora do ar: tenta de novo em 15 min, até 3 vezes)
+   └─ retificação ou nova tentativa
+```
+
+A tarefa "Processar editais pendentes" roda a cada minuto (`ProcessamentoEditalServico`): lê o edital com a IA,
+avalia o fit, define o status e dispara os alertas E01/E03/E05. Esgotadas as 3 tentativas, o edital segue sem a IA
+para `EM_REVISAO` com um aviso. Enquanto o perfil da empresa for o provisório (CNPJ zerado), os editais esperam em `COLETADO`.
+Editar campos à mão reavalia na hora, sem chamar a IA.
+
 ## Configurações do sistema (tabela `config`)
 
 Ficam no banco e podem ser alteradas a qualquer momento, sem reiniciar o servidor.

@@ -3,7 +3,7 @@ import express, { type ErrorRequestHandler } from "express";
 import path from "node:path";
 import type { ErroApi, HealthResponse } from "../shared/api.js";
 import { Agendador } from "./agendamento/agendador.js";
-import { registroRotinas, tarefasColeta, tarefasNotificacao } from "./agendamento/tarefas.js";
+import { registroRotinas, tarefasColeta, tarefasNotificacao, tarefasProcessamento } from "./agendamento/tarefas.js";
 import { ErroModeloLinguagem } from './portas/ModeloLinguagemPorta.js';
 import { ErroNegocio } from "./dominio/erros.js";
 import { ehErroDeConexaoNuvem } from "./db/conexao.js";
@@ -72,7 +72,7 @@ if (isProd) {
 app.listen(porta, () => {
   console.log(appUrl);
   new Agendador(
-    [...tarefasColeta(), ...tarefasNotificacao],
+    [...tarefasColeta(), ...tarefasNotificacao, ...tarefasProcessamento],
     60_000,
     registroRotinas,
   ).iniciar();

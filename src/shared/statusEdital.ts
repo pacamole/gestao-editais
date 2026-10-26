@@ -63,14 +63,14 @@ export function transicionar(status: StatusEdital, acao: AcaoTransicao): Resulta
   return regra.de.includes(status) ? { ok: true, novo: regra.para } : { ok: false, motivo: regra.motivo }
 }
 
-// ---- Transições do sistema (processamento automático) ----
+// ---- Transições do sistema (processamento e reavaliação automáticos) ----
 
 const TRANSICOES_SISTEMA: Record<StatusEdital, readonly StatusEdital[]> = {
   COLETADO: ['EM_ANALISE', 'EXPIRADO'],
   EM_ANALISE: ['ANALISADO', 'EM_REVISAO', 'FALHA', 'EXPIRADO'],
-  ANALISADO: ['COLETADO', 'EXPIRADO'],
+  ANALISADO: ['COLETADO', 'EM_REVISAO', 'EXPIRADO'],
   FALHA: ['COLETADO', 'EXPIRADO'],
-  EM_REVISAO: ['COLETADO', 'EXPIRADO'],
+  EM_REVISAO: ['COLETADO', 'ANALISADO', 'EXPIRADO'],
   APROVADO: ['EXPIRADO'],
   DESCARTADO: [],
   INSCRITO: [],
