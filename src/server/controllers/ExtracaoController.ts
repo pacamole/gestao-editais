@@ -1,12 +1,12 @@
 import { Router } from 'express'
-import { extracaoServico } from '../composicao.js'
+import { processamentoEditalServico } from '../composicao.js'
 
 export const rotasExtracao = Router()
 
 rotasExtracao.post('/editais/:id/extrair-dados', async (req, res) => {
-  res.json(await extracaoServico.extrairDados(req.params.id))
+  res.json(await processamentoEditalServico.lerSobDemanda(req.params.id, 'TEXTO'))
 })
 
 rotasExtracao.post('/editais/:id/ler-url', async (req, res) => {
-  res.json(await extracaoServico.lerUrl(req.params.id))
+  res.json(await processamentoEditalServico.lerSobDemanda(req.params.id, 'URL'))
 })

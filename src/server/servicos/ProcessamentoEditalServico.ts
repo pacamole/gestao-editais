@@ -6,6 +6,7 @@ import { ehMarcadorDeTextoPdf } from '../integracoes/pdf.js'
 import { ErroModeloLinguagem } from '../portas/ModeloLinguagemPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { podeTransicionarSistema } from '../../shared/statusEdital.js'
+import type { ExtracaoResposta } from '../../shared/tipos/edital.js'
 import type { AvaliacaoServico } from './AvaliacaoServico.js'
 import type { ExtracaoServico } from './ExtracaoServico.js'
 
@@ -101,6 +102,31 @@ export class ProcessamentoEditalServico {
       if (alvo !== status) status = this.mover(edital, alvo).status
     }
     return { id: editalId, status }
+  }
+
+  /** "Ler edital com IA" na tela: lê o texto (ou o endereço, sem texto) e reavalia com os campos novos. */
+  async lerSobDemanda(editalId: string, origem: 'TEXTO' | 'URL'): Promise<ExtracaoResposta> {
+    const resposta = origem === 'TEXTO' ? await this.extracao.extrairDados(editalId) : await this.extracao.lerUrl(editalId)
+    if (!resposta.atualizados || !this.reavaliar(editalId)) return resposta
+    return { ...resposta, edital: this.repos.edital.buscarPorId(editalId) ?? resposta.edital }
+  }
+
+  /**
+   * Relê com a IA os editais já analisados, preenchendo só os campos vazios, e os reavalia.
+   * Não avisa ninguém: não são editais novos.
+   */
+  async relerAnalisados(aoLer: (edital: Edital, resultado: ExtracaoResposta | Error) => void = () => {}): Promise<number> {
+    let relidos = 0
+    for (const edital of this.repos.edital.listarPorStatus(['ANALISADO', 'EM_REVISAO', 'APROVADO'])) {
+      if (!edital.texto_extraido?.trim() || ehMarcadorDeTextoPdf(edital.texto_extraido)) continue
+      try {
+        aoLer(edital, await this.lerSobDemanda(edital.id, 'TEXTO'))
+        relidos++
+      } catch (erro) {
+        aoLer(edital, erro instanceof Error ? erro : new Error(String(erro)))
+      }
+    }
+    return relidos
   }
 
   /** Reavalia todos os editais já analisados (depois de mudar o perfil). Devolve quantos. */
