@@ -9,12 +9,25 @@ import type {
   Evidencia,
   ValorCampoEditavel,
 } from '../../../shared/tipos/edital'
-import { CAMPOS_EDITAVEIS, MARCADOR_EDICAO_MANUAL } from '../../../shared/camposEditaveis'
+import { CAMPOS_EDITAVEIS, MARCADOR_DADO_ESTRUTURADO, MARCADOR_EDICAO_MANUAL } from '../../../shared/camposEditaveis'
 import { CAMPOS_EDITAL, MODALIDADES } from '../../../shared/rotulos'
 import { NAO_LOCALIZADO, SEM_CONEXAO, type AoErro } from './util'
 
-// Linha da tabela: rótulo, campo do edital (url_origem é só exibição) e valor já formatado.
-type Linha = [nome: string, campo: CampoEditavel | 'url_origem', valor: unknown]
+// Linha da tabela: rótulo, campo do edital (os links são só exibição) e valor já formatado.
+type CampoLink = 'url_documento' | 'url_origem'
+type Linha = [nome: string, campo: CampoEditavel | CampoLink, valor: unknown]
+const ehLink = (campo: string): campo is CampoLink => campo === 'url_documento' || campo === 'url_origem'
+
+// Texto curto do link: o nome do arquivo, num PDF; senão o endereço sem "https://". O endereço completo fica no link.
+function textoDoLink(url: string): string {
+  try {
+    const endereco = new URL(url)
+    const arquivo = decodeURIComponent(endereco.pathname.split('/').find((parte) => /\.pdf$/i.test(parte)) ?? '').replace(/\+/g, ' ')
+    return arquivo || `${endereco.hostname}${endereco.pathname}`.replace(/\/$/, '')
+  } catch {
+    return url
+  }
+}
 
 // Valor como aparece na tabela: datas e moedas formatadas, o resto como veio.
 function valorExibido(campo: CampoEditavel, valor: unknown): unknown {
@@ -33,13 +46,15 @@ function valorExibido(campo: CampoEditavel, valor: unknown): unknown {
 // A tabela e o editor saem do catálogo de campos: campo novo no catálogo aparece aqui sozinho.
 function linhasDoEdital(e: EditalDetalhado): Linha[] {
   return [
-    ['URL de origem', 'url_origem', e.url_original || e.url_documento],
+    // O documento do edital (PDF) e a página onde ele foi encontrado; quando são o mesmo endereço, uma linha só.
+    ['Documento do edital', 'url_documento', e.url_documento],
+    ...(e.url_original && e.url_original !== e.url_documento ? [['Página de origem', 'url_origem', e.url_original] as Linha] : []),
     ...CAMPOS_EDITAVEIS.map((campo): Linha => [CAMPOS_EDITAL[campo].rotulo, campo, valorExibido(campo, e[campo])]),
   ]
 }
 
 const camposEditaveis = (linhas: Linha[]) =>
-  linhas.map(([, campo]) => campo).filter((campo): campo is CampoEditavel => campo !== 'url_origem')
+  linhas.map(([, campo]) => campo).filter((campo): campo is CampoEditavel => !ehLink(campo))
 
 type Props = {
   id: string
@@ -67,7 +82,9 @@ export function DadosExtraidos({ id, edital: e, evidencias, textoDisponivel, aoE
     aoErro('')
     setFeedbackExtracao('')
     try {
-      const r = temUrl ? await apiEdital.lerUrl(id) : await apiEdital.extrairDados(id)
+      // Com o documento já lido (PDF ou texto da fonte), a IA usa esse texto. Ler a página só serve quando não há
+      // texto: em fontes como a FINEP o endereço é a lista de chamadas, que não descreve o edital.
+      const r = textoDisponivel ? await apiEdital.extrairDados(id) : await apiEdital.lerUrl(id)
       setFeedbackExtracao(r.mensagem ?? 'Leitura e extração concluídas.')
       await aoAtualizar()
     } catch (erroLeitura) {
@@ -248,15 +265,19 @@ export function DadosExtraidos({ id, edital: e, evidencias, textoDisponivel, aoE
                     <strong>{nome}</strong>
                   </td>
                   <td>
-                    {editandoCampos && campo !== 'url_origem' ? (
+                    {editandoCampos && !ehLink(campo) ? (
                       editor(campo)
-                    ) : campo === 'url_origem' && typeof valor === 'string' && /^https?:\/\//i.test(valor) ? (
-                      <a href={valor} target="_blank" rel="noopener noreferrer">{valor}</a>
+                    ) : ehLink(campo) && typeof valor === 'string' && /^https?:\/\//i.test(valor) ? (
+                      <a href={valor} target="_blank" rel="noopener noreferrer" className="link-truncado" title={valor}>
+                        {textoDoLink(valor)}
+                      </a>
                     ) : rotuloValor(valor, NAO_LOCALIZADO)}
                   </td>
                   <td>
                     {ev?.trecho_literal === MARCADOR_EDICAO_MANUAL ? (
                       <span className="discreto">Editado manualmente</span>
+                    ) : ev?.trecho_literal === MARCADOR_DADO_ESTRUTURADO ? (
+                      <span className="discreto">Informado pela fonte</span>
                     ) : ev ? (
                       <details>
                         <summary className="discreto">Ver trecho</summary>

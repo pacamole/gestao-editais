@@ -28,11 +28,11 @@ export function EditalDetalhePage() {
     void carregar()
   }, [carregar])
 
-  // Enquanto o sistema lê o edital, atualiza a tela sozinho até a avaliação sair.
+  // Enquanto o sistema lê o edital (ou espera para tentar de novo após uma falha), atualiza a tela sozinho.
   const statusAtual = dados?.edital.status
   useEffect(() => {
-    if (statusAtual !== 'COLETADO' && statusAtual !== 'EM_ANALISE') return
-    const timer = setInterval(() => void carregar(), 5000)
+    if (statusAtual !== 'COLETADO' && statusAtual !== 'EM_ANALISE' && statusAtual !== 'FALHA') return
+    const timer = setInterval(() => void carregar(), statusAtual === 'FALHA' ? 30_000 : 5000)
     return () => clearInterval(timer)
   }, [statusAtual, carregar])
 
@@ -75,7 +75,13 @@ export function EditalDetalhePage() {
         </div>
       )}
 
-      <Veredito avaliacao={avaliacao} status={e.status} aviso={e.erro_processamento} />
+      <Veredito
+        avaliacao={avaliacao}
+        status={e.status}
+        aviso={e.erro_processamento}
+        tentativas={e.tentativas_processamento}
+        atualizadoEm={e.atualizado_em}
+      />
       <DadosExtraidos
         id={id}
         edital={e}

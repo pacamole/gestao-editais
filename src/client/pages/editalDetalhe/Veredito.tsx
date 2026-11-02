@@ -5,9 +5,22 @@ type Props = {
   status: StatusEdital
   // Mensagem do processamento automático (perfil provisório, leitura por IA que falhou…).
   aviso: string | null
+  // Falhas seguidas da leitura por IA e quando foi a última (para dizer quando o sistema tenta de novo).
+  tentativas?: number
+  atualizadoEm?: string
 }
 
-export function Veredito({ avaliacao: a, status, aviso }: Props) {
+// Iguais às do processamento automático (ProcessamentoEditalServico).
+const MAXIMO_TENTATIVAS = 3
+const ESPERA_NOVA_TENTATIVA_MIN = 15
+
+function proximaTentativa(atualizadoEm: string | undefined): string {
+  if (!atualizadoEm) return 'em alguns minutos'
+  const quando = new Date(new Date(atualizadoEm).getTime() + ESPERA_NOVA_TENTATIVA_MIN * 60_000)
+  return quando <= new Date() ? 'no próximo minuto' : `por volta das ${quando.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+}
+
+export function Veredito({ avaliacao: a, status, aviso, tentativas = 0, atualizadoEm }: Props) {
   const emProcessamento = status === 'COLETADO' || status === 'EM_ANALISE'
   return (
     <div className="card detalhe-bloco">
@@ -17,7 +30,9 @@ export function Veredito({ avaliacao: a, status, aviso }: Props) {
       <div className="card__corpo">
         {aviso && (
           <p className="aviso aviso--atencao" role="status">
-            {aviso}
+            {status === 'FALHA' && tentativas < MAXIMO_TENTATIVAS
+              ? `A leitura por IA falhou (tentativa ${tentativas} de ${MAXIMO_TENTATIVAS}): ${aviso} O sistema tenta de novo sozinho ${proximaTentativa(atualizadoEm)}.`
+              : aviso}
           </p>
         )}
         {!a ? (
