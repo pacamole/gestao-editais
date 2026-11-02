@@ -8,10 +8,10 @@ src/server/            servidor Express (index.ts monta a API em /api)
   controllers/         camada HTTP: lê a requisição, chama um service e devolve a resposta (sem SQL nem regra)
   servicos/            regras de negócio e casos de uso, um service por assunto
     coleta/            leitura de fontes (página, feed, JSON), PDF principal, fontes internas e integracoes/ (FINEP, Embrapii)
-    ia/                prompts, leitura da resposta do modelo e índice de busca por trechos
+    ia/                prompts, leitura da resposta do modelo, contexto do edital (o que chat e extração mandam ao modelo) e busca por trechos
     notificacao/       textos dos e-mails E01–E06 (uma classe por tipo), formatação e simulação
   repositorios/        acesso a dados: todo o SQL (um repositório por agregado), arquivos de PDF e backup da base
-  dominio/             entidades, motor de critérios, cálculo da avaliação, validações e erros de negócio
+  dominio/             entidades, motor de critérios, cálculo da avaliação, validações, marcadores do texto do edital e erros de negócio
   portas/              interfaces do que vem de fora (modelo de linguagem, e-mail)
   adaptadores/         implementações das portas (Ollama, SMTP, console)
   integracoes/         clientes de recursos externos usados pelos services: download HTTP, leitura de PDF e de páginas, navegador invisível (Playwright)

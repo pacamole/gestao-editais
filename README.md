@@ -97,6 +97,7 @@ Sem SMTP configurado, os e-mails são apenas impressos no terminal.
 | `npm run db:importar -- arquivo.db` | Substitui a base local pela do arquivo                 |
 | `npm run coleta [-- "Nome da fonte"]` | Roda a coleta das fontes cadastradas (ou de uma)       |
 | `npm run email:teste -- email`      | Envia um e-mail de teste                               |
+| `npm run editais:reler`             | Relê com a IA os editais já analisados (preenche só campos vazios, sem e-mails) |
 
 ## Problemas comuns
 
@@ -112,4 +113,4 @@ Sem SMTP configurado, os e-mails são apenas impressos no terminal.
 - [docs/especificacao-gestao-editais.md](docs/especificacao-gestao-editais.md) — especificação completa
 - [docs/ESTRUTURA.md](docs/ESTRUTURA.md) — pastas do código e chaves da tabela `config`
 - [docs/DESIGN.md](docs/DESIGN.md) — guia visual (cores, componentes e classes CSS)
-- [docs/ENTREGAS.md](docs/ENTREGAS.md) — notas de entrega das tarefas de cada integrante
+- [docs/API-FINEP.md](docs/API-FINEP.md) — API pública da FINEP usada pela fonte integrada
