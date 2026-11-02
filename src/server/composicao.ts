@@ -19,6 +19,8 @@ import { BaseServico } from './servicos/BaseServico.js'
 import { BootstrapServico } from './servicos/BootstrapServico.js'
 import { ChatServico } from './servicos/ChatServico.js'
 import { ColetaServico } from './servicos/ColetaServico.js'
+import { criarIntegracoes } from './servicos/coleta/integracoes/index.js'
+import { DescobertaFonteServico } from './servicos/DescobertaFonteServico.js'
 import { ConfigSistemaServico } from './servicos/ConfigSistemaServico.js'
 import { CriterioServico } from './servicos/CriterioServico.js'
 import { DashboardServico } from './servicos/DashboardServico.js'
@@ -27,6 +29,7 @@ import { EditalServico } from './servicos/EditalServico.js'
 import { EntradaServico } from './servicos/EntradaServico.js'
 import { ExtracaoServico } from './servicos/ExtracaoServico.js'
 import { FonteServico } from './servicos/FonteServico.js'
+import { PendenciaServico } from './servicos/PendenciaServico.js'
 import { PerfilServico } from './servicos/PerfilServico.js'
 import { ProcessamentoEditalServico } from './servicos/ProcessamentoEditalServico.js'
 import { RegistroDocumentoServico } from './servicos/RegistroDocumentoServico.js'
@@ -47,14 +50,22 @@ export const gatilhosNotificacao = new GatilhosNotificacaoServico(notificacaoSer
 export const avaliacaoServico = new AvaliacaoServico(repositorios)
 export const revisaoServico = new RevisaoServico(repositorios)
 export const extracaoServico = new ExtracaoServico(repositorios, modeloLinguagem)
-export const processamentoEditalServico = new ProcessamentoEditalServico(repositorios, extracaoServico, avaliacaoServico, gatilhosNotificacao)
-export const editalServico = new EditalServico(repositorios, (id) => processamentoEditalServico.reavaliar(id))
+export const processamentoEditalServico = new ProcessamentoEditalServico(repositorios, extracaoServico, avaliacaoServico, gatilhosNotificacao, () =>
+  configSistemaServico.termosExcludentes(),
+)
+export const editalServico = new EditalServico(repositorios, (id) => processamentoEditalServico.reavaliar(id), () =>
+  configSistemaServico.diasExpirarSemPrazo(),
+)
 export const entradaServico = new EntradaServico(repositorios, (id) => processamentoEditalServico.processar(id))
 export const chatServico = new ChatServico(repositorios, modeloLinguagem, () => configSistemaServico.chatLimiteDiario())
 export const dashboardServico = new DashboardServico(new DashboardRepositorio())
 const registroDocumento = new RegistroDocumentoServico(repositorios, new DocumentoRepositorio())
-export const coletaServico = new ColetaServico(repositorios, registroDocumento)
-export const fonteServico = new FonteServico(repositorios, coletaServico)
+const integracoes = criarIntegracoes(modeloLinguagem)
+const descobertaFonte = new DescobertaFonteServico(modeloLinguagem)
+export const coletaServico = new ColetaServico(repositorios, registroDocumento, descobertaFonte, integracoes)
+export const fonteServico = new FonteServico(repositorios, coletaServico, descobertaFonte, integracoes, () =>
+  configSistemaServico.problemaDaIa(),
+)
 export const authServico = new AuthServico(repositorios)
 export const perfilServico = new PerfilServico(repositorios, () => processamentoEditalServico.reavaliarAtivos())
 export const criterioServico = new CriterioServico(repositorios, (id) => avaliacaoServico.simular(id))
@@ -65,3 +76,4 @@ export const baseServico = new BaseServico(
   path.join(root, 'exportacoes'),
 )
 export const bootstrapServico = new BootstrapServico(repositorios)
+export const pendenciaServico = new PendenciaServico(repositorios, () => configSistemaServico.configSmtp() !== null)

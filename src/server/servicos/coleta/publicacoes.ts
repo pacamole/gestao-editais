@@ -1,4 +1,4 @@
-import type { Publicacao } from './PortalColeta.js'
+export type Publicacao = { titulo: string; url: string }
 
 export const limpar = (texto: string) => texto.replace(/\s+/g, ' ').trim()
 
@@ -8,7 +8,12 @@ export function acumulador(base: string) {
   return {
     adicionar(titulo: string, href: string | undefined) {
       if (!href || !titulo) return
-      const url = new URL(href, base)
+      let url: URL
+      try {
+        url = new URL(href, base)
+      } catch {
+        return
+      }
       if (!['https:', 'http:'].includes(url.protocol)) return
       url.hash = ''
       publicacoes.set(url.href, { titulo: limpar(titulo), url: url.href })

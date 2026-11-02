@@ -1,23 +1,30 @@
 import { transacao } from '../db/index.js'
-import type { Fonte } from '../dominio/entidades.js'
+import type { Fonte, IntegracaoFonte as CodigoIntegracao } from '../dominio/entidades.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { baixar } from '../integracoes/http.js'
-import { documentoPrincipal, PORTAIS, portalDaFonte, type PortalColeta } from './coleta/portais/index.js'
+import { documentoPrincipal } from './coleta/documentoPrincipal.js'
+import { explicarFalhaColeta } from './coleta/explicarFalha.js'
+import { integracaoDa, type ChamadaColetada, type IntegracaoFonte } from './coleta/integracoes/index.js'
+import type { DescobertaFonteServico } from './DescobertaFonteServico.js'
 import type { RegistroDocumentoServico } from './RegistroDocumentoServico.js'
 
 type RepositoriosColeta = Pick<Repositorios, 'fonte' | 'coletaExecucao'>
 
-const mensagem = (erro: unknown) => (erro instanceof Error ? erro.message : String(erro))
+const ehPdf = (url: string) => /\.pdf($|\?)/i.test(url)
 
-// Percorre um portal: lista as chamadas abertas, baixa o PDF de cada uma e entrega ao registro.
-// Cada execução fica anotada (sucesso, parcial ou falha) para o painel de saúde e o alerta E06.
+/**
+ * Busca as chamadas abertas de uma fonte e entrega cada uma ao registro (com o PDF, quando houver).
+ * Fonte integrada: o adaptador dela (API/feed). Fonte do usuário: a leitura descoberta na verificação.
+ * Cada execução fica anotada (sucesso, parcial ou falha) para o painel de saúde e o alerta E06.
+ */
 export class ColetaServico {
   private readonly emExecucao = new Set<string>()
 
   constructor(
     private readonly repos: RepositoriosColeta,
     private readonly registro: RegistroDocumentoServico,
-    private readonly portais: readonly PortalColeta[] = PORTAIS,
+    private readonly descoberta: Pick<DescobertaFonteServico, 'ler'>,
+    private readonly integracoes: Record<CodigoIntegracao, IntegracaoFonte>,
     private readonly baixarArquivo = baixar,
   ) {}
 
@@ -29,38 +36,17 @@ export class ColetaServico {
     let processados = 0
     const erros: string[] = []
     try {
-      const portal = portalDaFonte(fonte.nome, this.portais)
-      if (!portal || fonte.tipo !== 'SCRAPER') throw new Error('Fonte sem coletor automático.')
-
-      const url = fonte.url_base ?? portal.urlPadrao
-      const html = Buffer.from(await this.baixarArquivo(url)).toString('utf8')
-      const publicacoes = portal.listarPublicacoes(html, url)
-      if (!publicacoes.length) throw new Error('Nenhuma chamada identificada; confira a estrutura do portal.')
-
-      for (const publicacao of publicacoes) {
+      for (const chamada of await this.chamadasAbertas(fonte)) {
         try {
-          const detalhe = Buffer.from(await this.baixarArquivo(publicacao.url)).toString('utf8')
-          const pdf = documentoPrincipal(detalhe, publicacao.url)
-          if (!pdf) throw new Error('PDF principal não localizado; requer entrada manual.')
-
-          const resultado = await this.registro.registrar(
-            fonte,
-            {
-              titulo: publicacao.titulo,
-              urlOriginal: publicacao.url,
-              urlDocumento: pdf,
-              numero: portal.numeroDaChamada(publicacao.titulo),
-            },
-            await this.baixarArquivo(pdf),
-          )
+          const resultado = await this.registrar(fonte, chamada)
           if (resultado !== 'DUPLICADO') itens++
           processados++
         } catch (erro) {
-          erros.push(`${publicacao.url}: ${mensagem(erro)}`)
+          erros.push(`Chamada "${chamada.titulo.slice(0, 80)}": ${explicarFalhaColeta(erro)}`)
         }
       }
     } catch (erro) {
-      erros.push(mensagem(erro))
+      erros.push(explicarFalhaColeta(erro))
     } finally {
       const status = erros.length ? (processados ? 'PARCIAL' : 'FALHA') : 'SUCESSO'
       const instante = new Date().toISOString()
@@ -80,5 +66,46 @@ export class ColetaServico {
       this.emExecucao.delete(fonte.id)
     }
     if (erros.length) throw new Error(erros.join('\n'))
+  }
+
+  private async chamadasAbertas(fonte: Fonte): Promise<ChamadaColetada[]> {
+    const integracao = integracaoDa(fonte, this.integracoes)
+    if (integracao) return integracao.listarChamadas()
+
+    if (fonte.tipo !== 'SCRAPER' && fonte.tipo !== 'RSS') throw new Error('Esta fonte não tem busca automática.')
+    if (!fonte.url_base) throw new Error('A fonte não tem endereço cadastrado.')
+    const { chamadas, redescoberta } = await this.descoberta.ler({
+      nome: fonte.nome,
+      url: fonte.url_base,
+      formato: fonte.formato_dados,
+      enderecoDados: fonte.endereco_dados,
+    })
+    // A página mudou de jeito de publicar (ex.: passou a usar uma API): guarda o novo caminho.
+    if (redescoberta) {
+      this.repos.fonte.atualizar(fonte.id, { formato_dados: redescoberta.formato, endereco_dados: redescoberta.enderecoDados })
+    }
+    return chamadas.map((c) => ({
+      titulo: c.titulo,
+      urlOriginal: c.url,
+      urlDocumento: ehPdf(c.url) ? c.url : null,
+      numero: c.numero,
+      textoAlternativo: c.texto ?? null,
+    }))
+  }
+
+  // Acha o PDF (informado, ou procurado na página da chamada) e registra. Sem PDF, registra com o texto da fonte.
+  private async registrar(fonte: Fonte, chamada: ChamadaColetada) {
+    let pdf = chamada.urlDocumento
+    if (!pdf && chamada.procurarPdfNaPagina !== false) {
+      try {
+        pdf = documentoPrincipal(Buffer.from(await this.baixarArquivo(chamada.urlOriginal)).toString('utf8'), chamada.urlOriginal) ?? null
+      } catch (erro) {
+        if (!chamada.textoAlternativo) throw erro
+      }
+    }
+    if (!pdf && !chamada.textoAlternativo) {
+      throw new Error('não achei o PDF do edital na página; se ele interessar, envie o link em Nova entrada.')
+    }
+    return this.registro.registrar(fonte, { ...chamada, urlDocumento: pdf }, pdf ? await this.baixarArquivo(pdf) : null)
   }
 }

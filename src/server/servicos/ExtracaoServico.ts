@@ -4,7 +4,7 @@ import { lerPaginaPublica } from '../integracoes/pagina.js'
 import { ehMarcadorDeTextoPdf } from '../integracoes/pdf.js'
 import { novoId, transacao } from '../db/index.js'
 import type { Edital } from '../dominio/entidades.js'
-import { MARCADOR_EDICAO_MANUAL } from '../../shared/camposEditaveis.js'
+import { evidenciaProtegida } from '../../shared/camposEditaveis.js'
 import { ErroNaoEncontrado, ErroRegraNegocio, ErroServicoExterno } from '../dominio/erros.js'
 import { ErroModeloLinguagem, type ModeloLinguagemPorta } from '../portas/ModeloLinguagemPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
@@ -62,7 +62,9 @@ export class ExtracaoServico {
 
   async lerUrl(editalId: string): Promise<ExtracaoResposta> {
     const edital = this.buscar(editalId)
-    const url = edital.url_original ?? edital.url_documento
+    // O documento do edital vem primeiro: a página de origem pode ser só a lista do órgão (ex.: FINEP), que não
+    // descreve o edital. A página só é lida quando não há documento (link colado de uma página de chamada).
+    const url = edital.url_documento ?? edital.url_original
     if (!url) throw new ErroRegraNegocio('Este edital não tem uma URL cadastrada para leitura.')
 
     let pagina
@@ -131,10 +133,10 @@ export class ExtracaoServico {
   private salvarCampos(edital: Edital, extracao: ResultadoExtracaoEdital, refazCamposDaIa = false): CampoEditalExtraido[] {
     const alteracoes: Partial<Edital> = {}
     const atualizados: CampoEditalExtraido[] = []
-    // Campo com evidência literal veio da IA; com o marcador de edição manual, foi o usuário.
+    // Campo com evidência literal veio da IA; com marcador, foi o usuário ou a própria fonte (esses a IA não refaz).
     const daIa = new Set(
       refazCamposDaIa
-        ? this.repos.evidencia.listarDoEdital(edital.id).filter((ev) => ev.trecho_literal !== MARCADOR_EDICAO_MANUAL).map((ev) => ev.campo)
+        ? this.repos.evidencia.listarDoEdital(edital.id).filter((ev) => !evidenciaProtegida(ev.trecho_literal)).map((ev) => ev.campo)
         : [],
     )
     for (const [campo, valor] of Object.entries(extracao.campos) as [CampoEditalExtraido, ValorCampoEditalExtraido][]) {

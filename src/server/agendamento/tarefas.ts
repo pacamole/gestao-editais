@@ -1,7 +1,6 @@
 import type { EstadoRotina, RegistroRotinas, Tarefa } from "./agendador.js";
 import { repositorios } from "../repositorios/index.js";
 import { coletaServico, editalServico, fonteServico, gatilhosNotificacao, processamentoEditalServico } from "../composicao.js";
-import { portalDaFonte } from "../servicos/coleta/portais/index.js";
 
 export const registroRotinas: RegistroRotinas = {
   obter: (nome) =>
@@ -20,19 +19,21 @@ export function horaColeta(cron: string | null): string {
   return `${partes[2].padStart(2, "0")}:${partes[1].padStart(2, "0")}`;
 }
 
+const coletaAutomatica = (tipo: string) => tipo === "SCRAPER" || tipo === "RSS";
+
 export function tarefasColeta(): Tarefa[] {
   fonteServico.garantirFontesPadrao();
   return [
     ...repositorios.fonte
       .listar()
-      .filter((f) => portalDaFonte(f.nome))
+      .filter((f) => f.tipo === "SCRAPER" || f.tipo === "RSS")
       .map(
         (f): Tarefa => ({
           nome: `Coleta ${f.id}`,
           recuperarAtrasada: true,
           deveRodar: (agora) => {
             const fonte = repositorios.fonte.buscarPorId(f.id);
-            if (!fonte?.ativo || fonte.tipo !== "SCRAPER") return false;
+            if (!fonte?.ativo || !coletaAutomatica(fonte.tipo)) return false;
             try {
               return agora.hora >= horaColeta(fonte.frequencia_cron);
             } catch (erro) {
@@ -42,7 +43,7 @@ export function tarefasColeta(): Tarefa[] {
           },
           executar: async () => {
             const fonte = repositorios.fonte.buscarPorId(f.id);
-            if (!fonte?.ativo || fonte.tipo !== "SCRAPER") return;
+            if (!fonte?.ativo || !coletaAutomatica(fonte.tipo)) return;
             try {
               await coletaServico.coletar(fonte);
             } finally {

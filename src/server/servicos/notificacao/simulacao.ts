@@ -50,6 +50,7 @@ export const EDITAL_FICTICIO: Edital = {
   erro_processamento: null,
   tentativas_processamento: 0,
   processado_em: null,
+  id_externo: null,
   criado_em: diasAPartirDeHoje(-1),
   atualizado_em: diasAPartirDeHoje(-1),
 }
@@ -97,6 +98,10 @@ export const FONTE_FICTICIA: Fonte = {
   ultima_coleta_em: diasAPartirDeHoje(0),
   ultimo_status: 'FALHA',
   ultima_mensagem_erro: 'Erro fictício: o portal de teste não respondeu (HTTP 503).',
+  removida_em: null,
+  integracao: null,
+  formato_dados: null,
+  endereco_dados: null,
 }
 
 export const FALHAS_SEGUIDAS_FICTICIAS = 3

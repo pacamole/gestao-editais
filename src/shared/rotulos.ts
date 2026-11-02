@@ -69,6 +69,19 @@ export const STATUS_EDITAL: Record<string, string> = {
   INSCRITO: 'Inscrito',
   ENCERRADO: 'Encerrado',
   EXPIRADO: 'Expirado',
+  FORA_DO_PERFIL: 'Fora do perfil',
+}
+
+// Origem do edital como o usuário a vê: as fontes internas ganham nomes de ação; fonte excluída fica indicada.
+const ORIGENS_INTERNAS: Record<string, string> = {
+  'Upload manual': 'PDF enviado',
+  'URL manual': 'Link colado',
+  'Cadastro manual': 'Cadastro manual',
+}
+
+export function rotuloDaFonte(fonte: { nome: string; removida_em?: string | null }): string {
+  const nome = ORIGENS_INTERNAS[fonte.nome] ?? fonte.nome
+  return fonte.removida_em ? `${nome} (fonte excluída)` : nome
 }
 
 export const ELEGIBILIDADE: Record<string, string> = {
