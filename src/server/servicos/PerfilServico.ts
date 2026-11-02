@@ -1,5 +1,6 @@
 import { transacao } from '../db/index.js'
 import { ErroValidacao } from '../dominio/erros.js'
+import { perfilProvisorio } from '../dominio/perfil.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { normalizarLista } from '../util/listas.js'
 import type { Porte } from '../../shared/tipos/dominio.js'
@@ -26,19 +27,30 @@ export class PerfilServico {
     const porte = String(payload.porte ?? 'ME') as Porte
     if (!PORTES.includes(porte)) throw new ErroValidacao('Porte inválido.')
 
+    // Sem valores inventados: o perfil só existe com os dados reais da empresa.
+    const obrigatorio = (campo: string, rotulo: string) => {
+      const valor = String(payload[campo] ?? '').trim()
+      if (!valor) throw new ErroValidacao(`${rotulo} é obrigatório.`)
+      return valor
+    }
+    const cnpj = obrigatorio('cnpj', 'CNPJ')
+    if (perfilProvisorio({ cnpj })) throw new ErroValidacao('Informe o CNPJ real da empresa.')
+    const uf = obrigatorio('uf', 'Estado').toUpperCase()
+    if (uf.length !== 2) throw new ErroValidacao('Estado deve ter 2 letras.')
+
     const perfil = {
       id: 1,
-      razao_social: String(payload.razao_social ?? '').trim() || 'I9+ Consultoria e Inovação',
+      razao_social: obrigatorio('razao_social', 'Razão social'),
       nome_fantasia: payload.nome_fantasia ? String(payload.nome_fantasia).trim() : null,
-      cnpj: String(payload.cnpj ?? '').trim() || '00.000.000/0000-00',
-      cnae_principal: String(payload.cnae_principal ?? '').trim() || '0000-0/00',
+      cnpj,
+      cnae_principal: obrigatorio('cnae_principal', 'CNAE principal'),
       cnaes_secundarios: normalizarLista(payload.cnaes_secundarios),
       porte,
-      natureza_juridica: String(payload.natureza_juridica ?? '').trim() || 'Sociedade Empresária Limitada',
-      data_fundacao: String(payload.data_fundacao ?? '').trim() || '2020-01-01',
+      natureza_juridica: obrigatorio('natureza_juridica', 'Natureza jurídica'),
+      data_fundacao: obrigatorio('data_fundacao', 'Data de fundação'),
       faturamento_anual: numeroOuNulo(payload.faturamento_anual),
-      uf: String(payload.uf ?? 'PR').trim().toUpperCase() || 'PR',
-      municipio: String(payload.municipio ?? '').trim() || 'Curitiba',
+      uf,
+      municipio: obrigatorio('municipio', 'Município'),
       areas_atuacao: normalizarLista(payload.areas_atuacao),
       palavras_chave: normalizarLista(payload.palavras_chave),
       possui_ict_parceira: Boolean(payload.possui_ict_parceira),

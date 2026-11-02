@@ -1,5 +1,6 @@
 import { PARAMETROS_PADRAO, TIPOS_NOTIFICACAO } from '../../shared/catalogoAlertas.js'
 import { CRITERIOS_PADRAO } from '../dominio/criteriosPadrao.js'
+import { PERFIL_INICIAL } from '../dominio/perfilInicial.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { CHAT_LIMITE_DIARIO_PADRAO, CHAVES_CONFIG } from './ConfigSistemaServico.js'
 
@@ -10,44 +11,14 @@ type RepositoriosBootstrap = Pick<
 
 const DESTINATARIOS_INICIADOS = 'destinatarios_iniciados'
 
-// Valores provisórios até a empresa preencher o perfil real (§14, perguntas 1 e 8-10).
-const PERFIL_PADRAO = {
-  razao_social: 'I9+ Consultoria e Inovação',
-  nome_fantasia: 'I9+',
-  cnpj: '00.000.000/0000-00',
-  cnae_principal: '5821-1/00',
-  cnaes_secundarios: ['6201-5/00', '7210-0/00'],
-  porte: 'ME',
-  natureza_juridica: 'Sociedade Empresária Limitada',
-  data_fundacao: '2020-01-01',
-  faturamento_anual: 4200000,
-  uf: 'PR',
-  municipio: 'Curitiba',
-  areas_atuacao: ['ESG', 'Sustentabilidade', 'Inovação', 'Energia', 'Descarbonização'],
-  palavras_chave: ['ESG', 'sustentabilidade', 'inovação', 'energia', 'descarbonização', 'clima'],
-  possui_ict_parceira: false,
-  certidoes_disponiveis: ['CND', 'FGTS', 'CRLV'],
-  capacidade_contrapartida_percentual: 30,
-  valor_minimo_interesse: 500000,
-  prazo_minimo_preparo_dias: 30,
-} as const
-
-// Garante os dados mínimos (perfil, critérios, alertas e config) numa base nova ou antiga.
+// Garante os dados mínimos (perfil da empresa, critérios, alertas e config) numa base nova ou antiga.
 // Roda antes de atender a API e depois de `db:reset`; só cria o que falta, nunca sobrescreve.
 export class BootstrapServico {
   constructor(private readonly repos: RepositoriosBootstrap) {}
 
   garantir(): void {
     if (!this.repos.perfilEmpresa.obter()) {
-      this.repos.perfilEmpresa.inserir({
-        id: 1,
-        ...PERFIL_PADRAO,
-        cnaes_secundarios: [...PERFIL_PADRAO.cnaes_secundarios],
-        areas_atuacao: [...PERFIL_PADRAO.areas_atuacao],
-        palavras_chave: [...PERFIL_PADRAO.palavras_chave],
-        certidoes_disponiveis: [...PERFIL_PADRAO.certidoes_disponiveis],
-        atualizado_em: new Date().toISOString(),
-      })
+      this.repos.perfilEmpresa.inserir({ ...PERFIL_INICIAL, atualizado_em: new Date().toISOString() })
     }
 
     if (this.repos.criterio.contar() === 0) {
