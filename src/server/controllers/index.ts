@@ -12,6 +12,7 @@ import { rotasEditais } from './EditalController.js'
 import { rotasEntrada } from './EntradaController.js'
 import { rotasExtracao } from './ExtracaoController.js'
 import { rotasFontes } from './FonteController.js'
+import { rotasPendencias } from './PendenciaController.js'
 import { rotasPerfil } from './PerfilController.js'
 
 // Todas as rotas da API, montadas em /api.
@@ -37,3 +38,4 @@ rotasApi.use(rotasEditais)
 rotasApi.use(rotasEntrada)
 rotasApi.use(rotasExtracao)
 rotasApi.use(rotasChat)
+rotasApi.use(rotasPendencias)

@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import type { UsuarioLogado } from '../../shared/tipos/auth'
 import { auth } from '../api/auth'
+import { AvisosSistema } from '../components/AvisosSistema'
 
 const linksOperacao = [
   { to: '/', rotulo: 'Dashboard', end: true },
@@ -55,6 +56,7 @@ export function AppLayout({ usuario }: { usuario: UsuarioLogado }) {
         </button>
       </nav>
       <main className="app-conteudo">
+        <AvisosSistema />
         <Outlet />
       </main>
     </div>

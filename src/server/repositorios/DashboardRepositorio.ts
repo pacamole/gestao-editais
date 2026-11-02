@@ -1,7 +1,7 @@
 import { db } from '../db/index.js'
 import type { CartoesDashboard, DistribuicaoFit, EditalResumoDashboard, EditalTopFit } from '../../shared/tipos/dashboard.js'
 
-const ENCERRADOS = "('DESCARTADO', 'ENCERRADO', 'EXPIRADO')"
+const ENCERRADOS = "('DESCARTADO', 'ENCERRADO', 'EXPIRADO', 'FORA_DO_PERFIL')"
 
 const JUNCAO_AVALIACAO = `
   LEFT JOIN fonte f ON e.fonte_id = f.id`
@@ -25,7 +25,7 @@ const contar = (sql: string, ...params: (string | number)[]) => (db.prepare(sql)
 export class DashboardRepositorio {
   contagens(criadosDesde: string, hoje: string, ate: string): CartoesDashboard {
     return {
-      novosSemana: contar('SELECT COUNT(*) as n FROM edital WHERE criado_em >= ?', criadosDesde),
+      novosSemana: contar("SELECT COUNT(*) as n FROM edital WHERE criado_em >= ? AND status <> 'FORA_DO_PERFIL'", criadosDesde),
       aguardandoRevisao: contar("SELECT COUNT(*) as n FROM edital WHERE status IN ('ANALISADO', 'EM_REVISAO')"),
       aprovadosSemInscricao: contar("SELECT COUNT(*) as n FROM edital WHERE status = 'APROVADO'"),
       prazoUrgente: contar(
@@ -89,8 +89,15 @@ export class DashboardRepositorio {
   }
 
   /** Cada fonte com o resultado da última execução de coleta. */
+  totalEditais(): number {
+    return contar('SELECT COUNT(*) as n FROM edital')
+  }
+
   fontesComUltimaExecucao(): FonteComExecucao[] {
-    const fontes = db.prepare('SELECT * FROM fonte ORDER BY nome').all() as Record<string, unknown>[]
+    // Só as fontes monitoradas: upload, link e cadastro manual não têm busca, e excluída não aparece.
+    const fontes = db
+      .prepare("SELECT * FROM fonte WHERE tipo IN ('SCRAPER', 'RSS') AND removida_em IS NULL ORDER BY nome")
+      .all() as Record<string, unknown>[]
     return fontes.map((f) => {
       const execucao = db
         .prepare('SELECT * FROM coleta_execucao WHERE fonte_id = ? ORDER BY iniciada_em DESC LIMIT 1')

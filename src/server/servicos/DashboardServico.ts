@@ -41,6 +41,7 @@ export class DashboardServico {
       topFit: this.consultas.maioresNotas(QUANTIDADE_LISTAS),
       distribuicao: this.consultas.distribuicaoPorFit() ?? { alto: 0, medio: 0, baixo: 0, total: 0 },
       saudeColeta,
+      totalEditais: this.consultas.totalEditais(),
     }
   }
 }

@@ -171,7 +171,7 @@ export class GatilhosNotificacaoServico {
           aguardandoVerificacao: edital.contarPorStatus('EM_REVISAO'),
           aprovadosSemInscricao: edital.contarPorStatus('APROVADO'),
         },
-        fontes: fonte.listarAtivas().map((f) => ({
+        fontes: fonte.listarMonitoradasAtivas().map((f) => ({
           nome: f.nome,
           ultimoStatus: f.ultimo_status,
           ultimaColetaEm: f.ultima_coleta_em,

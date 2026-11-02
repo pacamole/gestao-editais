@@ -59,5 +59,6 @@ export type DashboardResposta = {
   editaisUrgentes: EditalUrgente[]
   topFit: EditalTopFit[]
   distribuicao: DistribuicaoFit
-  saudeColeta: SaudeFonte[]
+  saudeColeta: SaudeFonte[] // só fontes monitoradas; vazio quando o usuário não cadastrou nenhuma
+  totalEditais: number
 }

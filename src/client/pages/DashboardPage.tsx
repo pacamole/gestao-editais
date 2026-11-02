@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { SistemaVazio } from '../components/SistemaVazio'
 import type { DashboardResposta } from '../../shared/tipos/dashboard'
 import { ErroApi, mensagemDeErro } from '../api/cliente'
 import { dashboard } from '../api/dashboard'
@@ -40,7 +41,7 @@ export function DashboardPage() {
       <header className="pagina-cabecalho">
         <div>
           <h1>Dashboard</h1>
-          <p>Visão geral do funil, priorização e saúde da coleta.</p>
+          <p>Visão geral dos editais, prioridades e prazos.</p>
         </div>
         <div className="linha">
           <Link to="/editais/novo" className="btn btn--primario">
@@ -64,7 +65,9 @@ export function DashboardPage() {
         </div>
       )}
 
-      {dados && (
+      {dados && dados.totalEditais === 0 && <SistemaVazio />}
+
+      {dados && dados.totalEditais > 0 && (
         <div className="pilha pilha--lg">
           <CartoesContagem cartoes={dados.cartoes} />
 
@@ -73,10 +76,15 @@ export function DashboardPage() {
             <TopFit itens={dados.topFit} />
           </div>
 
-          <div className="grade-2">
+          {/* Sem fontes monitoradas não há o que mostrar sobre buscas. */}
+          {dados.saudeColeta.length ? (
+            <div className="grade-2">
+              <DistribuicaoClassificacao distribuicao={dados.distribuicao} />
+              <SaudeColeta fontes={dados.saudeColeta} />
+            </div>
+          ) : (
             <DistribuicaoClassificacao distribuicao={dados.distribuicao} />
-            <SaudeColeta fontes={dados.saudeColeta} />
-          </div>
+          )}
         </div>
       )}
     </section>

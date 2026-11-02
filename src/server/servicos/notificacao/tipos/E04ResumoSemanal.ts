@@ -64,14 +64,17 @@ export class ResumoSemanal extends Notificacao {
       'PENDÊNCIAS',
       `  ${pendencias.aguardandoVerificacao} editais aguardam verificação manual`,
       `  ${pendencias.aprovadosSemInscricao} aprovados ainda não inscritos`,
-      '',
-      'SAÚDE DA COLETA',
-      ...ResumoSemanal.ouNenhum(
-        fontes.map(
-          (f) =>
-            `  ${f.nome}: ${f.ultimoStatus ?? 'nunca executada'} · última coleta ${f.ultimaColetaEm ? Formato.dataHora(f.ultimaColetaEm) : '—'} · ${f.itens ?? 0} itens`,
-        ),
-      ),
+      // Sem fontes monitoradas (os editais entram só pelo que o usuário envia), a seção não aparece.
+      ...(fontes.length
+        ? [
+            '',
+            'SAÚDE DA COLETA',
+            ...fontes.map(
+              (f) =>
+                `  ${f.nome}: ${f.ultimoStatus ?? 'nunca executada'} · última coleta ${f.ultimaColetaEm ? Formato.dataHora(f.ultimaColetaEm) : '—'} · ${f.itens ?? 0} itens`,
+            ),
+          ]
+        : []),
       '',
       `Abrir painel: ${Links.dashboard()}`,
     ].join('\n')

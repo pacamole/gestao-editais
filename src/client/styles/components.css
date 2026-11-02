@@ -1076,6 +1076,102 @@
   padding: 0;
 }
 
+/* Janela modal (<dialog>) */
+.modal {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  border: 1px solid var(--cor-linha);
+  border-radius: var(--raio-3);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  box-shadow: var(--sombra-2);
+}
+
+.modal::backdrop {
+  background: rgba(21, 29, 39, 0.45);
+}
+
+.modal__caixa {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 64px);
+}
+
+.modal__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  padding: var(--esp-4) var(--esp-5);
+  border-bottom: 1px solid var(--cor-linha);
+}
+
+.modal__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+  padding: var(--esp-5);
+  overflow-y: auto;
+}
+
+.modal__rodape {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--esp-2);
+  padding: var(--esp-3) var(--esp-5);
+  border-top: 1px solid var(--cor-linha);
+  background: var(--cor-superficie-2);
+}
+
+/* Menu de ações de uma linha (botão ⋮) */
+.menu-acoes__botao {
+  width: 32px;
+  padding: 0;
+  font-size: var(--texto-lg);
+  line-height: 1;
+}
+
+.menu-acoes {
+  position: fixed;
+  z-index: 50;
+  margin: 0;
+  padding: var(--esp-1) 0;
+  list-style: none;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-linha);
+  border-radius: var(--raio-2);
+  box-shadow: var(--sombra-2);
+}
+
+.menu-acoes__item {
+  display: block;
+  width: 100%;
+  padding: var(--esp-2) var(--esp-3);
+  border: 0;
+  background: none;
+  color: var(--cor-texto);
+  font: inherit;
+  font-size: var(--texto-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-acoes__item:hover:not(:disabled),
+.menu-acoes__item:focus-visible {
+  background: var(--cor-superficie-2);
+  outline: none;
+}
+
+.menu-acoes__item:disabled {
+  color: var(--cor-texto-3);
+  cursor: default;
+}
+
+.menu-acoes__item--perigo {
+  color: var(--vermelho-texto);
+}
+
 /* ================= Cartões ================= */
 
 .card {
@@ -1100,6 +1196,7 @@
 
 .card__corpo--justo {
   padding: 0;
+  overflow-x: auto; /* tabelas largas rolam dentro do cartão, não a página */
 }
 
 .card__rodape {
@@ -1369,7 +1466,7 @@ a.contador:hover {
 .tabela th {
   position: sticky;
   top: 0;
-  padding: var(--esp-3) var(--esp-4);
+  padding: var(--esp-3) var(--esp-3);
   background: var(--cor-superficie-2);
   border-bottom: 1px solid var(--cor-linha);
   font-size: var(--texto-xs);
@@ -1382,7 +1479,7 @@ a.contador:hover {
 }
 
 .tabela td {
-  padding: var(--esp-3) var(--esp-4);
+  padding: var(--esp-3) var(--esp-3);
   border-bottom: 1px solid var(--cor-linha);
   vertical-align: middle;
 }
@@ -1403,7 +1500,7 @@ a.contador:hover {
 }
 
 .tabela__titulo {
-  max-width: 340px;
+  max-width: 260px;
 }
 
 .tabela__titulo a {
@@ -1411,6 +1508,15 @@ a.contador:hover {
   color: var(--cor-texto);
   font-weight: 500;
   text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Link longo numa célula: uma linha só, cortada com reticências; o endereço completo aparece ao passar o mouse. */
+.link-truncado {
+  display: block;
+  max-width: 520px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

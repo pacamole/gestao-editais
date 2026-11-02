@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import type { Criterio, Operador, ResultadoSimulacao, TipoCriterio } from '../../../shared/tipos/criterios'
 import {
   CAMPOS_CRITERIO_EDITAL,
@@ -9,6 +9,7 @@ import {
 } from '../../../shared/catalogoCriterios'
 import { criterios, type EditalParaSimulacao } from '../../api/criterios'
 import { mensagemDeErro } from '../../api/cliente'
+import { Modal } from '../../components/Modal'
 
 // Estado do formulário: campos opcionais e peso como texto editável; id '' = novo.
 type FormCriterio = {
@@ -69,7 +70,10 @@ export function SecaoCriterios() {
   const [pontuaveis, setPontuaveis] = useState<Criterio[]>([])
   const [editalId, setEditalId] = useState('')
   const [editais, setEditais] = useState<EditalParaSimulacao[]>([])
-  const [form, setForm] = useState(criterioInicial)
+  // null = modal fechado; com id '' = critério novo.
+  const [form, setForm] = useState<FormCriterio | null>(null)
+  const [erroModal, setErroModal] = useState('')
+  const [salvando, setSalvando] = useState(false)
   const [simulacao, setSimulacao] = useState<ResultadoSimulacao | null>(null)
   const [mensagem, setMensagem] = useState('')
   const [erro, setErro] = useState('')
@@ -89,12 +93,13 @@ export function SecaoCriterios() {
   useEffect(() => { carregar() }, [])
 
   function atualizarCampo<K extends keyof FormCriterio>(campo: K, valor: FormCriterio[K]) {
-    setForm((atual) => ({ ...atual, [campo]: valor }))
+    setForm((atual) => (atual ? { ...atual, [campo]: valor } : atual))
   }
 
   // Trocar o campo do edital descarta operador e referência incompatíveis com o novo tipo.
   function trocarCampoEdital(campoEdital: string) {
     setForm((atual) => {
+      if (!atual) return atual
       const operadores = operadoresDoCampo(campoEdital)
       return {
         ...atual,
@@ -105,8 +110,15 @@ export function SecaoCriterios() {
     })
   }
 
-  function limpar() {
-    setForm(criterioInicial)
+  function abrir(inicial: FormCriterio) {
+    setMensagem('')
+    setErro('')
+    setErroModal('')
+    setForm(inicial)
+  }
+
+  function fechar() {
+    if (!salvando) setForm(null)
   }
 
   // Executa uma ação, limpando avisos antes e mostrando o erro se falhar.
@@ -120,8 +132,13 @@ export function SecaoCriterios() {
     }
   }
 
-  function salvar() {
-    return executar(async () => {
+  // O erro de validação aparece dentro do modal, que continua aberto para corrigir.
+  async function salvar(e: FormEvent) {
+    e.preventDefault()
+    if (!form) return
+    setErroModal('')
+    setSalvando(true)
+    try {
       const { id, ...resto } = form
       await criterios.salvar({
         ...resto,
@@ -131,10 +148,14 @@ export function SecaoCriterios() {
         peso: form.tipo === 'PONTUAVEL' ? Number(form.peso || 1) : null,
         mensagem_reprovacao: form.tipo === 'ELIMINATORIO' ? form.mensagem_reprovacao || null : null,
       })
-      setMensagem('Critério salvo com sucesso.')
-      limpar()
+      setMensagem(form.id ? 'Critério atualizado.' : 'Critério adicionado.')
+      setForm(null)
       await carregar()
-    }, 'Erro ao salvar critério')
+    } catch (falha) {
+      setErroModal(mensagemDeErro(falha, 'Erro ao salvar critério.'))
+    } finally {
+      setSalvando(false)
+    }
   }
 
   function excluir(id: string) {
@@ -170,8 +191,8 @@ export function SecaoCriterios() {
     }, 'Não foi possível simular.')
   }
 
-  const operadoresDisponiveis = form.campo_edital ? operadoresDoCampo(form.campo_edital) : []
-  const perfisDisponiveis = form.campo_edital ? camposPerfilCompativeis(form.campo_edital) : []
+  const operadoresDisponiveis = form?.campo_edital ? operadoresDoCampo(form.campo_edital) : []
+  const perfisDisponiveis = form?.campo_edital ? camposPerfilCompativeis(form.campo_edital) : []
   const pesoTotal = pontuaveis.filter((c) => c.ativo).reduce((soma, c) => soma + (c.peso ?? 0), 0)
 
   function acoes(lista: Criterio[], indice: number, item: Criterio) {
@@ -179,7 +200,7 @@ export function SecaoCriterios() {
       <div className="linha">
         <button className="btn btn--sm btn--fantasma" aria-label="Mover para cima" disabled={indice === 0} onClick={() => mover(lista, indice, -1)}>↑</button>
         <button className="btn btn--sm btn--fantasma" aria-label="Mover para baixo" disabled={indice === lista.length - 1} onClick={() => mover(lista, indice, 1)}>↓</button>
-        <button className="btn btn--sm btn--fantasma" onClick={() => setForm(paraFormulario(item))}>Editar</button>
+        <button className="btn btn--sm btn--fantasma" onClick={() => abrir(paraFormulario(item))}>Editar</button>
         <button className="btn btn--sm btn--fantasma" onClick={() => alternarAtivo(item.id)}>{item.ativo ? 'Desativar' : 'Ativar'}</button>
         <button className="btn btn--sm btn--perigo" onClick={() => excluir(item.id)}>Excluir</button>
       </div>
@@ -189,47 +210,8 @@ export function SecaoCriterios() {
   return (
     <section>
       <div className="pilha">
-        <div className="card">
-          <div className="card__cabecalho"><h2>{form.id ? 'Editar critério' : 'Cadastro de critério'}</h2></div>
-          <div className="card__corpo grade-3">
-            <div className="campo"><label htmlFor="nome">Nome</label><input id="nome" className="input" value={form.nome} onChange={(e) => atualizarCampo('nome', e.target.value)} /></div>
-            <div className="campo"><label htmlFor="tipo">Tipo</label><select id="tipo" className="select" value={form.tipo} onChange={(e) => atualizarCampo('tipo', e.target.value as TipoCriterio)}><option value="ELIMINATORIO">Eliminatório</option><option value="PONTUAVEL">Pontuável</option></select></div>
-            <div className="campo">
-              <label htmlFor="campo_edital">Campo do edital</label>
-              <select id="campo_edital" className="select" value={form.campo_edital} onChange={(e) => trocarCampoEdital(e.target.value)}>
-                <option value="" disabled>Selecione…</option>
-                {Object.entries(CAMPOS_CRITERIO_EDITAL).map(([campo, def]) => <option key={campo} value={campo}>{def.rotulo}</option>)}
-              </select>
-            </div>
-            <div className="campo">
-              <label htmlFor="operador">Operador</label>
-              <select id="operador" className="select" value={form.operador} disabled={!form.campo_edital} onChange={(e) => atualizarCampo('operador', e.target.value as Operador)}>
-                {operadoresDisponiveis.map((op) => <option key={op} value={op}>{OPERADORES[op]}</option>)}
-              </select>
-            </div>
-            <div className="campo">
-              <label htmlFor="campo_perfil">Comparar com (perfil)</label>
-              <select id="campo_perfil" className="select" value={form.campo_perfil} disabled={!form.campo_edital} onChange={(e) => atualizarCampo('campo_perfil', e.target.value)}>
-                <option value="">— valor de referência fixo —</option>
-                {perfisDisponiveis.map((campo) => <option key={campo} value={campo}>{rotuloPerfil(campo)}</option>)}
-              </select>
-            </div>
-            <div className="campo">
-              <label htmlFor="valor_referencia">Valor de referência</label>
-              <input id="valor_referencia" className="input" value={form.valor_referencia} disabled={!!form.campo_perfil} placeholder={form.campo_perfil ? 'Usando o campo do perfil' : 'Ex.: SUBVENCAO, CREDITO'} onChange={(e) => atualizarCampo('valor_referencia', e.target.value)} />
-            </div>
-            {form.tipo === 'PONTUAVEL'
-              ? <div className="campo"><label htmlFor="peso">Peso (1–10)</label><input id="peso" type="number" min={1} max={10} className="input" value={form.peso} onChange={(e) => atualizarCampo('peso', e.target.value)} /></div>
-              : <div className="campo"><label htmlFor="mensagem_reprovacao">Mensagem de reprovação</label><input id="mensagem_reprovacao" className="input" value={form.mensagem_reprovacao} onChange={(e) => atualizarCampo('mensagem_reprovacao', e.target.value)} /></div>}
-            <label className="checkbox"><input type="checkbox" checked={form.ativo} onChange={(e) => atualizarCampo('ativo', e.target.checked)} /> Ativo</label>
-          </div>
-          <div className="card__rodape linha linha--entre">
-            <button className="btn btn--fantasma" onClick={limpar}>Limpar</button>
-            <button className="btn btn--primario" onClick={salvar}>Salvar critério</button>
-          </div>
-          {mensagem ? <div className="card__rodape"><p className="aviso aviso--sucesso">{mensagem}</p></div> : null}
-          {erro ? <div className="card__rodape"><p className="aviso aviso--erro" role="alert">{erro}</p></div> : null}
-        </div>
+        {mensagem ? <p className="aviso aviso--sucesso" role="status">{mensagem}</p> : null}
+        {erro ? <p className="aviso aviso--erro" role="alert">{erro}</p> : null}
 
         <div className="card">
           <div className="card__cabecalho"><h2>Simulação</h2></div>
@@ -241,7 +223,10 @@ export function SecaoCriterios() {
         </div>
 
         <div className="card">
-          <div className="card__cabecalho"><h2>Critérios eliminatórios</h2></div>
+          <div className="card__cabecalho">
+            <h2>Critérios eliminatórios</h2>
+            <button className="btn btn--sm btn--primario" onClick={() => abrir({ ...criterioInicial, tipo: 'ELIMINATORIO' })}>+ Novo critério</button>
+          </div>
           <div className="card__corpo">
             {eliminatorios.map((item, indice) => (
               <div key={item.id} className="linha" style={{ justifyContent: 'space-between', borderBottom: '1px solid var(--cor-linha)', padding: '0.75rem 0', opacity: item.ativo ? 1 : 0.55 }}>
@@ -256,7 +241,10 @@ export function SecaoCriterios() {
         </div>
 
         <div className="card">
-          <div className="card__cabecalho"><h2>Critérios pontuáveis</h2></div>
+          <div className="card__cabecalho">
+            <h2>Critérios pontuáveis</h2>
+            <button className="btn btn--sm btn--primario" onClick={() => abrir({ ...criterioInicial, tipo: 'PONTUAVEL' })}>+ Novo critério</button>
+          </div>
           <div className="card__corpo">
             {pontuaveis.map((item, indice) => {
               const relativo = item.ativo && pesoTotal ? Math.round((100 * (item.peso ?? 0)) / pesoTotal) : 0
@@ -278,6 +266,61 @@ export function SecaoCriterios() {
           </div>
         </div>
       </div>
+
+      <Modal
+        aberto={form !== null}
+        titulo={form?.id ? 'Editar critério' : 'Novo critério'}
+        aoFechar={fechar}
+        rodape={
+          <>
+            <span />
+            <div className="linha">
+              <button type="button" className="btn btn--fantasma" onClick={fechar} disabled={salvando}>Cancelar</button>
+              <button type="submit" form="form-criterio" className="btn btn--primario" disabled={salvando}>
+                {salvando ? 'Salvando…' : form?.id ? 'Salvar alterações' : 'Adicionar critério'}
+              </button>
+            </div>
+          </>
+        }
+      >
+        {form ? (
+          <form id="form-criterio" className="pilha" onSubmit={salvar}>
+            <div className="grade-2">
+              <div className="campo"><label htmlFor="nome">Nome</label><input id="nome" className="input" autoFocus required value={form.nome} onChange={(e) => atualizarCampo('nome', e.target.value)} /></div>
+              <div className="campo"><label htmlFor="tipo">Tipo</label><select id="tipo" className="select" value={form.tipo} onChange={(e) => atualizarCampo('tipo', e.target.value as TipoCriterio)}><option value="ELIMINATORIO">Eliminatório</option><option value="PONTUAVEL">Pontuável</option></select></div>
+              <div className="campo">
+                <label htmlFor="campo_edital">Campo do edital</label>
+                <select id="campo_edital" className="select" value={form.campo_edital} onChange={(e) => trocarCampoEdital(e.target.value)}>
+                  <option value="" disabled>Selecione…</option>
+                  {Object.entries(CAMPOS_CRITERIO_EDITAL).map(([campo, def]) => <option key={campo} value={campo}>{def.rotulo}</option>)}
+                </select>
+              </div>
+              <div className="campo">
+                <label htmlFor="operador">Operador</label>
+                <select id="operador" className="select" value={form.operador} disabled={!form.campo_edital} onChange={(e) => atualizarCampo('operador', e.target.value as Operador)}>
+                  {operadoresDisponiveis.map((op) => <option key={op} value={op}>{OPERADORES[op]}</option>)}
+                </select>
+              </div>
+              <div className="campo">
+                <label htmlFor="campo_perfil">Comparar com (perfil)</label>
+                <select id="campo_perfil" className="select" value={form.campo_perfil} disabled={!form.campo_edital} onChange={(e) => atualizarCampo('campo_perfil', e.target.value)}>
+                  <option value="">— valor de referência fixo —</option>
+                  {perfisDisponiveis.map((campo) => <option key={campo} value={campo}>{rotuloPerfil(campo)}</option>)}
+                </select>
+              </div>
+              <div className="campo">
+                <label htmlFor="valor_referencia">Valor de referência</label>
+                <input id="valor_referencia" className="input" value={form.valor_referencia} disabled={!!form.campo_perfil} placeholder={form.campo_perfil ? 'Usando o campo do perfil' : 'Ex.: SUBVENCAO, CREDITO'} onChange={(e) => atualizarCampo('valor_referencia', e.target.value)} />
+              </div>
+              {form.tipo === 'PONTUAVEL'
+                ? <div className="campo"><label htmlFor="peso">Peso (1–10)</label><input id="peso" type="number" min={1} max={10} className="input" value={form.peso} onChange={(e) => atualizarCampo('peso', e.target.value)} /></div>
+                : <div className="campo"><label htmlFor="mensagem_reprovacao">Mensagem de reprovação</label><input id="mensagem_reprovacao" className="input" value={form.mensagem_reprovacao} onChange={(e) => atualizarCampo('mensagem_reprovacao', e.target.value)} /></div>}
+              <label className="checkbox"><input type="checkbox" checked={form.ativo} onChange={(e) => atualizarCampo('ativo', e.target.checked)} /> Ativo</label>
+            </div>
+            {erroModal ? <p className="aviso aviso--erro" role="alert">{erroModal}</p> : null}
+          </form>
+        ) : null}
+      </Modal>
     </section>
   )
 }
