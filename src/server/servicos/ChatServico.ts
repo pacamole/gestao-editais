@@ -4,11 +4,14 @@ import { ErroModeloLinguagem, type ModeloLinguagemPorta } from '../portas/Modelo
 import type { Repositorios } from '../repositorios/index.js'
 import { inicioDoDia } from '../../shared/datas.js'
 import type { EventoChat, HistoricoChatResposta } from '../../shared/tipos/chat.js'
+import { caracteresDisponiveis, contextoParaPergunta } from './ia/contextoEdital.js'
 import { mensagensDeChat } from './ia/promptsChat.js'
 
 type RepositoriosChat = Pick<Repositorios, 'edital' | 'conversa' | 'mensagem' | 'perfilEmpresa'>
 
 const MAXIMO_CARACTERES_PERGUNTA = 2000
+// O pedido além do edital: instruções e perfil (~1.000), histórico e pergunta (~1.700) e a resposta (2.048).
+const RESERVA_TOKENS = 4_800
 
 export type PedidoPergunta = { editalId: string; usuarioId: string; pergunta: unknown }
 
@@ -74,16 +77,24 @@ export class ChatServico {
     const conversaExistente = this.repos.conversa.buscarDoUsuario(edital.id, usuarioId)
     const historico = conversaExistente ? this.repos.mensagem.ultimasDaConversa(conversaExistente.id, 6) : []
 
+    const contexto = contextoParaPergunta(
+      edital.id,
+      textoEdital,
+      texto,
+      caracteresDisponiveis(this.modelo.limiteDeContexto(), RESERVA_TOKENS),
+    )
     destino.aoIniciar()
     destino.aoEvento({
       tipo: 'status',
-      mensagem: 'Enviando o edital completo ao Ollama. A resposta pode demorar um pouco mais…',
+      mensagem: contexto.completo
+        ? 'Enviando o edital completo ao Ollama. A resposta pode demorar um pouco mais…'
+        : 'O edital é longo: enviando ao Ollama as partes ligadas à sua pergunta…',
     })
 
     let conteudo = ''
     try {
       const mensagens = mensagensDeChat(
-        textoEdital,
+        contexto,
         texto,
         historico.map(({ papel, conteudo: c }) => ({ papel, conteudo: c })),
         this.repos.perfilEmpresa.obter() ?? null,

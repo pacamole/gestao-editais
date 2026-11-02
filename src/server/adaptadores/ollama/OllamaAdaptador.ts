@@ -7,8 +7,12 @@ import {
 import { cabecalhosOllama, enderecoOllama, type ConexaoOllama } from './conexao.js'
 
 const TIMEOUT_MS = 600_000
-const CONTEXTO_TOKENS = 8192
+// O gemma2 do modo local tem janela de 8k tokens; os modelos do Ollama Cloud aceitam bem mais.
+const CONTEXTO_LOCAL = 8192
+const CONTEXTO_NUVEM = 32_768
 const MAXIMO_TOKENS_PADRAO = 2048
+
+const contextoDa = (conexao: ConexaoOllama) => (conexao.chave ? CONTEXTO_NUVEM : CONTEXTO_LOCAL)
 
 type RespostaOllama = {
   message?: { content?: unknown }
@@ -37,6 +41,10 @@ export class OllamaAdaptador implements ModeloLinguagemPorta {
     private readonly lerConexao: () => ConexaoOllama,
     private readonly fazerFetch: typeof fetch = fetch,
   ) {}
+
+  limiteDeContexto(): number {
+    return contextoDa(this.lerConexao())
+  }
 
   async gerarJson(mensagens: MensagemModelo[], opcoes: OpcoesGeracao = {}): Promise<Record<string, unknown>> {
     const resposta = await this.chamar({
@@ -141,7 +149,7 @@ export class OllamaAdaptador implements ModeloLinguagemPorta {
           ...(pedido.json ? { format: 'json' } : {}),
           options: {
             temperature: pedido.temperatura,
-            num_ctx: CONTEXTO_TOKENS,
+            num_ctx: contextoDa(conexao),
             num_predict: pedido.maximoTokens ?? MAXIMO_TOKENS_PADRAO,
           },
           messages: pedido.mensagens.map((m) => ({ role: m.papel, content: m.conteudo })),

@@ -1,6 +1,7 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { load } from "cheerio";
+import { marcadorDeUrl } from "../dominio/textoEdital.js";
 import { extrairPdf } from "./pdf.js";
 
 const LIMITE_BYTES = 5 * 1024 * 1024;
@@ -228,6 +229,6 @@ export async function lerPaginaPublica(
   const pagina = textoHtml(Buffer.from(bytes).toString("utf8"));
   return {
     titulo: pagina.titulo,
-    texto: `[Fonte URL: ${url.href}]\n${pagina.texto}`,
+    texto: `${marcadorDeUrl(url.href)}\n${pagina.texto}`,
   };
 }

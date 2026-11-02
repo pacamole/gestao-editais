@@ -10,6 +10,8 @@ export type OpcoesGeracao = {
 }
 
 export interface ModeloLinguagemPorta {
+  /** Tokens que o modelo aceita num pedido (entrada e resposta juntas). */
+  limiteDeContexto(): number
   /** Resposta única em JSON (o objeto já interpretado). */
   gerarJson(mensagens: MensagemModelo[], opcoes?: OpcoesGeracao): Promise<Record<string, unknown>>
   /** Resposta em texto, em pedaços, à medida que o modelo escreve. */

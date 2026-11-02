@@ -1,4 +1,5 @@
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { marcadorDePagina } from "../dominio/textoEdital.js";
 
 export type PaginaPdf = { pagina: number; texto: string };
 export type TextoPdf = {
@@ -39,7 +40,7 @@ export async function extrairPdf(arquivo: Uint8Array): Promise<TextoPdf> {
     return {
       paginas,
       texto: paginas
-        .map((p) => `[Página ${p.pagina}]\n${p.texto}`)
+        .map((p) => `${marcadorDePagina(p.pagina)}\n${p.texto}`)
         .join("\n\n"),
       // Só quando a maior parte do documento não tem texto; uma capa em imagem não impede a leitura.
       requerLeituraManual: paginas.filter((p) => !p.texto.trim()).length * 2 > paginas.length,

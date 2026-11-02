@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto'
+import { cabecalhoDaSecao, secoesDoTexto } from '../../dominio/textoEdital.js'
 
-type Trecho = {
-  texto: string
+// Busca por palavras (BM25) nos trechos do edital: usada quando o documento não cabe inteiro no modelo.
+
+export type TrechoEdital = { ordem: number; texto: string }
+
+type Trecho = TrechoEdital & {
   termos: string[]
   frequencias: Map<string, number>
 }
@@ -13,13 +17,7 @@ type IndiceEdital = {
   mediaTamanho: number
 }
 
-export type BuscaEdital = {
-  trechos: string
-  relevante: boolean
-}
-
 const MAXIMO_EDITAIS_CACHE = 20
-const MAXIMO_CARACTERES_TRECHOS = 9_000
 const TAMANHO_TRECHO = 1_400
 const SOBREPOSICAO = 180
 const PALAVRAS_COMUNS = new Set([
@@ -32,36 +30,36 @@ const cacheIndices = new Map<string, IndiceEdital>()
 function tokenizar(texto: string): string[] {
   return texto
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .toLocaleLowerCase('pt-BR')
     .match(/[\p{L}\p{N}]{3,}/gu)
     ?.filter((termo) => !/^\d+$/.test(termo) && !PALAVRAS_COMUNS.has(termo)) ?? []
 }
 
+// Cada trecho leva o marcador da sua página, para o modelo poder citar a origem.
 function dividirEmTrechos(texto: string): string[] {
-  const paginas = texto.split(/(?=\[(?:Página\s+\d+|Fonte URL:)[^\]]*\])/)
   const trechos: string[] = []
-
-  for (const pagina of paginas) {
-    let restante = pagina.trim()
+  for (const secao of secoesDoTexto(texto)) {
+    const cabecalho = cabecalhoDaSecao(secao)
+    const comCabecalho = (parte: string) => (cabecalho ? `${cabecalho}\n${parte}` : parte)
+    let restante = secao.conteudo
     while (restante.length > TAMANHO_TRECHO) {
       let fim = restante.lastIndexOf(' ', TAMANHO_TRECHO)
       if (fim < TAMANHO_TRECHO * 0.6) fim = TAMANHO_TRECHO
-      trechos.push(restante.slice(0, fim).trim())
+      trechos.push(comCabecalho(restante.slice(0, fim).trim()))
       restante = restante.slice(Math.max(0, fim - SOBREPOSICAO)).trim()
     }
-    if (restante) trechos.push(restante)
+    if (restante) trechos.push(comCabecalho(restante))
   }
-
   return trechos
 }
 
 function criarIndice(texto: string, assinatura: string): IndiceEdital {
-  const trechos = dividirEmTrechos(texto).map((conteudo) => {
+  const trechos = dividirEmTrechos(texto).map((conteudo, ordem) => {
     const termos = tokenizar(conteudo)
     const frequencias = new Map<string, number>()
     for (const termo of termos) frequencias.set(termo, (frequencias.get(termo) ?? 0) + 1)
-    return { texto: conteudo, termos, frequencias }
+    return { ordem, texto: conteudo, termos, frequencias }
   })
   const frequenciaDocumentos = new Map<string, number>()
   for (const trecho of trechos) {
@@ -78,8 +76,8 @@ function criarIndice(texto: string, assinatura: string): IndiceEdital {
   }
 }
 
-function obterIndice(editalId: string, texto: string, versao?: string): IndiceEdital {
-  const assinatura = versao ?? createHash('sha256').update(texto).digest('hex')
+function obterIndice(editalId: string, texto: string): IndiceEdital {
+  const assinatura = createHash('sha256').update(texto).digest('hex')
   let indice = cacheIndices.get(editalId)
   if (indice?.assinatura !== assinatura) {
     indice = criarIndice(texto, assinatura)
@@ -96,46 +94,39 @@ function obterIndice(editalId: string, texto: string, versao?: string): IndiceEd
   return indice
 }
 
-export function buscarTrechosEdital(editalId: string, texto: string, pergunta: string, versao?: string): BuscaEdital {
-  const termosPergunta = [...new Set(tokenizar(pergunta))]
-  if (!termosPergunta.length || /\d+\s*[+\-*/×÷]\s*\d+/.test(pergunta)) {
-    return { trechos: '', relevante: false }
-  }
+const paraTrecho = ({ ordem, texto }: Trecho): TrechoEdital => ({ ordem, texto })
 
-  const indice = obterIndice(editalId, texto, versao)
+/** Todos os trechos do edital, na ordem do documento. */
+export function trechosDoEdital(editalId: string, texto: string): TrechoEdital[] {
+  return obterIndice(editalId, texto).trechos.map(paraTrecho)
+}
+
+/** Trechos que têm algum termo da consulta, do mais relevante para o menos. */
+export function buscarTrechos(editalId: string, texto: string, consulta: string): TrechoEdital[] {
+  const termosConsulta = [...new Set(tokenizar(consulta))]
+  if (!termosConsulta.length) return []
+
+  const indice = obterIndice(editalId, texto)
   const totalTrechos = indice.trechos.length
-  const classificados = indice.trechos.map((trecho, ordem) => {
-    let score = 0
-    let termosCorrespondentes = 0
-    for (const termo of termosPergunta) {
-      const frequencia = trecho.frequencias.get(termo) ?? 0
-      if (!frequencia) continue
-      termosCorrespondentes++
-      const documentosComTermo = indice.frequenciaDocumentos.get(termo) ?? 0
-      const idf = Math.log(1 + (totalTrechos - documentosComTermo + 0.5) / (documentosComTermo + 0.5))
-      const tamanhoNormalizado = trecho.termos.length / Math.max(1, indice.mediaTamanho)
-      score += idf * (frequencia * 2.2) / (frequencia + 1.2 * (0.25 + 0.75 * tamanhoNormalizado))
-    }
-    return { ...trecho, ordem, score, termosCorrespondentes }
-  })
-  const relevantes = classificados
-    .filter((trecho) => trecho.score > 0)
-    .sort((a, b) => b.score - a.score || a.ordem - b.ordem)
+  return indice.trechos
+    .map((trecho) => {
+      let score = 0
+      for (const termo of termosConsulta) {
+        const frequencia = trecho.frequencias.get(termo) ?? 0
+        if (!frequencia) continue
+        const documentosComTermo = indice.frequenciaDocumentos.get(termo) ?? 0
+        const idf = Math.log(1 + (totalTrechos - documentosComTermo + 0.5) / (documentosComTermo + 0.5))
+        const tamanhoNormalizado = trecho.termos.length / Math.max(1, indice.mediaTamanho)
+        score += idf * (frequencia * 2.2) / (frequencia + 1.2 * (0.25 + 0.75 * tamanhoNormalizado))
+      }
+      return { trecho, score }
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || a.trecho.ordem - b.trecho.ordem)
+    .map(({ trecho }) => paraTrecho(trecho))
+}
 
-  if (!relevantes.length) return { trechos: '', relevante: false }
-
-  const selecionados: typeof relevantes = []
-  let caracteres = 0
-  for (const trecho of relevantes) {
-    const acrescimo = trecho.texto.length + (selecionados.length ? 2 : 0)
-    if (caracteres + acrescimo > MAXIMO_CARACTERES_TRECHOS) continue
-    selecionados.push(trecho)
-    caracteres += acrescimo
-    if (selecionados.length >= 6) break
-  }
-
-  return {
-    trechos: selecionados.sort((a, b) => a.ordem - b.ordem).map((trecho) => trecho.texto).join('\n\n'),
-    relevante: true,
-  }
+/** Junta os trechos escolhidos na ordem em que aparecem no documento. */
+export function juntarTrechos(trechos: Iterable<TrechoEdital>): string {
+  return [...trechos].sort((a, b) => a.ordem - b.ordem).map((trecho) => trecho.texto).join('\n\n')
 }

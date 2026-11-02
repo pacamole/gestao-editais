@@ -1,18 +1,17 @@
-import { hoje } from '../../shared/datas.js'
-import { buscarTrechosEdital } from './ia/indiceEdital.js'
+import { hoje, prazoVencido } from '../../shared/datas.js'
 import { lerPaginaPublica } from '../integracoes/pagina.js'
 import { ehMarcadorDeTextoPdf } from '../integracoes/pdf.js'
 import { novoId, transacao } from '../db/index.js'
 import type { Edital } from '../dominio/entidades.js'
+import { semPaginasLidas } from '../dominio/textoEdital.js'
 import { evidenciaProtegida } from '../../shared/camposEditaveis.js'
 import { ErroNaoEncontrado, ErroRegraNegocio, ErroServicoExterno } from '../dominio/erros.js'
 import { ErroModeloLinguagem, type ModeloLinguagemPorta } from '../portas/ModeloLinguagemPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
 import type { ExtracaoResposta } from '../../shared/tipos/edital.js'
+import { caracteresDisponiveis, contextoParaExtracao } from './ia/contextoEdital.js'
 import {
-  CONSULTAS_EXTRACAO,
   interpretarExtracao,
-  MAXIMO_CARACTERES_EXTRACAO,
   type CampoEditalExtraido,
   type ResultadoExtracaoEdital,
   type ValorCampoEditalExtraido,
@@ -21,11 +20,16 @@ import { mensagensDeExtracao } from './ia/promptsExtracao.js'
 
 type RepositoriosExtracao = Pick<Repositorios, 'edital' | 'evidencia'>
 
-// Remove do texto o conteúdo de leituras anteriores de URL, para não duplicar ao reler.
-export function semConteudoWebAnterior(texto: string): string {
-  return texto
-    .replace(/(?:^|\n\n)\[Fonte URL:[^\]]+\]\n[\s\S]*?(?=\n\n\[(?:Página\s+\d+|Fonte URL:)[^\]]*\]|$)/g, '')
-    .trim()
+// Um JSON com todos os campos e suas evidências passa de 2.048 tokens quando o edital é rico.
+const TOKENS_RESPOSTA = 3_072
+// O pedido além do edital: as instruções e a lista de campos.
+const RESERVA_TOKENS = TOKENS_RESPOSTA + 1_000
+
+// Prazo encontrado que já passou: o edital fica como está até a expiração diária, então o usuário é avisado.
+function avisoDePrazo(edital: Edital, campos: CampoEditalExtraido[]): string {
+  if (!campos.includes('prazo_inscricao') || !prazoVencido(edital.prazo_inscricao)) return ''
+  const [ano, mes, dia] = edital.prazo_inscricao!.split('-')
+  return ` O prazo de inscrição encontrado (${dia}/${mes}/${ano}) já passou: o edital será marcado como expirado na próxima verificação.`
 }
 
 // Lê o documento do edital com o modelo de linguagem e preenche os campos que ainda estão vazios.
@@ -50,12 +54,13 @@ export class ExtracaoServico {
 
     const extracao = await this.extrairCampos(edital.id, edital.texto_extraido)
     const campos = this.salvarCampos(edital, extracao, opcoes.refazCamposDaIa)
+    const atualizado = this.repos.edital.buscarPorId(edital.id)!
     return {
-      edital: this.repos.edital.buscarPorId(edital.id)!,
+      edital: atualizado,
       atualizados: campos.length,
       campos,
       mensagem: campos.length
-        ? `${campos.length} campo(s) preenchido(s) com evidência do documento.`
+        ? `${campos.length} campo(s) preenchido(s) com evidência do documento.${avisoDePrazo(atualizado, campos)}`
         : 'Não foram encontrados novos campos com evidência verificável. Os dados existentes foram preservados.',
     }
   }
@@ -77,7 +82,7 @@ export class ExtracaoServico {
       throw passageira ? new ErroServicoExterno(mensagem) : new ErroRegraNegocio(mensagem)
     }
 
-    const textoAnterior = edital.texto_extraido?.trim() ? semConteudoWebAnterior(edital.texto_extraido) : ''
+    const textoAnterior = edital.texto_extraido?.trim() ? semPaginasLidas(edital.texto_extraido) : ''
     const textoExtraido = textoAnterior ? `${textoAnterior}\n\n${pagina.texto}` : pagina.texto
     const titulo =
       pagina.titulo && /^Chamada Pública identificada em /i.test(edital.titulo) ? pagina.titulo : edital.titulo
@@ -99,33 +104,27 @@ export class ExtracaoServico {
       })
     }
 
+    const atualizado = this.repos.edital.buscarPorId(edital.id)!
     return {
-      edital: this.repos.edital.buscarPorId(edital.id)!,
+      edital: atualizado,
       atualizados: campos.length,
       campos,
-      mensagem: `Página lida e conteúdo adicionado ao contexto do chat. ${campos.length} campo(s) preenchido(s) com evidência verificável.`,
+      mensagem: `Página lida e conteúdo adicionado ao contexto do chat. ${campos.length} campo(s) preenchido(s) com evidência verificável.${avisoDePrazo(atualizado, campos)}`,
     }
   }
 
-  /** Pede ao modelo os campos do edital, usando só os trechos mais relevantes do documento. */
+  /** Pede ao modelo os campos do edital: o documento inteiro, ou os trechos de cada campo se não couber. */
   async extrairCampos(editalId: string, textoEdital: string): Promise<ResultadoExtracaoEdital> {
-    const trechosUnicos = new Set<string>()
-    let contexto = ''
-    for (const consulta of CONSULTAS_EXTRACAO) {
-      const busca = buscarTrechosEdital(editalId, textoEdital, consulta)
-      if (!busca.relevante) continue
-      for (const trecho of busca.trechos.split(/\n\n(?=\[Página\s+\d+\])/)) {
-        const conteudo = trecho.trim()
-        if (!conteudo || trechosUnicos.has(conteudo) || contexto.length + conteudo.length + 2 > MAXIMO_CARACTERES_EXTRACAO) continue
-        trechosUnicos.add(conteudo)
-        contexto += `${contexto ? '\n\n' : ''}${conteudo}`
-      }
-    }
-    if (!contexto) {
+    const contexto = contextoParaExtracao(
+      editalId,
+      textoEdital,
+      caracteresDisponiveis(this.modelo.limiteDeContexto(), RESERVA_TOKENS),
+    )
+    if (!contexto.texto.trim()) {
       throw new ErroModeloLinguagem('Não encontrei trechos suficientes no texto para extrair os dados. Verifique se o PDF tem texto legível.', 422)
     }
 
-    const dados = await this.modelo.gerarJson(mensagensDeExtracao(contexto, hoje()))
+    const dados = await this.modelo.gerarJson(mensagensDeExtracao(contexto, hoje()), { maximoTokens: TOKENS_RESPOSTA })
     return interpretarExtracao(dados, textoEdital)
   }
 
