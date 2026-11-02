@@ -6,7 +6,7 @@ import type { FiltroListaEditais, LinhaListaEdital } from '../repositorios/Edita
 import type { Repositorios } from '../repositorios/index.js'
 import { diasAte, hoje, prazoVencido, somarDias } from '../../shared/datas.js'
 import { STATUS_ATIVOS } from '../../shared/statusEdital.js'
-import { ELEGIBILIDADE, MODALIDADES, STATUS_EDITAL } from '../../shared/rotulos.js'
+import { ELEGIBILIDADE, MODALIDADES, rotuloDaFonte, STATUS_EDITAL } from '../../shared/rotulos.js'
 import type { DetalheEditalResposta, SalvarCamposResposta } from '../../shared/tipos/edital.js'
 import type { ItemListaEdital, ListaEditaisResposta } from '../../shared/tipos/editais.js'
 
@@ -44,6 +44,8 @@ export class EditalServico {
     private readonly repos: RepositoriosEdital,
     // Depois de editar campos à mão, a avaliação é refeita na hora (sem chamar a IA).
     private readonly aoEditarCampos: (editalId: string) => void = () => {},
+    // Dias sem atualização para expirar um edital que não tem prazo definido.
+    private readonly diasExpirarSemPrazo: () => number = () => 60,
   ) {}
 
   listar(consulta: ConsultaEditais, instante = new Date()): ListaEditaisResposta {
@@ -84,7 +86,7 @@ export class EditalServico {
         campo((l.status_elegibilidade && ELEGIBILIDADE[l.status_elegibilidade]) ?? l.status_elegibilidade ?? 'Sem avaliação'),
         campo(l.nota_ajustada_manual ?? l.nota_fit ?? ''),
         campo(STATUS_EDITAL[l.status] ?? l.status ?? ''),
-        campo(l.fonte_nome),
+        campo(l.fonte_nome ? rotuloDaFonte({ nome: l.fonte_nome }) : ''),
       ].join(';'),
     )
     return '﻿' + [cabecalho, ...linhas].join('\r\n')
@@ -99,6 +101,15 @@ export class EditalServico {
         this.repos.edital.atualizar(edital.id, { status: 'EXPIRADO' })
         total++
       }
+    }
+    // Sem prazo e parado há tempo demais: ninguém vai agir sobre ele. Aprovados ficam, a decisão já é humana.
+    const limite = new Date(instante.getTime() - this.diasExpirarSemPrazo() * DIA_MS).toISOString()
+    for (const edital of this.repos.edital.listarSemPrazoParadosDesde(STATUS_ATIVOS.filter((s) => s !== 'APROVADO'), limite)) {
+      this.repos.edital.atualizar(edital.id, {
+        status: 'EXPIRADO',
+        erro_processamento: `Expirado: sem prazo definido e sem atualização há mais de ${this.diasExpirarSemPrazo()} dias.`,
+      })
+      total++
     }
     return total
   }

@@ -12,6 +12,7 @@ import type {
 import { diagnosticarOllama } from '../adaptadores/ollama/diagnostico.js'
 import { MODELO, OLLAMA_CLOUD_URL, OLLAMA_URL_PADRAO, type ConexaoOllama } from '../adaptadores/ollama/conexao.js'
 import { ErroServicoExterno, ErroValidacao } from '../dominio/erros.js'
+import { TERMOS_EXCLUDENTES_PADRAO } from '../dominio/relevancia.js'
 import type { ConfigSmtp, EmailPorta } from '../portas/EmailPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
 
@@ -30,11 +31,15 @@ export const CHAVES_CONFIG = {
   smtpUsuario: 'smtp_usuario',
   smtpSenha: 'smtp_senha',
   smtpNomeRemetente: 'smtp_nome_remetente',
+  termosExcludentes: 'termos_excludentes',
+  diasExpirarSemPrazo: 'dias_expirar_sem_prazo',
 } as const
 
 const SMTP_PORTA_PADRAO = 465
 export const CHAT_LIMITE_DIARIO_PADRAO = 20
 const CHAT_LIMITE_MAXIMO = 500
+export const DIAS_EXPIRAR_SEM_PRAZO_PADRAO = 60
+const DIAS_EXPIRAR_MAXIMO = 3650
 
 export function urlHttpValida(valor: string): boolean {
   try {
@@ -43,6 +48,10 @@ export function urlHttpValida(valor: string): boolean {
     return false
   }
 }
+
+const listaDeTermos = (texto: string): string[] => [
+  ...new Set(texto.split(/\r?\n|,/).map((t) => t.trim()).filter(Boolean)),
+]
 
 // Configurações do sistema: IA (Ollama), e-mail (SMTP) e limite do chat.
 export class ConfigSistemaServico {
@@ -67,6 +76,17 @@ export class ConfigSistemaServico {
 
   chatLimiteDiario(): number {
     return this.repos.config.obterNumero(CHAVES_CONFIG.chatLimiteDiario, CHAT_LIMITE_DIARIO_PADRAO)
+  }
+
+  /** Termos que tiram da análise o edital coletado sozinho (um por linha na configuração; sem nada salvo, a lista padrão). */
+  termosExcludentes(): string[] {
+    const salvo = this.repos.config.obter(CHAVES_CONFIG.termosExcludentes)
+    return salvo === undefined ? [...TERMOS_EXCLUDENTES_PADRAO] : listaDeTermos(salvo)
+  }
+
+  /** Dias sem atualização depois dos quais um edital sem prazo definido expira. */
+  diasExpirarSemPrazo(): number {
+    return this.repos.config.obterNumero(CHAVES_CONFIG.diasExpirarSemPrazo, DIAS_EXPIRAR_SEM_PRAZO_PADRAO)
   }
 
   /** null = SMTP não configurado (e-mails só são impressos no terminal). */
@@ -103,6 +123,11 @@ export class ConfigSistemaServico {
     const modeloNuvem = limpar(entrada.ollama_modelo_nuvem, atual.ollama_modelo_nuvem)
     const chaveNova = typeof entrada.ollama_chave === 'string' && entrada.ollama_chave.trim() ? entrada.ollama_chave.trim() : null
     const limiteChat = entrada.chat_limite_diario === undefined ? atual.chat_limite_diario : Number(entrada.chat_limite_diario)
+    const termos = Array.isArray(entrada.termos_excludentes)
+      ? listaDeTermos(entrada.termos_excludentes.map(String).join('\n'))
+      : atual.termos_excludentes
+    const diasExpirar =
+      entrada.dias_expirar_sem_prazo === undefined ? atual.dias_expirar_sem_prazo : Number(entrada.dias_expirar_sem_prazo)
     const host = limpar(entrada.smtp_host, atual.smtp_host)
     const porta = entrada.smtp_porta === undefined ? atual.smtp_porta : Number(entrada.smtp_porta)
     const usuario = limpar(entrada.smtp_usuario, atual.smtp_usuario)
@@ -119,6 +144,9 @@ export class ConfigSistemaServico {
     if (!Number.isInteger(limiteChat) || limiteChat < 1 || limiteChat > CHAT_LIMITE_MAXIMO) {
       throw new ErroValidacao(`Perguntas por dia: informe um número inteiro de 1 a ${CHAT_LIMITE_MAXIMO}.`)
     }
+    if (!Number.isInteger(diasExpirar) || diasExpirar < 1 || diasExpirar > DIAS_EXPIRAR_MAXIMO) {
+      throw new ErroValidacao(`Dias para expirar edital sem prazo: informe um número inteiro de 1 a ${DIAS_EXPIRAR_MAXIMO}.`)
+    }
     if (!Number.isInteger(porta) || porta < 1 || porta > 65535) throw new ErroValidacao('Porta SMTP inválida (1 a 65535).')
     if (host && !emailValido(usuario)) throw new ErroValidacao('Informe o e-mail da conta que envia os alertas.')
     if (host && !senhaNova && !atual.smtp_senha_definida) throw new ErroValidacao('Informe a senha de app da conta.')
@@ -130,6 +158,8 @@ export class ConfigSistemaServico {
     if (entrada.remover_ollama_chave) config.definir(CHAVES_CONFIG.ollamaChave, '')
     else if (chaveNova) config.definir(CHAVES_CONFIG.ollamaChave, chaveNova)
     config.definir(CHAVES_CONFIG.chatLimiteDiario, String(limiteChat))
+    config.definir(CHAVES_CONFIG.termosExcludentes, termos.join('\n'))
+    config.definir(CHAVES_CONFIG.diasExpirarSemPrazo, String(diasExpirar))
     config.definir(CHAVES_CONFIG.smtpHost, host)
     config.definir(CHAVES_CONFIG.smtpPorta, String(porta))
     config.definir(CHAVES_CONFIG.smtpUsuario, usuario)
@@ -175,6 +205,18 @@ export class ConfigSistemaServico {
     return { situacao, modo, url: conexao.url, modelo: conexao.modelo, modelos }
   }
 
+  /** null se a IA configurada responde e tem o modelo; senão, o motivo em linguagem de usuário. */
+  async problemaDaIa(): Promise<string | null> {
+    const { situacao, modo } = await this.testarOllama({})
+    const motivos: Record<string, string> = {
+      SEM_CHAVE: 'falta a chave do Ollama Cloud em Configurações › IA.',
+      ACESSO_NEGADO: 'a chave do Ollama Cloud foi recusada; confira em Configurações › IA.',
+      SEM_MODELO: 'o modelo escolhido não está disponível; confira em Configurações › IA.',
+      SEM_CONEXAO: modo === 'LOCAL' ? 'o Ollama local não está respondendo (ele está aberto?).' : 'o Ollama Cloud não está respondendo.',
+    }
+    return situacao === 'OK' ? null : (motivos[situacao] ?? 'a IA não está respondendo.')
+  }
+
   // ---- Internos ----
 
   private texto(chave: string): string {
@@ -212,6 +254,8 @@ export class ConfigSistemaServico {
       smtp_senha_definida: Boolean(this.repos.config.obter(CHAVES_CONFIG.smtpSenha)),
       smtp_nome_remetente: this.texto(CHAVES_CONFIG.smtpNomeRemetente),
       chat_limite_diario: this.chatLimiteDiario(),
+      termos_excludentes: this.termosExcludentes(),
+      dias_expirar_sem_prazo: this.diasExpirarSemPrazo(),
     }
   }
 }

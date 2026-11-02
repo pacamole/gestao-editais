@@ -1,6 +1,7 @@
 import type { Edital, StatusEdital } from '../dominio/entidades.js'
 import { ErroNegocio, ErroRegraNegocio, ErroServicoExterno } from '../dominio/erros.js'
 import { MOTIVO_PERFIL_PROVISORIO, perfilProvisorio } from '../dominio/perfil.js'
+import { avaliarRelevancia } from '../dominio/relevancia.js'
 import { ehMarcadorDeTextoPdf } from '../integracoes/pdf.js'
 import { ErroModeloLinguagem } from '../portas/ModeloLinguagemPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
@@ -8,7 +9,7 @@ import { podeTransicionarSistema } from '../../shared/statusEdital.js'
 import type { AvaliacaoServico } from './AvaliacaoServico.js'
 import type { ExtracaoServico } from './ExtracaoServico.js'
 
-type RepositoriosProcessamento = Pick<Repositorios, 'edital' | 'perfilEmpresa'>
+type RepositoriosProcessamento = Pick<Repositorios, 'edital' | 'perfilEmpresa' | 'fonte' | 'revisao'>
 
 // O que o processamento avisa quando termina (quem decide se vira e-mail é o módulo de notificações).
 export interface EventosProcessamento {
@@ -38,6 +39,7 @@ function falhaTransitoria(erro: unknown): boolean {
 /**
  * Leva um edital coletado até a decisão: lê com a IA, avalia o fit, define o status e avisa quem acompanha.
  *
+ *   COLETADO → FORA_DO_PERFIL (coleta automática que o filtro de relevância dispensa)
  *   COLETADO → EM_ANALISE → ANALISADO (elegível ou não) | EM_REVISAO (faltou dado) | FALHA (tenta de novo)
  *
  * Um edital por vez (o modelo local não atende vários), na ordem de chegada.
@@ -50,6 +52,7 @@ export class ProcessamentoEditalServico {
     private readonly extracao: Pick<ExtracaoServico, 'extrairDados' | 'lerUrl'>,
     private readonly avaliacao: Pick<AvaliacaoServico, 'registrar'>,
     private readonly eventos: EventosProcessamento,
+    private readonly termosExcludentes: () => string[] = () => [],
     private readonly agora: () => Date = () => new Date(),
   ) {}
 
@@ -121,6 +124,12 @@ export class ProcessamentoEditalServico {
       return { id: editalId, status: 'COLETADO', motivo: MOTIVO_PERFIL_PROVISORIO }
     }
 
+    const fora = this.foraDoPerfil(edital, perfil)
+    if (fora) {
+      this.mover(edital, 'FORA_DO_PERFIL', { erro_processamento: fora, processado_em: this.agora().toISOString() })
+      return { id: editalId, status: 'FORA_DO_PERFIL', motivo: fora }
+    }
+
     this.mover(edital, 'EM_ANALISE', { erro_processamento: null })
 
     // 1. Leitura por IA. Se falhar, repete depois; esgotadas as tentativas, segue com o que há e pede revisão.
@@ -169,12 +178,21 @@ export class ProcessamentoEditalServico {
     return { id: editalId, status, motivo: aviso ?? undefined }
   }
 
+  // O filtro vale só para o que chega sozinho, e nunca de novo para o que o usuário já resgatou.
+  private foraDoPerfil(edital: Edital, perfil: Parameters<typeof avaliarRelevancia>[1]): string | null {
+    const fonte = this.repos.fonte.buscarPorId(edital.fonte_id)
+    if (fonte?.tipo !== 'SCRAPER' && fonte?.tipo !== 'RSS') return null
+    if (this.repos.revisao.listarDoEdital(edital.id).some((r) => r.acao === 'RESGATOU')) return null
+    const resultado = avaliarRelevancia(edital, perfil, this.termosExcludentes())
+    return resultado.relevante ? null : resultado.motivo
+  }
+
   private async lerComIa(edital: Edital): Promise<void> {
     const temTexto = Boolean(edital.texto_extraido?.trim()) && !ehMarcadorDeTextoPdf(edital.texto_extraido)
     if (temTexto) {
       // Retificação: refaz o que a IA preencheu antes, preservando o que foi editado à mão.
       await this.extracao.extrairDados(edital.id, { refazCamposDaIa: edital.retificado })
-    } else if (edital.url_original ?? edital.url_documento) {
+    } else if (edital.url_documento ?? edital.url_original) {
       await this.extracao.lerUrl(edital.id)
     }
     // Sem texto nem endereço (cadastro manual): nada para ler; a avaliação usa os campos digitados.

@@ -15,7 +15,7 @@ export function ehMarcadorDeTextoPdf(texto: string | null): boolean {
 }
 
 // PDF.js mantém a referência física de página e as quebras indicadas pelo documento.
-// Sem OCR: páginas sem camada de texto são encaminhadas para leitura manual.
+// Sem OCR: documento com a maior parte das páginas sem camada de texto é encaminhado para leitura manual.
 export async function extrairPdf(arquivo: Uint8Array): Promise<TextoPdf> {
   const tarefa = getDocument({
     data: new Uint8Array(arquivo),
@@ -41,7 +41,8 @@ export async function extrairPdf(arquivo: Uint8Array): Promise<TextoPdf> {
       texto: paginas
         .map((p) => `[Página ${p.pagina}]\n${p.texto}`)
         .join("\n\n"),
-      requerLeituraManual: paginas.some((p) => !p.texto.trim()),
+      // Só quando a maior parte do documento não tem texto; uma capa em imagem não impede a leitura.
+      requerLeituraManual: paginas.filter((p) => !p.texto.trim()).length * 2 > paginas.length,
     };
   } finally {
     await tarefa.destroy();

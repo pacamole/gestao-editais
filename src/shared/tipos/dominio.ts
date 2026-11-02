@@ -15,6 +15,7 @@ export type StatusEdital =
   | 'INSCRITO'
   | 'ENCERRADO'
   | 'EXPIRADO'
+  | 'FORA_DO_PERFIL'
 
 export type Modalidade = 'SUBVENCAO' | 'CREDITO' | 'PREMIO' | 'LICITACAO' | 'CHAMADA_PUBLICA' | 'OUTRO'
 
@@ -55,6 +56,7 @@ export type Edital = {
   erro_processamento: string | null
   tentativas_processamento: number
   processado_em: string | null
+  id_externo: string | null
   criado_em: string
   atualizado_em: string
 }
@@ -161,6 +163,7 @@ export type AcaoRevisao =
   | 'MARCOU_INSCRITO'
   | 'REGISTROU_RESULTADO'
   | 'REABRIU'
+  | 'RESGATOU'
 
 export type Revisao = {
   id: string
@@ -179,6 +182,11 @@ export type Revisao = {
 export type TipoFonte = 'SCRAPER' | 'RSS' | 'UPLOAD_MANUAL' | 'URL_MANUAL'
 export type StatusColeta = 'SUCESSO' | 'FALHA' | 'PARCIAL'
 
+/** Fontes pré-existentes, lidas por um adaptador próprio. */
+export type IntegracaoFonte = 'FINEP' | 'EMBRAPII'
+/** Como uma fonte adicionada pelo usuário é lida (descoberto na verificação). */
+export type FormatoDadosFonte = 'HTML' | 'FEED' | 'JSON'
+
 export type Fonte = {
   id: string
   nome: string
@@ -189,6 +197,10 @@ export type Fonte = {
   ultima_coleta_em: string | null
   ultimo_status: StatusColeta | null
   ultima_mensagem_erro: string | null
+  removida_em: string | null
+  integracao: IntegracaoFonte | null
+  formato_dados: FormatoDadosFonte | null
+  endereco_dados: string | null
 }
 
 export type ColetaExecucao = {

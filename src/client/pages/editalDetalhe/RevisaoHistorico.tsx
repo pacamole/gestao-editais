@@ -11,6 +11,7 @@ const BOTOES: Record<AcaoRevisaoManual, { texto: string; classe: string }> = {
   MARCOU_INSCRITO: { texto: 'Marcar como inscrito', classe: 'btn' },
   REGISTROU_RESULTADO: { texto: 'Registrar resultado', classe: 'btn' },
   REABRIU: { texto: 'Reabrir', classe: 'btn' },
+  RESGATOU: { texto: 'Resgatar para análise', classe: 'btn btn--primario' },
 }
 
 type Props = {

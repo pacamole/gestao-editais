@@ -42,7 +42,14 @@ CREATE TABLE fonte (
   ativo                 INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
   ultima_coleta_em      TEXT,
   ultimo_status         TEXT CHECK (ultimo_status IN ('SUCESSO', 'FALHA', 'PARCIAL')),
-  ultima_mensagem_erro  TEXT
+  ultima_mensagem_erro  TEXT,
+  -- Fonte excluída que tinha editais: some das listas, mas os editais mantêm a origem.
+  removida_em           TEXT,
+  -- Fonte integrada (pré-existente, lida por um adaptador próprio). Null = adicionada pelo usuário.
+  integracao            TEXT CHECK (integracao IN ('FINEP', 'EMBRAPII')),
+  -- Fonte adicionada pelo usuário: como ela é lida, descoberto na verificação da página.
+  formato_dados         TEXT CHECK (formato_dados IN ('HTML', 'FEED', 'JSON')),
+  endereco_dados        TEXT
 );
 
 -- Log das execuções de coleta (P08: últimas 10 execuções, itens coletados; E06: falhas consecutivas).
@@ -90,7 +97,7 @@ CREATE TABLE edital (
   resumo_executivo             TEXT,
   status                       TEXT NOT NULL DEFAULT 'COLETADO' CHECK (status IN (
                                  'COLETADO', 'EM_ANALISE', 'ANALISADO', 'FALHA', 'EM_REVISAO',
-                                 'APROVADO', 'DESCARTADO', 'INSCRITO', 'ENCERRADO', 'EXPIRADO')),
+                                 'APROVADO', 'DESCARTADO', 'INSCRITO', 'ENCERRADO', 'EXPIRADO', 'FORA_DO_PERFIL')),
   -- §9 Retificação
   retificado                   INTEGER NOT NULL DEFAULT 0 CHECK (retificado IN (0, 1)),
   -- Mensagem do último erro de processamento (status FALHA, "requer leitura manual")
@@ -98,6 +105,8 @@ CREATE TABLE edital (
   -- Falhas seguidas ao ler o edital com a IA (zera ao concluir) e quando o processamento terminou
   tentativas_processamento     INTEGER NOT NULL DEFAULT 0,
   processado_em                TEXT,
+  -- Identidade da chamada na fonte (ex.: id na API da FINEP), quando ela não tem página própria
+  id_externo                   TEXT,
   criado_em                    TEXT NOT NULL,
   atualizado_em                TEXT NOT NULL
 );
@@ -106,6 +115,7 @@ CREATE INDEX idx_edital_prazo ON edital(prazo_inscricao);
 CREATE INDEX idx_edital_hash ON edital(hash_documento);
 CREATE INDEX idx_edital_url_documento ON edital(url_documento);
 CREATE INDEX idx_edital_numero_orgao ON edital(numero_edital, orgao_financiador);
+CREATE INDEX idx_edital_id_externo ON edital(fonte_id, id_externo);
 
 -- §9 Retificação: versão anterior do edital preservada antes do reprocessamento.
 CREATE TABLE edital_versao (
@@ -191,7 +201,7 @@ CREATE TABLE revisao (
   usuario_id      TEXT NOT NULL REFERENCES usuario(id),
   acao            TEXT NOT NULL CHECK (acao IN (
                     'APROVOU', 'DESCARTOU', 'CORRIGIU_CAMPO', 'AJUSTOU_NOTA', 'REPROCESSOU',
-                    'MARCOU_INSCRITO', 'REGISTROU_RESULTADO', 'REABRIU')),
+                    'MARCOU_INSCRITO', 'REGISTROU_RESULTADO', 'REABRIU', 'RESGATOU')),
   campo_alterado  TEXT,
   valor_anterior  TEXT,
   valor_novo      TEXT,

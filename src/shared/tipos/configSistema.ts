@@ -17,6 +17,8 @@ export type ConfigSistema = {
   smtp_senha_definida: boolean // senha de app
   smtp_nome_remetente: string // nome exibido no "De:"; '' = padrão
   chat_limite_diario: number // perguntas por usuário por dia
+  termos_excludentes: string[] // edital coletado com algum destes termos (e nada do perfil no título) fica fora do perfil
+  dias_expirar_sem_prazo: number // dias sem atualização para expirar edital sem prazo
 }
 
 // smtp_senha ausente ou vazia mantém a senha atual.
@@ -33,6 +35,8 @@ export type SalvarConfigSistemaEntrada = {
   smtp_senha?: string
   smtp_nome_remetente?: string
   chat_limite_diario?: number
+  termos_excludentes?: string[]
+  dias_expirar_sem_prazo?: number
 }
 
 export type ConfigSistemaResposta = { config: ConfigSistema }

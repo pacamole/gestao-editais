@@ -9,11 +9,13 @@ export const STATUS_EM_PROCESSAMENTO: readonly StatusEdital[] = ['COLETADO', 'EM
 export const STATUS_AGUARDANDO_DECISAO: readonly StatusEdital[] = ['ANALISADO', 'EM_REVISAO']
 /** Editais ainda em jogo: podem expirar, ser reavaliados e ser decididos. */
 export const STATUS_ATIVOS: readonly StatusEdital[] = [...STATUS_EM_PROCESSAMENTO, ...STATUS_AGUARDANDO_DECISAO, 'APROVADO']
+/** Descartado pelo filtro de relevância; não conta como em andamento e só volta pelo "Resgatar". */
+export const STATUS_FORA_DO_PERFIL: StatusEdital = 'FORA_DO_PERFIL'
 export const STATUS_FINAIS: readonly StatusEdital[] = ['DESCARTADO', 'INSCRITO', 'ENCERRADO', 'EXPIRADO']
 
 // ---- Ações do usuário ----
 
-export type AcaoTransicao = 'APROVOU' | 'DESCARTOU' | 'MARCOU_INSCRITO' | 'REGISTROU_RESULTADO' | 'REABRIU'
+export type AcaoTransicao = 'APROVOU' | 'DESCARTOU' | 'MARCOU_INSCRITO' | 'REGISTROU_RESULTADO' | 'REABRIU' | 'RESGATOU'
 
 type Regra = { de: readonly StatusEdital[]; para: StatusEdital; motivo: string }
 
@@ -43,6 +45,11 @@ const REGRAS: Record<AcaoTransicao, Regra> = {
     para: 'EM_REVISAO',
     motivo: 'Só é possível reabrir um edital descartado ou expirado.',
   },
+  RESGATOU: {
+    de: ['FORA_DO_PERFIL'],
+    para: 'COLETADO',
+    motivo: 'Só é possível resgatar um edital que o filtro deixou fora do perfil.',
+  },
 }
 
 export const ACOES_TRANSICAO = Object.keys(REGRAS) as AcaoTransicao[]
@@ -66,7 +73,7 @@ export function transicionar(status: StatusEdital, acao: AcaoTransicao): Resulta
 // ---- Transições do sistema (processamento e reavaliação automáticos) ----
 
 const TRANSICOES_SISTEMA: Record<StatusEdital, readonly StatusEdital[]> = {
-  COLETADO: ['EM_ANALISE', 'EXPIRADO'],
+  COLETADO: ['EM_ANALISE', 'FORA_DO_PERFIL', 'EXPIRADO'],
   EM_ANALISE: ['ANALISADO', 'EM_REVISAO', 'FALHA', 'EXPIRADO'],
   ANALISADO: ['COLETADO', 'EM_REVISAO', 'EXPIRADO'],
   FALHA: ['COLETADO', 'EXPIRADO'],
@@ -76,6 +83,7 @@ const TRANSICOES_SISTEMA: Record<StatusEdital, readonly StatusEdital[]> = {
   INSCRITO: [],
   ENCERRADO: [],
   EXPIRADO: [],
+  FORA_DO_PERFIL: [],
 }
 
 export function podeTransicionarSistema(de: StatusEdital, para: StatusEdital): boolean {

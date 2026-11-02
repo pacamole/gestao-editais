@@ -34,7 +34,7 @@ export type LinhaListaEdital = Edital & {
 // Nota vigente: o ajuste manual, quando existe, vale mais que a calculada.
 const NOTA_OU_ZERO = "COALESCE(a.nota_ajustada_manual, a.nota_fit, 0)"
 const NOTA = "COALESCE(a.nota_ajustada_manual, a.nota_fit)"
-const EM_ANDAMENTO = "e.status NOT IN ('EXPIRADO', 'ENCERRADO', 'DESCARTADO')"
+const EM_ANDAMENTO = "e.status NOT IN ('EXPIRADO', 'ENCERRADO', 'DESCARTADO', 'FORA_DO_PERFIL')"
 
 const JUNCOES_LISTA = `
   FROM edital e
@@ -70,6 +70,9 @@ function montarWhere(filtro: FiltroListaEditais): { where: string; params: Valor
   } else if (filtro.status && filtro.status.length > 1) {
     condicoes.push(`e.status IN (${filtro.status.map(() => '?').join(', ')})`)
     params.push(...filtro.status)
+  } else {
+    // Sem filtro de status, o que o filtro de relevância deixou de fora fica escondido (resgata-se pelo status).
+    condicoes.push("e.status <> 'FORA_DO_PERFIL'")
   }
   if (filtro.elegibilidade) {
     condicoes.push("a.status_elegibilidade = ?")
@@ -194,6 +197,16 @@ export class EditalRepositorio extends Repositorio<
     )
   }
 
+  /** Editais sem prazo, nos status informados, sem alteração desde o instante (ISO) informado. */
+  listarSemPrazoParadosDesde(status: readonly StatusEdital[], antesDe: string): Edital[] {
+    return this.consultar(
+      `SELECT * FROM edital
+       WHERE prazo_inscricao IS NULL AND atualizado_em <= ? AND status IN (${Repositorio.marcadores(status)})`,
+      antesDe,
+      ...status,
+    )
+  }
+
   listarCriadosDesde(instante: string): Edital[] {
     return this.consultar('SELECT * FROM edital WHERE criado_em >= ? ORDER BY criado_em DESC', instante)
   }
@@ -207,6 +220,11 @@ export class EditalRepositorio extends Repositorio<
   }
 
   /** §9 Deduplicação: mesmo hash, ou mesma URL do documento, ou mesmo número + órgão. */
+  /** Chamada de uma fonte pela identidade que a própria fonte dá a ela (ex.: id na API da FINEP). */
+  buscarPorIdExterno(fonteId: string, idExterno: string): Edital | undefined {
+    return this.consultarUm('SELECT * FROM edital WHERE fonte_id = ? AND id_externo = ? LIMIT 1', fonteId, idExterno)
+  }
+
   buscarPorOrigem(url: string): Edital | undefined {
     return this.consultarUm('SELECT * FROM edital WHERE url_original = ? LIMIT 1', url)
   }
