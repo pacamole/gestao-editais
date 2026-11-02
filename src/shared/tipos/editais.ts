@@ -72,13 +72,11 @@ export type CriarPorUploadEntrada = {
   tipo: 'UPLOAD_PDF'
   nome_arquivo: string
   arquivo_base64: string
-  fonte_id: string
 }
 
 export type CriarPorUrlEntrada = {
   tipo: 'URL'
   url: string
-  fonte_id: string
 }
 
 // Campos de lista aceitam texto separado por vírgula (o servidor divide) ou a lista pronta.
@@ -90,7 +88,6 @@ export type CriarManualEntrada = {
   orgao_financiador: string | null
   numero_edital: string | null
   modalidade: string | null // código de MODALIDADES vindo do formulário
-  fonte_id: string
   data_publicacao: string | null
   prazo_inscricao: string | null
   data_resultado_prevista: string | null

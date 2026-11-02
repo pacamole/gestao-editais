@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import type { FonteComExecucoes } from '../../shared/tipos/fontes'
 import { mensagemDeErro } from '../api/cliente'
-import { fontes as apiFontes } from '../api/fontes'
 import { FormManual } from './novaEntrada/FormManual'
 import { FormUpload } from './novaEntrada/FormUpload'
 import { FormUrl } from './novaEntrada/FormUrl'
@@ -27,7 +25,6 @@ const ABAS: { id: Aba; rotulo: string }[] = [
 export function NovaEntradaPage() {
   const navigate = useNavigate()
   const [abaAtiva, setAbaAtiva] = useState<Aba>('upload')
-  const [fontes, setFontes] = useState<FonteComExecucoes[]>([])
 
   // Estado geral
   const [processando, setProcessando] = useState(false)
@@ -38,22 +35,6 @@ export function NovaEntradaPage() {
   const [upload, setUpload] = useState<ValoresUpload>(VALORES_UPLOAD_INICIAIS)
   const [url, setUrl] = useState<ValoresUrl>(VALORES_URL_INICIAIS)
   const [manual, setManual] = useState<ValoresManual>(VALORES_MANUAL_INICIAIS)
-
-  // Carrega fontes e escolhe a fonte padrão de cada aba
-  useEffect(() => {
-    apiFontes
-      .listar()
-      .then((r) => {
-        const lista = r.fontes || []
-        setFontes(lista)
-        const fUpload = lista.find((f) => f.tipo === 'UPLOAD_MANUAL' || f.nome.includes('Upload')) || lista[0]
-        const fUrl = lista.find((f) => f.tipo === 'URL_MANUAL' || f.nome.includes('URL')) || lista[0]
-        if (fUpload) setUpload((v) => ({ ...v, fonteId: fUpload.id }))
-        if (fUrl) setUrl((v) => ({ ...v, fonteId: fUrl.id }))
-        if (lista[0]) setManual((v) => ({ ...v, fonteId: lista[0].id }))
-      })
-      .catch(() => {})
-  }, [])
 
   // Executa a criação com indicador de progresso e abre o detalhe do edital criado.
   const processar: Processar = async ({ mensagemInicial, mensagemSucesso, erroPadrao, executar }) => {
@@ -71,7 +52,7 @@ export function NovaEntradaPage() {
     }
   }
 
-  const comum = { fontes, processando, onErro: setErro, processar }
+  const comum = { processando, onErro: setErro, processar }
 
   return (
     <section>

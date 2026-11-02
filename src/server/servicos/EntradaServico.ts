@@ -1,3 +1,4 @@
+import { FONTE_CADASTRO, FONTE_LINK, FONTE_UPLOAD, FONTES_ENTRADA_MANUAL } from './coleta/fontesPadrao.js'
 import { createHash } from 'node:crypto'
 import { ehMarcadorDeTextoPdf, extrairPdf } from '../integracoes/pdf.js'
 import type { Edital } from '../dominio/entidades.js'
@@ -11,10 +12,10 @@ import { normalizarValor } from '../../shared/valoresCampo.js'
 type RepositoriosEntrada = Pick<Repositorios, 'edital' | 'fonte'>
 
 const LIMITE_UPLOAD_BYTES = 20 * 1024 * 1024
-const AVISO_PAGINAS_SEM_TEXTO = 'Requer leitura manual: uma ou mais páginas não têm camada de texto.'
+const AVISO_PAGINAS_SEM_TEXTO = 'Requer leitura manual: a maior parte das páginas não tem camada de texto.'
 
-export type EntradaUpload = { arquivo_base64?: unknown; nome_arquivo?: unknown; fonte_id?: unknown }
-export type EntradaUrl = { url?: unknown; fonte_id?: unknown }
+export type EntradaUpload = { arquivo_base64?: unknown; nome_arquivo?: unknown }
+export type EntradaUrl = { url?: unknown }
 
 // Cadastro de editais pelo usuário: PDF enviado, link colado ou campos digitados.
 export class EntradaServico {
@@ -25,7 +26,7 @@ export class EntradaServico {
     private readonly lerPdf: typeof extrairPdf = extrairPdf,
   ) {}
 
-  async criarPorUpload({ arquivo_base64, nome_arquivo, fonte_id }: EntradaUpload): Promise<CriarEditalResposta> {
+  async criarPorUpload({ arquivo_base64, nome_arquivo }: EntradaUpload): Promise<CriarEditalResposta> {
     if (!arquivo_base64 || typeof arquivo_base64 !== 'string') throw new ErroValidacao('Arquivo PDF não fornecido.')
 
     const buffer = Buffer.from(arquivo_base64, 'base64')
@@ -71,7 +72,7 @@ export class EntradaServico {
 
     const edital = this.repos.edital.inserir({
       titulo: nome.length > 5 ? nome : `Edital via Upload - ${nome}`,
-      fonte_id: this.fonteDe(fonte_id, 'Upload manual'),
+      fonte_id: this.fonteInterna(FONTE_UPLOAD),
       hash_documento: hash,
       status: 'COLETADO',
       texto_extraido: textoPdf.texto,
@@ -83,17 +84,19 @@ export class EntradaServico {
     return { ok: true, id: edital.id }
   }
 
-  criarPorUrl({ url, fonte_id }: EntradaUrl): CriarEditalResposta {
+  criarPorUrl({ url }: EntradaUrl): CriarEditalResposta {
     if (typeof url !== 'string' || !url.trim()) throw new ErroValidacao('Endereço URL do edital é obrigatório.')
     const endereco = url.trim()
     if (!/^https?:\/\//i.test(endereco)) throw new ErroValidacao('Informe uma URL válida iniciando com http:// ou https://.')
 
-    const duplicado = this.repos.edital.buscarDuplicado({
-      hash_documento: null,
-      url_documento: endereco,
-      numero_edital: null,
-      orgao_financiador: null,
-    })
+    // A mesma chamada pode já ter vindo da coleta, que guarda a página (url_original) e o PDF (url_documento).
+    const duplicado =
+      this.repos.edital.buscarDuplicado({
+        hash_documento: null,
+        url_documento: endereco,
+        numero_edital: null,
+        orgao_financiador: null,
+      }) ?? this.repos.edital.buscarPorOrigem(endereco)
     if (duplicado) return { ok: true, id: duplicado.id, duplicado: true, mensagem: 'Edital já cadastrado com esta URL de origem.' }
 
     let dominio = 'Portal de Fomento'
@@ -105,7 +108,7 @@ export class EntradaServico {
 
     const edital = this.repos.edital.inserir({
       titulo: `Chamada Pública identificada em ${dominio}`,
-      fonte_id: this.fonteDe(fonte_id, 'URL manual'),
+      fonte_id: this.fonteInterna(FONTE_LINK),
       url_original: endereco,
       url_documento: endereco,
       status: 'COLETADO',
@@ -133,7 +136,7 @@ export class EntradaServico {
     const edital = this.repos.edital.inserir({
       ...campos,
       titulo,
-      fonte_id: this.fonteDe(dados.fonte_id),
+      fonte_id: this.fonteInterna(FONTE_CADASTRO),
       status: 'COLETADO',
       retificado: false,
     })
@@ -149,12 +152,12 @@ export class EntradaServico {
   }
 
   // A fonte informada, ou a padrão do tipo de entrada, ou a primeira cadastrada.
-  private fonteDe(informada: unknown, nomePadrao?: string): string {
-    const id =
-      (typeof informada === 'string' && informada) ||
-      (nomePadrao ? this.repos.fonte.buscarPorNome(nomePadrao)?.id : undefined) ||
-      this.repos.fonte.listar()[0]?.id
-    if (!id) throw new ErroRegraNegocio('Nenhuma fonte cadastrada. Cadastre uma fonte em Configurações antes de criar editais.')
-    return id
+  // A origem de quem envia é sempre uma fonte interna (criada aqui se a base ainda não a tiver).
+  private fonteInterna(nome: string): string {
+    const existente = this.repos.fonte.buscarPorNome(nome)
+    if (existente) return existente.id
+    const { tipo } = FONTES_ENTRADA_MANUAL.find((f) => f.nome === nome)!
+    return this.repos.fonte.inserir({ nome, tipo, ativo: true }).id
   }
+
 }

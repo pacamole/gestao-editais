@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import type { FiltrosEditais as Filtros, ListaEditaisResposta, LoteResposta } from '../../shared/tipos/editais'
-import type { FonteComExecucoes } from '../../shared/tipos/fontes'
+import type { OrigensResposta } from '../../shared/tipos/fontes'
 import { ErroApi, mensagemDeErro } from '../api/cliente'
 import { editais } from '../api/editais'
 import { fontes as apiFontes } from '../api/fontes'
+import { pendencias as apiPendencias } from '../api/pendencias'
+import { SistemaVazio } from '../components/SistemaVazio'
 import { AcoesLote } from './editais/AcoesLote'
 import { FiltrosEditais } from './editais/FiltrosEditais'
 import { aplicarFiltros, FILTROS_PADRAO, filtrosAlteradosPelaUrl, filtrosDaUrl } from './editais/filtrosUrl'
@@ -21,7 +23,9 @@ export function EditaisPage() {
   const [pagina, setPagina] = useState(Number(searchParams.get('pagina') ?? 1))
 
   const [dados, setDados] = useState<ListaEditaisResposta | null>(null)
-  const [fontes, setFontes] = useState<FonteComExecucoes[]>([])
+  const [origens, setOrigens] = useState<OrigensResposta['origens']>([])
+  // Quantos editais existem no sistema, sem filtro: zero mostra a explicação de primeiro uso.
+  const [totalNoSistema, setTotalNoSistema] = useState<number | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
@@ -30,11 +34,15 @@ export function EditaisPage() {
   const [selecionados, setSelecionados] = useState<string[]>([])
   const [executandoLote, setExecutandoLote] = useState(false)
 
-  // Lista de fontes para o filtro (falha silenciosa: o filtro fica só com "Todas")
+  // Origens para o filtro (falha silenciosa: o filtro fica só com "Todas")
   useEffect(() => {
     apiFontes
-      .listar()
-      .then((r) => setFontes(r.fontes || []))
+      .origens()
+      .then((r) => setOrigens(r.origens))
+      .catch(() => {})
+    apiPendencias
+      .obter()
+      .then((r) => setTotalNoSistema(r.totalEditais))
       .catch(() => {})
   }, [])
 
@@ -167,8 +175,9 @@ export function EditaisPage() {
         </div>
       )}
 
+      {totalNoSistema === 0 ? <SistemaVazio /> : (
       <div className="card" style={{ marginBottom: 'var(--esp-4)' }}>
-        <FiltrosEditais filtros={filtros} fontes={fontes} onAlterar={alterarFiltros} onLimpar={limparFiltros} />
+        <FiltrosEditais filtros={filtros} origens={origens} onAlterar={alterarFiltros} onLimpar={limparFiltros} />
 
         <AcoesLote
           selecionados={selecionados.length}
@@ -196,6 +205,7 @@ export function EditaisPage() {
           />
         )}
       </div>
+      )}
     </section>
   )
 }

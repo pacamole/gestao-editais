@@ -15,7 +15,7 @@ function lerComoBase64(arquivo: File): Promise<string> {
 }
 
 // Aba 1: upload de PDF por arrastar e soltar (limite 20 MB).
-export function FormUpload({ fontes, valores, onAlterar, processando, onErro, processar }: PropsFormulario<ValoresUpload>) {
+export function FormUpload({ valores, onAlterar, processando, onErro, processar }: PropsFormulario<ValoresUpload>) {
   const [arrastando, setArrastando] = useState(false)
   const { arquivo } = valores
 
@@ -52,7 +52,7 @@ export function FormUpload({ fontes, valores, onAlterar, processando, onErro, pr
       executar: async (avisar) => {
         const base64 = await lerComoBase64(arquivo)
         avisar('Extraindo informações do documento e cadastrando edital...')
-        return editais.criarPorUpload({ nome_arquivo: arquivo.name, arquivo_base64: base64, fonte_id: valores.fonteId })
+        return editais.criarPorUpload({ nome_arquivo: arquivo.name, arquivo_base64: base64 })
       },
     })
   }
@@ -60,23 +60,6 @@ export function FormUpload({ fontes, valores, onAlterar, processando, onErro, pr
   return (
     <form onSubmit={submeter} className="card__corpo">
       <div className="pilha">
-        <div className="campo">
-          <label htmlFor="fonte-upload">Fonte de origem</label>
-          <select
-            id="fonte-upload"
-            className="select"
-            value={valores.fonteId}
-            onChange={(e) => onAlterar({ fonteId: e.target.value })}
-            disabled={processando}
-          >
-            {fontes.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.nome} ({f.tipo})
-              </option>
-            ))}
-          </select>
-          <span className="campo__ajuda">Identifica a fonte de captação associada a este documento.</span>
-        </div>
 
         {/* Área de arrastar e soltar */}
         <div className="campo">

@@ -17,7 +17,6 @@ function montarPayload(v: ValoresManual): Omit<CriarManualEntrada, 'tipo'> {
     orgao_financiador: textoOuNulo(v.orgaoFinanciador),
     numero_edital: textoOuNulo(v.numeroEdital),
     modalidade: v.modalidade,
-    fonte_id: v.fonteId,
     data_publicacao: v.dataPublicacao || null,
     prazo_inscricao: v.prazoInscricao || null,
     data_resultado_prevista: v.dataResultado || null,
@@ -42,7 +41,7 @@ function montarPayload(v: ValoresManual): Omit<CriarManualEntrada, 'tipo'> {
 }
 
 // Aba 3: cadastro manual dos campos, dividido em quatro blocos mais o resumo.
-export function FormManual({ fontes, valores, onAlterar, processando, onErro, processar }: PropsFormulario<ValoresManual>) {
+export function FormManual({ valores, onAlterar, processando, onErro, processar }: PropsFormulario<ValoresManual>) {
   function submeter(e: FormEvent) {
     e.preventDefault()
     if (!valores.titulo.trim()) {
@@ -62,7 +61,7 @@ export function FormManual({ fontes, valores, onAlterar, processando, onErro, pr
   return (
     <form onSubmit={submeter} className="card__corpo">
       <div className="pilha pilha--lg">
-        <SecaoDadosBasicos {...secao} fontes={fontes} />
+        <SecaoDadosBasicos {...secao} />
         <SecaoCronograma {...secao} />
         <SecaoValores {...secao} />
         <SecaoRequisitos {...secao} />

@@ -1,15 +1,13 @@
 import type { CriarEditalResposta } from '../../../shared/tipos/editais'
-import type { FonteComExecucoes } from '../../../shared/tipos/fontes'
 
 // Os valores de cada formulário ficam na página para sobreviver à troca de aba.
 
-export type ValoresUpload = { arquivo: File | null; fonteId: string }
+export type ValoresUpload = { arquivo: File | null }
 
-export type ValoresUrl = { url: string; fonteId: string }
+export type ValoresUrl = { url: string }
 
 // Campos do cadastro manual como digitados (números ainda em texto).
 export type ValoresManual = {
-  fonteId: string
   titulo: string
   orgaoFinanciador: string
   numeroEdital: string
@@ -36,12 +34,11 @@ export type ValoresManual = {
   resumoExecutivo: string
 }
 
-export const VALORES_UPLOAD_INICIAIS: ValoresUpload = { arquivo: null, fonteId: '' }
+export const VALORES_UPLOAD_INICIAIS: ValoresUpload = { arquivo: null }
 
-export const VALORES_URL_INICIAIS: ValoresUrl = { url: '', fonteId: '' }
+export const VALORES_URL_INICIAIS: ValoresUrl = { url: '' }
 
 export const VALORES_MANUAL_INICIAIS: ValoresManual = {
-  fonteId: '',
   titulo: '',
   orgaoFinanciador: '',
   numeroEdital: '',
@@ -77,7 +74,6 @@ export type Processar = (opcoes: {
 }) => void
 
 export type PropsFormulario<V> = {
-  fontes: FonteComExecucoes[]
   valores: V
   onAlterar: (parcial: Partial<V>) => void
   processando: boolean

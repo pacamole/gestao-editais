@@ -1,9 +1,8 @@
 import { MODALIDADES } from '../../../shared/rotulos'
-import type { FonteComExecucoes } from '../../../shared/tipos/fontes'
 import type { PropsSecao } from './tipos'
 
 // Cadastro manual, bloco 1: dados gerais.
-export function SecaoDadosBasicos({ valores, onAlterar, processando, fontes }: PropsSecao & { fontes: FonteComExecucoes[] }) {
+export function SecaoDadosBasicos({ valores, onAlterar, processando }: PropsSecao) {
   return (
     <div className="pilha">
       <h3>1. Dados Básicos do Edital</h3>
@@ -14,7 +13,7 @@ export function SecaoDadosBasicos({ valores, onAlterar, processando, fontes }: P
             id="man-titulo"
             type="text"
             className="input"
-            placeholder="Ex: Chamada Pública FINEP Inovação e Transição Energética"
+            placeholder="Ex: Chamada Pública de Inovação e Transição Energética"
             value={valores.titulo}
             onChange={(e) => onAlterar({ titulo: e.target.value })}
             disabled={processando}
@@ -22,22 +21,6 @@ export function SecaoDadosBasicos({ valores, onAlterar, processando, fontes }: P
           />
         </div>
 
-        <div className="campo">
-          <label htmlFor="man-fonte">Fonte de Origem</label>
-          <select
-            id="man-fonte"
-            className="select"
-            value={valores.fonteId}
-            onChange={(e) => onAlterar({ fonteId: e.target.value })}
-            disabled={processando}
-          >
-            {fontes.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.nome}
-              </option>
-            ))}
-          </select>
-        </div>
 
         <div className="campo">
           <label htmlFor="man-orgao">Órgão Financiador</label>

@@ -1,16 +1,16 @@
 import { MODALIDADES, STATUS_EDITAL } from '../../../shared/rotulos'
-import type { FonteComExecucoes } from '../../../shared/tipos/fontes'
+import type { OrigensResposta } from '../../../shared/tipos/fontes'
 import type { FiltrosEditais as Filtros } from '../../../shared/tipos/editais'
 
 type Props = {
   filtros: Filtros
-  fontes: FonteComExecucoes[]
+  origens: OrigensResposta['origens']
   onAlterar: (parcial: Partial<Filtros>) => void
   onLimpar: () => void
 }
 
 // Barra de filtros combinados (Tarefa 12).
-export function FiltrosEditais({ filtros, fontes, onAlterar, onLimpar }: Props) {
+export function FiltrosEditais({ filtros, origens, onAlterar, onLimpar }: Props) {
   return (
     <div className="filtros">
       {/* Busca textual por título ou órgão */}
@@ -91,17 +91,17 @@ export function FiltrosEditais({ filtros, fontes, onAlterar, onLimpar }: Props) 
       </div>
 
       <div className="campo">
-        <label htmlFor="filtro-fonte">Fonte</label>
+        <label htmlFor="filtro-fonte">Origem</label>
         <select
           id="filtro-fonte"
           className="select"
           value={filtros.fonteId}
           onChange={(e) => onAlterar({ fonteId: e.target.value })}
         >
-          <option value="TODAS">Todas as fontes</option>
-          {fontes.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nome}
+          <option value="TODAS">Todas as origens</option>
+          {origens.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.nome}
             </option>
           ))}
         </select>
