@@ -28,7 +28,10 @@ git --version
 git clone https://github.com/pacamole/gestao-editais.git
 cd gestao-editais
 npm install
+npx playwright install chromium    # navegador invisível (~120 MB), usado para ler sites montados por JavaScript
 ```
+
+Sem o Chromium o sistema funciona, mas fontes adicionadas cujo site é montado por JavaScript não podem ser verificadas.
 
 ## 3. Criar o arquivo de ambiente
 
@@ -51,12 +54,6 @@ Escolha **um**:
 ```bash
 npm run db:reset                          # base nova, vazia
 npm run db:importar -- caminho/base.db    # base exportada por um colega
-```
-
-Opcional, para ter editais fictícios e testar as telas:
-
-```bash
-npm run db:seed-editais
 ```
 
 ## 5. Subir o sistema
@@ -96,10 +93,9 @@ Sem SMTP configurado, os e-mails são apenas impressos no terminal.
 | `npm run build` e `npm start`       | Gera e sobe a versão de produção                       |
 | `npm run typecheck`                 | Checa os tipos do TypeScript                           |
 | `npm run db:reset`                  | **Apaga** o banco e recria a partir de `db/schema.sql` |
-| `npm run db:seed-editais`           | Insere editais fictícios numa base sem editais         |
 | `npm run db:exportar`               | Exporta a base para `exportacoes/*.db`                 |
 | `npm run db:importar -- arquivo.db` | Substitui a base local pela do arquivo                 |
-| `npm run coleta [-- FINEP]`         | Roda a coleta de todas as fontes (ou de uma)           |
+| `npm run coleta [-- "Nome da fonte"]` | Roda a coleta das fontes cadastradas (ou de uma)       |
 | `npm run email:teste -- email`      | Envia um e-mail de teste                               |
 
 ## Problemas comuns

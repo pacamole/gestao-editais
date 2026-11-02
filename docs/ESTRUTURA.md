@@ -7,14 +7,14 @@ src/client/            interface React (páginas em pages/, rotas em router.tsx)
 src/server/            servidor Express (index.ts monta a API em /api)
   controllers/         camada HTTP: lê a requisição, chama um service e devolve a resposta (sem SQL nem regra)
   servicos/            regras de negócio e casos de uso, um service por assunto
-    coleta/            fontes padrão e portais/ (uma classe por portal: FINEP, CNPq, Embrapii)
+    coleta/            leitura de fontes (página, feed, JSON), PDF principal, fontes internas e integracoes/ (FINEP, Embrapii)
     ia/                prompts, leitura da resposta do modelo e índice de busca por trechos
     notificacao/       textos dos e-mails E01–E06 (uma classe por tipo), formatação e simulação
   repositorios/        acesso a dados: todo o SQL (um repositório por agregado), arquivos de PDF e backup da base
   dominio/             entidades, motor de critérios, cálculo da avaliação, validações e erros de negócio
   portas/              interfaces do que vem de fora (modelo de linguagem, e-mail)
   adaptadores/         implementações das portas (Ollama, SMTP, console)
-  integracoes/         clientes de recursos externos usados pelos services: download HTTP, leitura de PDF e de páginas
+  integracoes/         clientes de recursos externos usados pelos services: download HTTP, leitura de PDF e de páginas, navegador invisível (Playwright)
   agendamento/         agendador e tarefas agendadas (coleta, expiração, alertas)
   cli/                 comandos do terminal (db:reset, db:exportar, coleta, e-mail de teste…), um arquivo por comando
   db/                  conexão com o banco (local ou nuvem) e transações
@@ -34,12 +34,13 @@ As dependências sempre apontam para dentro: um service nunca importa `express`,
 COLETADO ──► EM_ANALISE ──► ANALISADO   (elegível ou não, com nota)
    ▲             │       └─► EM_REVISAO  (faltou dado para decidir)
    │             └─────────► FALHA       (IA fora do ar: tenta de novo em 15 min, até 3 vezes)
+   ├─ coleta automática que o filtro de relevância dispensa ──► FORA_DO_PERFIL ──(Resgatar)──► COLETADO
    └─ retificação ou nova tentativa
 ```
 
 A tarefa "Processar editais pendentes" roda a cada minuto (`ProcessamentoEditalServico`): lê o edital com a IA,
 avalia o fit, define o status e dispara os alertas E01/E03/E05. Esgotadas as 3 tentativas, o edital segue sem a IA
-para `EM_REVISAO` com um aviso. Enquanto o perfil da empresa for o provisório (CNPJ zerado), os editais esperam em `COLETADO`.
+para `EM_REVISAO` com um aviso. Enquanto o perfil da empresa não estiver cadastrado (ou tiver o CNPJ zerado), os editais esperam em `COLETADO`.
 Editar campos à mão reavalia na hora, sem chamar a IA.
 
 ## Configurações do sistema (tabela `config`)
