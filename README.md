@@ -87,30 +87,22 @@ Sem SMTP configurado, os e-mails são apenas impressos no terminal.
 
 ## Comandos
 
-| Comando                             | O que faz                                              |
-| ----------------------------------- | ------------------------------------------------------ |
-| `npm run dev`                       | Sobe em modo desenvolvimento, com recarga automática   |
-| `npm run build` e `npm start`       | Gera e sobe a versão de produção                       |
-| `npm run typecheck`                 | Checa os tipos do TypeScript                           |
-| `npm run db:reset`                  | **Apaga** o banco e recria a partir de `db/schema.sql` |
-| `npm run db:exportar`               | Exporta a base para `exportacoes/*.db`                 |
-| `npm run db:importar -- arquivo.db` | Substitui a base local pela do arquivo                 |
-| `npm run coleta [-- "Nome da fonte"]` | Roda a coleta das fontes cadastradas (ou de uma)       |
-| `npm run email:teste -- email`      | Envia um e-mail de teste                               |
-| `npm run editais:reler`             | Relê com a IA os editais já analisados (preenche só campos vazios, sem e-mails) |
-
-## Problemas comuns
-
-| Sintoma                                   | Solução                                                                       |
-| ----------------------------------------- | ----------------------------------------------------------------------------- |
-| "Banco não criado" ao rodar `npm run dev` | Rode o passo 4.                                                               |
-| Chat não responde                         | Verifique se o Ollama está rodando e se o modelo `gemma2:latest` foi baixado. |
-| Porta 3000 em uso                         | Troque a porta no `APP_URL` do `.env` (ex.: `http://localhost:3001`).         |
+| Comando                               | O que faz                                                                       |
+| ------------------------------------- | ------------------------------------------------------------------------------- |
+| `npm run dev`                         | Sobe em modo desenvolvimento, com recarga automática                            |
+| `npm run build` e `npm start`         | Gera e sobe a versão de produção                                                |
+| `npm run typecheck`                   | Checa os tipos do TypeScript                                                    |
+| `npm run db:reset`                    | **Apaga** o banco e recria a partir de `db/schema.sql`                          |
+| `npm run db:exportar`                 | Exporta a base para `exportacoes/*.db`                                          |
+| `npm run db:importar -- arquivo.db`   | Substitui a base local pela do arquivo                                          |
+| `npm run coleta [-- "Nome da fonte"]` | Roda a coleta das fontes cadastradas (ou de uma)                                |
+| `npm run email:teste -- email`        | Envia um e-mail de teste                                                        |
+| `npm run editais:reler`               | Relê com a IA os editais já analisados (preenche só campos vazios, sem e-mails) |
 
 ## Mais documentação
 
 - [docs/BASE-DE-DADOS.md](docs/BASE-DE-DADOS.md) — base na nuvem (Turso), exportar e importar entre computadores
-- [docs/especificacao-gestao-editais.md](docs/especificacao-gestao-editais.md) — especificação completa
+- [docs/especificacao-gestao-editais.md](docs/especificacao-gestao-editais.md) — especificação completa gerada para o início do desenvolvimento
 - [docs/ESTRUTURA.md](docs/ESTRUTURA.md) — pastas do código e chaves da tabela `config`
 - [docs/DESIGN.md](docs/DESIGN.md) — guia visual (cores, componentes e classes CSS)
 - [docs/API-FINEP.md](docs/API-FINEP.md) — API pública da FINEP usada pela fonte integrada
