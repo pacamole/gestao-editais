@@ -19,10 +19,6 @@ rotasCriterios.patch('/criterios/:id/ativo', (req, res) => {
   res.json(criterioServico.alternarAtivo(req.params.id))
 })
 
-rotasCriterios.post('/criterios/reordenar', (req, res) => {
-  res.json(criterioServico.reordenar(req.body?.ids))
-})
-
 rotasCriterios.post('/criterios/simular', (req, res) => {
   res.json(criterioServico.simular(req.body?.edital_id))
 })

@@ -68,7 +68,11 @@ export const fonteServico = new FonteServico(repositorios, coletaServico, descob
 )
 export const authServico = new AuthServico(repositorios)
 export const perfilServico = new PerfilServico(repositorios, () => processamentoEditalServico.reavaliarAtivos())
-export const criterioServico = new CriterioServico(repositorios, (id) => avaliacaoServico.simular(id))
+export const criterioServico = new CriterioServico(
+  repositorios,
+  (id) => avaliacaoServico.simular(id),
+  () => processamentoEditalServico.reavaliarAtivos(),
+)
 export const alertaServico = new AlertaServico(repositorios, notificacaoServico, () => configSistemaServico.configSmtp() !== null)
 export const destinatarioServico = new DestinatarioServico(repositorios)
 export const baseServico = new BaseServico(

@@ -2,7 +2,6 @@ import type {
   CriterioResposta,
   ExcluirCriterioResposta,
   ListaCriteriosResposta,
-  OkCriterioResposta,
   SalvarCriterioEntrada,
   SimulacaoResposta,
 } from '../../shared/tipos/criterios'
@@ -22,9 +21,6 @@ export const criterios = {
   excluir: (id: string) => requisicao<ExcluirCriterioResposta>(caminhoCriterio(id), { metodo: 'DELETE' }),
 
   alternarAtivo: (id: string) => requisicao<CriterioResposta>(`${caminhoCriterio(id)}/ativo`, { metodo: 'PATCH' }),
-
-  reordenar: (ids: string[]) =>
-    requisicao<OkCriterioResposta>('/api/criterios/reordenar', { metodo: 'POST', corpo: { ids } }),
 
   simular: (editalId: string) =>
     requisicao<SimulacaoResposta>('/api/criterios/simular', { metodo: 'POST', corpo: { edital_id: editalId } }),

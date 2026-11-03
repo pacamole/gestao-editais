@@ -8,7 +8,7 @@ export const gruposConfiguracoes: { grupo: string; secoes: Secao[] }[] = [
     grupo: 'Empresa',
     secoes: [
       { to: 'perfil', rotulo: 'Perfil da empresa', descricao: 'Dados estratégicos usados para comparação com os editais ativos.' },
-      { to: 'criterios', rotulo: 'Critérios e pesos', descricao: 'Configuração do filtro dinâmico e simulação com edital analisado.' },
+      { to: 'criterios', rotulo: 'Critérios e pesos', descricao: 'As regras que decidem se um edital é elegível e qual a sua nota de fit.' },
     ],
   },
   {

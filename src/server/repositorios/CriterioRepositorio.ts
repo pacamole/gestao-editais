@@ -1,4 +1,3 @@
-import { transacao } from '../db/index.js'
 import type { Criterio, TipoCriterio } from '../dominio/entidades.js'
 import { Repositorio } from './repositorio.js'
 
@@ -13,10 +12,5 @@ export class CriterioRepositorio extends Repositorio<Criterio, string, 'id' | 'a
 
   listarAtivos(tipo: TipoCriterio): Criterio[] {
     return this.consultar('SELECT * FROM criterio WHERE tipo = ? AND ativo = 1 ORDER BY ordem, nome', tipo)
-  }
-
-  /** P07 reordenar: grava a posição de cada critério conforme a ordem dos ids. */
-  reordenar(ids: string[]): void {
-    transacao(() => ids.forEach((id, posicao) => this.atualizar(id, { ordem: posicao })))
   }
 }

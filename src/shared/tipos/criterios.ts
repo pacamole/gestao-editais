@@ -16,12 +16,12 @@ export type ListaCriteriosResposta = {
   pontuaveis: Criterio[]
 }
 
-// Sem id = novo critério.
-export type SalvarCriterioEntrada = Omit<Criterio, 'id'> & { id?: string }
+// Sem id = novo critério (entra no fim da lista do seu tipo).
+export type SalvarCriterioEntrada = Omit<Criterio, 'id' | 'ordem'> & { id?: string }
 
-export type CriterioResposta = { ok: true; criterio: Criterio }
-export type ExcluirCriterioResposta = { ok: true; removido: boolean }
-export type OkCriterioResposta = { ok: true }
+// editaisReavaliados: editais em andamento que foram reavaliados com a mudança.
+export type CriterioResposta = { ok: true; criterio: Criterio; editaisReavaliados: number }
+export type ExcluirCriterioResposta = { ok: true; removido: boolean; editaisReavaliados: number }
 
 // Resultado da avaliação de um edital com os critérios ativos (mesmo formato gravado em avaliacao).
 export type ResultadoSimulacao = {

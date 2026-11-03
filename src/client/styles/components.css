@@ -1886,6 +1886,244 @@ a.contador:hover {
   border-radius: inherit;
 }
 
+/* Lista de critérios (P07): nome, frase do cálculo, peso e menu ⋮. */
+.lista-criterios {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-criterios__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  padding: var(--esp-4) var(--esp-5);
+  border-bottom: 1px solid var(--cor-linha);
+}
+
+.lista-criterios__item:last-child {
+  border-bottom: 0;
+}
+
+.lista-criterios__item--inativo .criterio-lado-a-lado {
+  opacity: 0.55;
+}
+
+.lista-criterios__texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  min-width: 0;
+  flex: 1;
+}
+
+/* Formulário de critério: escolha do tipo em cartões e a regra agrupada. */
+.escolha-tipo,
+.regra-criterio {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.escolha-tipo legend,
+.regra-criterio legend {
+  margin-bottom: var(--esp-2);
+  font-weight: 600;
+}
+
+.escolha-tipo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--esp-3);
+}
+
+.escolha-tipo__opcao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  padding: var(--esp-3) var(--esp-4);
+  border: 1px solid var(--cor-linha-forte);
+  border-radius: var(--raio-2);
+  cursor: pointer;
+}
+
+.escolha-tipo__opcao input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.escolha-tipo__opcao:focus-within {
+  outline: 2px solid var(--cor-foco);
+  outline-offset: 2px;
+}
+
+.escolha-tipo__opcao--ativa {
+  border-color: var(--cor-primaria);
+  background: var(--cor-primaria-suave);
+}
+
+/* Cada campo da regra: pergunta, campo e dica; a borda tem a cor do pedaço da conta que ele preenche. */
+.regra-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  padding: var(--esp-2) 0 var(--esp-2) var(--esp-3);
+  border-left: 3px solid var(--cor-linha-forte);
+}
+
+.regra-campo > label {
+  font-weight: 600;
+}
+
+.regra-campo__dica {
+  font-size: var(--texto-sm);
+  color: var(--cor-texto-2);
+}
+
+.regra-campo--edital {
+  border-left-color: var(--azul-texto);
+}
+
+.regra-campo--perfil {
+  border-left-color: var(--verde-texto);
+}
+
+.regra-campo--fixo {
+  border-left-color: var(--cinza-texto);
+}
+
+.regra-criterio input[type='range'] {
+  width: 100%;
+  accent-color: var(--cor-primaria);
+}
+
+@media (max-width: 600px) {
+  .escolha-tipo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* "Como o sistema vai calcular": a regra do formulário em frases, atualizada ao digitar. */
+.como-calcula {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  padding: var(--esp-3) var(--esp-4);
+  border-radius: var(--raio-2);
+  background: var(--cor-superficie-2);
+  border: 1px solid var(--cor-linha);
+}
+
+.como-calcula ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.como-calcula li {
+  display: flex;
+  gap: var(--esp-2);
+}
+
+.como-calcula__icone {
+  flex: none;
+  width: 1.25em;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Critério (P07): o texto explicativo de um lado e a conta do outro; empilha em telas estreitas. */
+.criterio-lado-a-lado {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+  gap: var(--esp-3) var(--esp-5);
+  min-width: 0;
+  flex: 1;
+}
+
+/* A conta do critério, montada com os parâmetros do cadastro. */
+.formula {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  padding: var(--esp-3) var(--esp-4);
+  border-radius: var(--raio-2);
+  background: var(--cor-superficie-2);
+  border: 1px solid var(--cor-linha);
+  min-width: 0;
+}
+
+.formula__linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-1) var(--esp-2);
+}
+
+.formula__rotulo {
+  font-family: var(--fonte-mono);
+  font-size: var(--texto-sm);
+  color: var(--cor-texto-2);
+  white-space: nowrap;
+}
+
+.formula__expressao {
+  display: contents;
+}
+
+.formula__op {
+  font-size: var(--texto-sm);
+  color: var(--cor-texto-2);
+}
+
+/* Parâmetro do cadastro: a cor diz de onde vem o dado. */
+.formula__termo {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--raio-1);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+}
+
+.formula__termo--edital {
+  background: var(--azul-fundo);
+  color: var(--azul-texto);
+}
+
+.formula__termo--perfil {
+  background: var(--verde-fundo);
+  color: var(--verde-texto);
+}
+
+.formula__termo--fixo {
+  background: var(--cinza-fundo);
+  color: var(--cinza-texto);
+}
+
+.formula__termo--sistema {
+  background: transparent;
+  border: 1px dashed var(--cor-linha-forte);
+  color: var(--cor-texto-2);
+}
+
+.formula-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2) var(--esp-4);
+  font-size: var(--texto-sm);
+}
+
+
 /* Evidência: trecho literal do edital, com página. */
 .evidencia {
   padding: var(--esp-3) var(--esp-4);

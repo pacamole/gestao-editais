@@ -7,7 +7,6 @@ import type {
   CriterioResposta,
   ExcluirCriterioResposta,
   ListaCriteriosResposta,
-  OkCriterioResposta,
   ResultadoSimulacao,
   SimulacaoResposta,
 } from '../../shared/tipos/criterios.js'
@@ -21,6 +20,8 @@ export class CriterioServico {
   constructor(
     private readonly repos: RepositoriosCriterio,
     private readonly simularAvaliacao: (editalId: string) => ResultadoSimulacao,
+    // Mudar um critério muda a elegibilidade e a nota: os editais em andamento são reavaliados na hora.
+    private readonly reavaliarEditais: () => number = () => 0,
   ) {}
 
   listar(): ListaCriteriosResposta {
@@ -43,32 +44,29 @@ export class CriterioServico {
       peso: tipo === 'PONTUAVEL' && item.peso != null && item.peso !== '' ? Number(item.peso) : null,
       mensagem_reprovacao: item.mensagem_reprovacao == null || item.mensagem_reprovacao === '' ? null : String(item.mensagem_reprovacao),
       ativo: item.ativo !== false,
-      ordem: Number(item.ordem ?? 0),
     }
 
     const erro = validarCriterio(dados)
     if (erro) throw new ErroValidacao(erro)
 
     const existente = this.repos.criterio.buscarPorId(dados.id)
-    const salvo = existente ? this.repos.criterio.atualizar(dados.id, dados) : this.repos.criterio.inserir(dados)
-    return { ok: true, criterio: salvo! }
+    // Critério novo entra no fim da lista do seu tipo.
+    const salvo = existente
+      ? this.repos.criterio.atualizar(dados.id, dados)
+      : this.repos.criterio.inserir({ ...dados, ordem: this.repos.criterio.listarPorTipo(tipo).length })
+    return { ok: true, criterio: salvo!, editaisReavaliados: this.reavaliarEditais() }
   }
 
   excluir(id: string): ExcluirCriterioResposta {
-    return { ok: true, removido: this.repos.criterio.excluir(id) }
+    const removido = this.repos.criterio.excluir(id)
+    return { ok: true, removido, editaisReavaliados: removido ? this.reavaliarEditais() : 0 }
   }
 
   alternarAtivo(id: string): CriterioResposta {
     const criterio = this.repos.criterio.buscarPorId(id)
     if (!criterio) throw new ErroNaoEncontrado('Critério não encontrado.')
-    return { ok: true, criterio: this.repos.criterio.atualizar(criterio.id, { ativo: !criterio.ativo })! }
-  }
-
-  reordenar(ids: unknown): OkCriterioResposta {
-    const lista = Array.isArray(ids) ? ids.filter((id: unknown): id is string => typeof id === 'string') : []
-    if (!lista.length) throw new ErroValidacao('Nenhum critério para reordenar.')
-    this.repos.criterio.reordenar(lista)
-    return { ok: true }
+    const salvo = this.repos.criterio.atualizar(criterio.id, { ativo: !criterio.ativo })!
+    return { ok: true, criterio: salvo, editaisReavaliados: this.reavaliarEditais() }
   }
 
   /** Avalia um edital com os critérios atuais, sem gravar nada. */
