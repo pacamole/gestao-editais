@@ -2,6 +2,9 @@
 // carrega. Serve para sites montados por JavaScript, em que o HTML baixado direto só tem menus: os dados
 // das chamadas vêm de uma API que a própria página consulta. Usado só na descoberta da fonte; a busca
 // diária chama o endereço encontrado direto.
+import { createRequire } from 'node:module'
+import path from 'node:path'
+import { ehExecutavel, pastaRecursos } from '../config/executavel.js'
 
 export type RespostaJson = { url: string; dados: unknown }
 export type PaginaRenderizada = { html: string; respostasJson: RespostaJson[] }
@@ -9,10 +12,16 @@ export type PaginaRenderizada = { html: string; respostasJson: RespostaJson[] }
 const TEMPO_LIMITE_MS = 20_000
 const TAMANHO_MAXIMO_JSON = 2 * 1024 * 1024
 const MAXIMO_RESPOSTAS = 40
+// No executável não vai o Chromium: usa o navegador do computador (o Edge vem com o Windows).
+const CANAIS_EXECUTAVEL = ['msedge', 'chrome']
 
 export class ErroNavegadorIndisponivel extends Error {
   constructor() {
-    super('Este site precisa do navegador invisível, que não está instalado. Rode "npx playwright install chromium" no servidor.')
+    super(
+      ehExecutavel
+        ? 'Este site precisa do Microsoft Edge ou do Google Chrome, e nenhum dos dois foi encontrado neste computador.'
+        : 'Este site precisa do navegador invisível, que não está instalado. Rode "npx playwright install chromium" no servidor.',
+    )
     this.name = 'ErroNavegadorIndisponivel'
   }
 }
@@ -26,21 +35,35 @@ const mesmoSite = (a: string, b: string) => {
   }
 }
 
+type Playwright = typeof import('playwright')
+type Navegador = Awaited<ReturnType<Playwright['chromium']['launch']>>
+
+// No executável, o Playwright fica na pasta extraída: ele lê arquivos próprios do disco e não cabe no servidor empacotado.
+async function carregarPlaywright(): Promise<Playwright> {
+  if (pastaRecursos) return createRequire(path.join(pastaRecursos, 'navegador.js'))('playwright-core') as Playwright
+  return import('playwright')
+}
+
+async function abrirNavegador(playwright: Playwright): Promise<Navegador> {
+  for (const channel of ehExecutavel ? CANAIS_EXECUTAVEL : [undefined]) {
+    try {
+      return await playwright.chromium.launch({ headless: true, channel })
+    } catch (erro) {
+      if (!/Executable doesn't exist|is not found|playwright install/i.test(String(erro))) throw erro
+    }
+  }
+  throw new ErroNavegadorIndisponivel()
+}
+
 export async function abrirPagina(url: string): Promise<PaginaRenderizada> {
-  let playwright: typeof import('playwright')
+  let playwright: Playwright
   try {
-    playwright = await import('playwright')
+    playwright = await carregarPlaywright()
   } catch {
     throw new ErroNavegadorIndisponivel()
   }
 
-  let navegador: Awaited<ReturnType<typeof playwright.chromium.launch>>
-  try {
-    navegador = await playwright.chromium.launch({ headless: true })
-  } catch (erro) {
-    if (/Executable doesn't exist|playwright install/i.test(String(erro))) throw new ErroNavegadorIndisponivel()
-    throw erro
-  }
+  const navegador = await abrirNavegador(playwright)
 
   try {
     const pagina = await navegador.newPage({ userAgent: 'GestaoEditais/0.1 (coleta de chamadas publicas)' })

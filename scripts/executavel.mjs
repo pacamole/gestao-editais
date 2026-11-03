@@ -46,8 +46,8 @@ const libsqlNativo = {
   },
 }
 
-// CommonJS: o Node SEA não roda ESM. vite (só em dev) e playwright (Chromium à parte) ficam de fora;
-// sem o playwright, sites montados por JavaScript não são lidos, como quando o Chromium não está instalado.
+// CommonJS: o Node SEA não roda ESM. vite (só em dev) e playwright ficam de fora do arquivo único:
+// o playwright-core vai embutido como arquivos e é carregado da pasta extraída (integracoes/navegador.ts).
 await build({
   entryPoints: ['src/server/index.ts'],
   outfile: servidor,
@@ -70,6 +70,12 @@ const assets = {
 for (const arquivo of fs.readdirSync('dist/client', { recursive: true })) {
   const caminho = path.join('dist/client', arquivo)
   if (fs.statSync(caminho).isFile()) assets[caminho.replaceAll('\\', '/')] = caminho
+}
+
+const playwrightCore = path.dirname(require.resolve('playwright-core/package.json'))
+for (const arquivo of fs.readdirSync(playwrightCore, { recursive: true })) {
+  const caminho = path.join(playwrightCore, arquivo)
+  if (fs.statSync(caminho).isFile()) assets[`node_modules/playwright-core/${arquivo.replaceAll(path.sep, '/')}`] = caminho
 }
 
 fs.writeFileSync(

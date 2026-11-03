@@ -96,7 +96,7 @@ Quem recebe o arquivo só precisa:
 
 Os dados ficam em `C:\Users\<nome>\GestaoEditais` (banco em `data/`, exportações em `exportacoes/`), não importa onde o `.exe` esteja.
 Para trocar a porta (padrão 3000), crie nessa pasta um `.env` com `APP_URL=http://localhost:3001`.
-O executável não leva o Chromium: fontes cujo site é montado por JavaScript não podem ser verificadas.
+O executável não leva o Chromium: para fontes cujo site é montado por JavaScript, ele usa o Microsoft Edge do computador (ou o Google Chrome). Sem nenhum dos dois, essas fontes não podem ser verificadas.
 A IA continua dependendo do Ollama na máquina ou da chave do Ollama Cloud em **Configurações**.
 
 ## Comandos
