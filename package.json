@@ -13,8 +13,7 @@
     "email:teste": "tsx --disable-warning=ExperimentalWarning src/server/cli/email-teste.ts",
     "db:exportar": "tsx --disable-warning=ExperimentalWarning src/server/cli/base-exportar.ts",
     "db:importar": "tsx --disable-warning=ExperimentalWarning src/server/cli/base-importar.ts",
-    "editais:reler": "tsx --disable-warning=ExperimentalWarning src/server/cli/editais-reler.ts",
-    "empacotar": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/empacotar.ps1"
+    "editais:reler": "tsx --disable-warning=ExperimentalWarning src/server/cli/editais-reler.ts"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
