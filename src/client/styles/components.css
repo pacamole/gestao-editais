@@ -248,7 +248,7 @@
 
 .app-conteudo {
   width: 100%;
-  max-width: var(--largura-conteudo);
+  min-width: 0;
   padding: var(--esp-8) var(--esp-10) var(--esp-12);
 }
 
@@ -1499,8 +1499,9 @@ a.contador:hover {
   white-space: nowrap;
 }
 
+/* O título acompanha a largura da tela (o resto do texto aparece cortado com reticências). */
 .tabela__titulo {
-  max-width: 260px;
+  max-width: clamp(260px, 32vw, 720px);
 }
 
 .tabela__titulo a {
@@ -1516,7 +1517,7 @@ a.contador:hover {
 /* Link longo numa célula: uma linha só, cortada com reticências; o endereço completo aparece ao passar o mouse. */
 .link-truncado {
   display: block;
-  max-width: 520px;
+  max-width: clamp(240px, 45vw, 960px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
