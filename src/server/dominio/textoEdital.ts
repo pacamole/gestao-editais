@@ -6,6 +6,9 @@ export type SecaoTexto = { pagina: number | null; url: string | null; conteudo: 
 // Um marcador começa o texto ou vem depois de uma linha em branco, e ocupa a linha inteira.
 const MARCADOR = /(?<=^|\n\n)\[(?:Página\s+(\d+)|Fonte URL:\s*([^\]]+))\]\n/g
 
+// Documento escaneado: vale para o edital, não para uma leitura. A IA ler o resto não resolve.
+export const AVISO_PAGINAS_SEM_TEXTO = 'Requer leitura manual: a maior parte das páginas não tem camada de texto.'
+
 export const marcadorDePagina = (pagina: number) => `[Página ${pagina}]`
 export const marcadorDeUrl = (url: string) => `[Fonte URL: ${url}]`
 

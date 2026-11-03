@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { novoId, transacao } from '../db/index.js'
 import type { Edital, Fonte } from '../dominio/entidades.js'
+import { AVISO_PAGINAS_SEM_TEXTO } from '../dominio/textoEdital.js'
 import type { DocumentoRepositorio } from '../repositorios/DocumentoRepositorio.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { extrairPdf } from '../integracoes/pdf.js'
@@ -66,7 +67,7 @@ export class RegistroDocumentoServico {
       const texto = await this.lerPdf(arquivo)
       await this.documentos.salvarPdf(hash, arquivo)
       textoExtraido = texto.texto
-      aviso = texto.requerLeituraManual ? 'Requer leitura manual: a maior parte das páginas não tem camada de texto.' : null
+      aviso = texto.requerLeituraManual ? AVISO_PAGINAS_SEM_TEXTO : null
     }
 
     const campos = {

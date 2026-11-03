@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { ehMarcadorDeTextoPdf, extrairPdf } from '../integracoes/pdf.js'
 import type { Edital } from '../dominio/entidades.js'
 import { ErroRegraNegocio, ErroValidacao } from '../dominio/erros.js'
+import { AVISO_PAGINAS_SEM_TEXTO } from '../dominio/textoEdital.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { CAMPOS_EDITAVEIS, type CampoEditavel } from '../../shared/camposEditaveis.js'
 import { CAMPOS_EDITAL } from '../../shared/rotulos.js'
@@ -12,7 +13,6 @@ import { normalizarValor } from '../../shared/valoresCampo.js'
 type RepositoriosEntrada = Pick<Repositorios, 'edital' | 'fonte'>
 
 const LIMITE_UPLOAD_BYTES = 20 * 1024 * 1024
-const AVISO_PAGINAS_SEM_TEXTO = 'Requer leitura manual: a maior parte das páginas não tem camada de texto.'
 
 export type EntradaUpload = { arquivo_base64?: unknown; nome_arquivo?: unknown }
 export type EntradaUrl = { url?: unknown }

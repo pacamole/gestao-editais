@@ -2,6 +2,7 @@ import type { Edital, StatusEdital } from '../dominio/entidades.js'
 import { ErroNegocio, ErroRegraNegocio, ErroServicoExterno } from '../dominio/erros.js'
 import { MOTIVO_PERFIL_PROVISORIO, perfilProvisorio } from '../dominio/perfil.js'
 import { avaliarRelevancia } from '../dominio/relevancia.js'
+import { AVISO_PAGINAS_SEM_TEXTO } from '../dominio/textoEdital.js'
 import { ehMarcadorDeTextoPdf } from '../integracoes/pdf.js'
 import { ErroModeloLinguagem } from '../portas/ModeloLinguagemPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
@@ -23,6 +24,9 @@ const ESPERA_NOVA_TENTATIVA_MIN = 15
 const INTERROMPIDO_APOS_MIN = 30
 const EDITAIS_POR_RODADA = 3
 const LIMITE_AVISO_PERFIL = 500
+// Status em que erro_processamento pode ser falha de leitura. Nos demais ele explica outra coisa
+// (fora do perfil, expirado, perfil provisório) e uma leitura bem-sucedida não o desmente.
+const STATUS_COM_FALHA_DE_LEITURA: readonly StatusEdital[] = ['FALHA', 'ANALISADO', 'EM_REVISAO', 'APROVADO']
 
 export type ResultadoProcessamento = { id: string; status: StatusEdital; motivo?: string }
 export type ResumoRodada = { processados: number; aguardandoPerfil: number }
@@ -107,8 +111,25 @@ export class ProcessamentoEditalServico {
   /** "Ler edital com IA" na tela: lê o texto (ou o endereço, sem texto) e reavalia com os campos novos. */
   async lerSobDemanda(editalId: string, origem: 'TEXTO' | 'URL'): Promise<ExtracaoResposta> {
     const resposta = origem === 'TEXTO' ? await this.extracao.extrairDados(editalId) : await this.extracao.lerUrl(editalId)
-    if (!resposta.atualizados || !this.reavaliar(editalId)) return resposta
+    await this.registrarLeitura(editalId, resposta.atualizados > 0)
     return { ...resposta, edital: this.repos.edital.buscarPorId(editalId) ?? resposta.edital }
+  }
+
+  // A leitura deu certo: tira o aviso da falha anterior. Edital em FALHA nem precisava esperar a nova tentativa.
+  private async registrarLeitura(editalId: string, temCamposNovos: boolean): Promise<void> {
+    const edital = this.repos.edital.buscarPorId(editalId)
+    if (!edital || !STATUS_COM_FALHA_DE_LEITURA.includes(edital.status)) return
+
+    const aviso = edital.erro_processamento === AVISO_PAGINAS_SEM_TEXTO ? AVISO_PAGINAS_SEM_TEXTO : null
+    if (edital.status === 'FALHA') {
+      const perfil = this.repos.perfilEmpresa.obter()
+      if (!perfil || perfilProvisorio(perfil)) return
+      await this.concluir(this.mover(edital, 'EM_ANALISE', { erro_processamento: aviso }), aviso)
+      return
+    }
+
+    if (edital.erro_processamento !== aviso) this.repos.edital.atualizar(editalId, { erro_processamento: aviso })
+    if (temCamposNovos) this.reavaliar(editalId)
   }
 
   /**
@@ -177,6 +198,13 @@ export class ProcessamentoEditalServico {
       }
       aviso = transitoria ? `A leitura por IA falhou ${tentativas} vezes (${motivo}). Confira e complete os dados à mão.` : motivo
     }
+
+    return this.concluir(edital, aviso)
+  }
+
+  // Depois da leitura (ou da desistência dela): avalia, define o status final e avisa quem acompanha.
+  private async concluir(edital: Edital, aviso: string | null): Promise<ResultadoProcessamento> {
+    const editalId = edital.id
 
     // 2. Avaliação do fit e status final.
     let status: StatusEdital
