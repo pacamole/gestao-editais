@@ -6,7 +6,7 @@
   "scripts": {
     "coleta": "tsx src/server/cli/coleta.ts",
     "dev": "tsx watch --disable-warning=ExperimentalWarning --ignore ./src/client src/server/index.ts",
-    "build": "vite build && tsc -p tsconfig.server.json",
+    "build": "vite build && tsc -p tsconfig.server.json && node scripts/executavel.mjs",
     "start": "cross-env NODE_ENV=production node --disable-warning=ExperimentalWarning dist/server/index.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "db:reset": "tsx --disable-warning=ExperimentalWarning src/server/cli/db-reset.ts",
@@ -36,6 +36,8 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "cross-env": "^10.1.0",
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"

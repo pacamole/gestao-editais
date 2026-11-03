@@ -1,4 +1,5 @@
 import "./config/env.js";
+import { spawn } from "node:child_process";
 import express, { type ErrorRequestHandler } from "express";
 import path from "node:path";
 import type { ErroApi, HealthResponse } from "../shared/api.js";
@@ -9,10 +10,15 @@ import { ErroNegocio } from "./dominio/erros.js";
 import { ehErroDeConexaoNuvem } from "./db/conexao.js";
 import { bancoVazio } from "./db/index.js";
 import { appUrl, porta } from "./config/app.js";
-import { root } from "./config/paths.js";
+import { ehExecutavel } from "./config/executavel.js";
+import { pastaCliente, root } from "./config/paths.js";
+import { criarBaseNova } from "./composicao.js";
 import { rotasApi } from "./controllers/index.js";
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = process.env.NODE_ENV === "production" || ehExecutavel;
+
+// O executável cria a base sozinho na primeira vez, para quem testa não precisar de comandos.
+if (bancoVazio() && ehExecutavel) criarBaseNova();
 
 if (bancoVazio()) {
   console.error(
@@ -53,27 +59,47 @@ const tratarErro: ErrorRequestHandler = (erro, _req, res, _next) => {
 app.use("/api", tratarErro);
 
 // ---- Front-end ----
-if (isProd) {
-  const clientDir = path.join(root, "dist/client");
-  app.use(express.static(clientDir));
-  app.get(/^(?!\/api).*/, (_req, res) =>
-    res.sendFile(path.join(clientDir, "index.html")),
-  );
-} else {
-  const { createServer } = await import("vite");
-  const vite = await createServer({
-    root,
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-  app.use(vite.middlewares);
+// Sem await no topo do arquivo: o executável empacota o servidor como CommonJS, que não aceita.
+async function servirFrontEnd(): Promise<void> {
+  if (isProd) {
+    app.use(express.static(pastaCliente));
+    app.get(/^(?!\/api).*/, (_req, res) =>
+      res.sendFile(path.join(pastaCliente, "index.html")),
+    );
+  } else {
+    const { createServer } = await import("vite");
+    const vite = await createServer({
+      root,
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  }
 }
 
-app.listen(porta, () => {
-  console.log(appUrl);
-  new Agendador(
-    [...tarefasColeta(), ...tarefasNotificacao, ...tarefasProcessamento],
-    60_000,
-    registroRotinas,
-  ).iniciar();
-});
+function iniciar(): void {
+  app.listen(porta, (erro) => {
+    if (erro) {
+      console.error(`Não foi possível abrir o sistema na porta ${porta}: ${erro.message}`);
+      if (!ehExecutavel) process.exit(1);
+      // Aberto com dois cliques: mantém a janela para a mensagem ser lida.
+      console.error(`Outro programa (ou o próprio sistema, já aberto) está usando a porta. Feche-o ou troque a porta com APP_URL num arquivo .env em ${root}.`);
+      console.error("Tecle Enter para fechar.");
+      process.stdin.once("data", () => process.exit(1));
+      return;
+    }
+    console.log(appUrl);
+    if (ehExecutavel) {
+      console.log(`Dados em ${root}`);
+      console.log("Gestor de Editais aberto no navegador. Feche esta janela para encerrar o sistema.");
+      spawn("cmd", ["/c", "start", "", appUrl], { detached: true, stdio: "ignore" }).unref();
+    }
+    new Agendador(
+      [...tarefasColeta(), ...tarefasNotificacao, ...tarefasProcessamento],
+      60_000,
+      registroRotinas,
+    ).iniciar();
+  });
+}
+
+servirFrontEnd().then(iniciar);

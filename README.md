@@ -85,12 +85,26 @@ npm run email:teste -- voce@email.com
 
 Sem SMTP configurado, os e-mails são apenas impressos no terminal.
 
+## Executável (para testar sem instalar nada)
+
+`npm run build` também gera `dist/gestao-editais.exe` (Windows, ~105 MB), com o Node, o servidor e a interface dentro.
+Quem recebe o arquivo só precisa:
+
+1. Salvar o `.exe` em qualquer pasta (pode mudar de lugar depois).
+2. Dar dois cliques. Na primeira vez o Windows pode avisar que o app não é reconhecido: **Mais informações › Executar assim mesmo**.
+3. O sistema abre no navegador; clique em **Criar conta**. Fechar a janela preta encerra o sistema.
+
+Os dados ficam em `C:\Users\<nome>\GestaoEditais` (banco em `data/`, exportações em `exportacoes/`), não importa onde o `.exe` esteja.
+Para trocar a porta (padrão 3000), crie nessa pasta um `.env` com `APP_URL=http://localhost:3001`.
+O executável não leva o Chromium: fontes cujo site é montado por JavaScript não podem ser verificadas.
+A IA continua dependendo do Ollama na máquina ou da chave do Ollama Cloud em **Configurações**.
+
 ## Comandos
 
 | Comando                               | O que faz                                                                       |
 | ------------------------------------- | ------------------------------------------------------------------------------- |
 | `npm run dev`                         | Sobe em modo desenvolvimento, com recarga automática                            |
-| `npm run build` e `npm start`         | Gera e sobe a versão de produção                                                |
+| `npm run build` e `npm start`         | Gera a versão de produção (e o `dist/gestao-editais.exe`) e a sobe              |
 | `npm run typecheck`                   | Checa os tipos do TypeScript                                                    |
 | `npm run db:reset`                    | **Apaga** o banco e recria a partir de `db/schema.sql`                          |
 | `npm run db:exportar`                 | Exporta a base para `exportacoes/*.db`                                          |

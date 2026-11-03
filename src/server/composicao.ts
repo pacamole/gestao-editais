@@ -1,5 +1,6 @@
 // Raiz de composição: o único lugar que escolhe as implementações e liga uma camada à outra.
 // Controllers recebem os services daqui; services recebem repositórios e portas pelo construtor.
+import fs from 'node:fs'
 import path from 'node:path'
 import { EmailConfiguravel } from './adaptadores/email/EmailConfiguravel.js'
 import { SmtpAdaptador } from './adaptadores/email/SmtpAdaptador.js'
@@ -7,7 +8,7 @@ import { OllamaAdaptador } from './adaptadores/ollama/OllamaAdaptador.js'
 import { GatilhosNotificacaoServico } from './servicos/GatilhosNotificacaoServico.js'
 import { NotificacaoServico } from './servicos/NotificacaoServico.js'
 import { arquivoBanco, arquivoSchema, root } from './config/paths.js'
-import { db } from './db/index.js'
+import { db, transacao } from './db/index.js'
 import { BaseRepositorio } from './repositorios/BaseRepositorio.js'
 import { DashboardRepositorio } from './repositorios/DashboardRepositorio.js'
 import { DocumentoRepositorio } from './repositorios/DocumentoRepositorio.js'
@@ -80,4 +81,13 @@ export const baseServico = new BaseServico(
   path.join(root, 'exportacoes'),
 )
 export const bootstrapServico = new BootstrapServico(repositorios)
+
+// Base nova: db/schema.sql + dados iniciais (perfil, critérios, alertas e fontes).
+export function criarBaseNova(): void {
+  db.exec(fs.readFileSync(arquivoSchema, 'utf8'))
+  transacao(() => {
+    fonteServico.garantirFontesPadrao()
+    bootstrapServico.garantir()
+  })
+}
 export const pendenciaServico = new PendenciaServico(repositorios, () => configSistemaServico.configSmtp() !== null)

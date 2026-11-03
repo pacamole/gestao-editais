@@ -1,5 +1,11 @@
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+// @ts-expect-error o pdfjs-dist não publica tipos para o worker
+import * as pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import { marcadorDePagina } from "../dominio/textoEdital.js";
+
+// No Node o PDF.js roda o worker na mesma thread. Registrado aqui em vez de carregado pelo caminho
+// do arquivo, que não existe em disco dentro do executável.
+(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = pdfjsWorker;
 
 export type PaginaPdf = { pagina: number; texto: string };
 export type TextoPdf = {
