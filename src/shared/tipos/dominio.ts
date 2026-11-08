@@ -97,6 +97,7 @@ export type PerfilEmpresa = {
   valor_minimo_interesse: number | null
   prazo_minimo_preparo_dias: number | null
   site_url: string | null
+  instrucoes_extras: string
   atualizado_em: string
 }
 

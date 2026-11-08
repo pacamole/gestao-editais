@@ -159,6 +159,7 @@ CREATE TABLE perfil_empresa (
   valor_minimo_interesse               REAL,
   prazo_minimo_preparo_dias            INTEGER,
   site_url                             TEXT,
+  instrucoes_extras                    TEXT NOT NULL DEFAULT '',
   atualizado_em                        TEXT NOT NULL
 );
 

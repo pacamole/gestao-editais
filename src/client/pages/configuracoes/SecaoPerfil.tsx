@@ -24,6 +24,7 @@ type FormPerfil = {
   valor_minimo_interesse: string
   prazo_minimo_preparo_dias: string
   site_url: string
+  instrucoes_extras: string
 }
 
 const perfilInicial: FormPerfil = {
@@ -46,6 +47,7 @@ const perfilInicial: FormPerfil = {
   valor_minimo_interesse: '',
   prazo_minimo_preparo_dias: '',
   site_url: '',
+  instrucoes_extras: '',
 }
 
 const listaParaTexto = (lista: string[] | null) => (Array.isArray(lista) ? lista.join(', ') : '')
@@ -73,6 +75,7 @@ function paraFormulario(p: PerfilEmpresa): FormPerfil {
     valor_minimo_interesse: numeroParaTexto(p.valor_minimo_interesse),
     prazo_minimo_preparo_dias: numeroParaTexto(p.prazo_minimo_preparo_dias),
     site_url: p.site_url ?? '',
+    instrucoes_extras: p.instrucoes_extras ?? '',
   }
 }
 
@@ -146,7 +149,7 @@ export function SecaoPerfil() {
             <div className="campo"><label htmlFor="faturamento_anual">Faturamento anual</label><input id="faturamento_anual" type="number" className="input" value={perfil.faturamento_anual} onChange={(e) => atualizar('faturamento_anual', e.target.value)} /></div>
             <div className="campo"><label htmlFor="uf">Estado</label><input id="uf" className="input" maxLength={2} value={perfil.uf} onChange={(e) => atualizar('uf', e.target.value.toUpperCase())} /></div>
             <div className="campo"><label htmlFor="municipio">Município</label><input id="municipio" className="input" value={perfil.municipio} onChange={(e) => atualizar('municipio', e.target.value)} /></div>
-            <div className="campo"><label htmlFor="site_url">Site da empresa</label><input id="site_url" type="url" className="input" placeholder="https://www.empresa.com.br" value={perfil.site_url} onChange={(e) => atualizar('site_url', e.target.value)} /><small>Na triagem, percorremos até 500 páginas públicas do domínio (links internos e sitemap), priorizando conteúdo relevante para a comparação.</small></div>
+            <div className="campo"><label htmlFor="site_url">Link da página da empresa</label><input id="site_url" type="url" className="input" placeholder="https://www.empresa.com.br" value={perfil.site_url} onChange={(e) => atualizar('site_url', e.target.value)} /><small>Na triagem, lemos as páginas públicas do domínio encontradas por links internos e sitemaps (até 500 páginas), priorizando o conteúdo mais relevante para a comparação.</small></div>
             <div className="campo"><label htmlFor="areas_atuacao">Áreas de atuação</label><input id="areas_atuacao" className="input" value={perfil.areas_atuacao} onChange={(e) => atualizar('areas_atuacao', e.target.value)} /></div>
             <div className="campo"><label htmlFor="palavras_chave">Palavras-chave</label><input id="palavras_chave" className="input" value={perfil.palavras_chave} onChange={(e) => atualizar('palavras_chave', e.target.value)} /></div>
             <div className="campo"><label htmlFor="certidoes_disponiveis">Certidões disponíveis</label><input id="certidoes_disponiveis" className="input" value={perfil.certidoes_disponiveis} onChange={(e) => atualizar('certidoes_disponiveis', e.target.value)} /></div>
@@ -154,6 +157,11 @@ export function SecaoPerfil() {
             <div className="campo"><label htmlFor="valor_minimo_interesse">Valor mínimo de interesse</label><input id="valor_minimo_interesse" type="number" step="0.01" className="input" value={perfil.valor_minimo_interesse} onChange={(e) => atualizar('valor_minimo_interesse', e.target.value)} /></div>
             <div className="campo"><label htmlFor="prazo_minimo_preparo_dias">Prazo mínimo de preparo (dias)</label><input id="prazo_minimo_preparo_dias" type="number" className="input" value={perfil.prazo_minimo_preparo_dias} onChange={(e) => atualizar('prazo_minimo_preparo_dias', e.target.value)} /></div>
             <label className="checkbox"><input type="checkbox" checked={perfil.possui_ict_parceira} onChange={(e) => atualizar('possui_ict_parceira', e.target.checked)} /> Possui parceria com instituição de pesquisa</label>
+            <div className="campo" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="instrucoes_extras">Instruções extras</label>
+              <textarea id="instrucoes_extras" className="textarea" rows={5} value={perfil.instrucoes_extras} onChange={(e) => atualizar('instrucoes_extras', e.target.value)} />
+              <small>Inclua informações adicionais sobre a empresa que devem ser consideradas na comparação com os editais.</small>
+            </div>
           </div>
         </div>
 

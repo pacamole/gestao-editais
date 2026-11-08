@@ -59,6 +59,7 @@ export class PerfilServico {
       valor_minimo_interesse: numeroOuNulo(payload.valor_minimo_interesse),
       prazo_minimo_preparo_dias: numeroOuNulo(payload.prazo_minimo_preparo_dias),
       site_url: this.urlSite(payload.site_url),
+      instrucoes_extras: typeof payload.instrucoes_extras === 'string' ? payload.instrucoes_extras : '',
     }
 
     const existente = this.repos.perfilEmpresa.obter()

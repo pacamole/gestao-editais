@@ -40,4 +40,5 @@ export const PERFIL_INICIAL: Omit<PerfilEmpresa, 'atualizado_em'> = {
   valor_minimo_interesse: null,
   prazo_minimo_preparo_dias: null,
   site_url: null,
+  instrucoes_extras: '',
 }

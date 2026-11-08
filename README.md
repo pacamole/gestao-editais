@@ -77,7 +77,7 @@ Para usar o Ollama Cloud em vez disso, informe a chave de API em **Configuraçõ
 
 ## Como testar as etapas de análise
 
-1. Em **Configurações › Perfil da empresa**, preencha os dados e o endereço público do site da empresa.
+1. Em **Configurações › Perfil da empresa**, preencha os dados, o link público do site e, se necessário, as instruções extras para contextualizar a empresa.
 2. Abra um edital com texto extraído. A etapa inicial é executada automaticamente para editais novos; em um edital existente, use **Analisar elegibilidade** para executar novamente.
 3. Confira a lista de requisitos em forma de perguntas e as comparações com o perfil e o site. O sistema valida primeiro a página principal e depois descobre páginas por links internos e sitemaps, percorrendo até 500 páginas e 10 milhões de caracteres. Páginas relevantes são priorizadas dentro do limite de contexto da IA; a tela informa se a leitura ou o contexto foram limitados e mostra as páginas que sustentam cada comparação.
 4. Clique em **Fazer análise profunda**. A IA extrai os campos e a elegibilidade é recalculada com os critérios eliminatórios; a pontuação continua sendo calculada apenas para editais elegíveis.

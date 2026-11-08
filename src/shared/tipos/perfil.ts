@@ -29,6 +29,7 @@ export type SalvarPerfilEntrada = {
   valor_minimo_interesse: NumeroEntrada
   prazo_minimo_preparo_dias: NumeroEntrada
   site_url: string | null
+  instrucoes_extras: string
   // Reavalia todos os editais ativos com o perfil salvo.
   reavaliar: boolean
 }

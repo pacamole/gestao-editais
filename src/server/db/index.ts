@@ -26,7 +26,7 @@ function abrir(config: ConfigConexao): void {
   const nova = config.modo === "NUVEM" ? abrirRemota(config.url, config.token) : abrirLocal();
   fecharAtual();
   db = nova;
-  garantirColunaSitePerfil();
+  garantirColunasPerfil();
   garantirTabelaTriagem();
   Object.assign(estado, { modo: config.modo, url: config.modo === "NUVEM" ? config.url : "", erroNuvem: null });
 }
@@ -51,12 +51,15 @@ try {
   estado.url = configInicial.url;
 }
 
-function garantirColunaSitePerfil(): void {
+function garantirColunasPerfil(): void {
   const tabelaExiste = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'perfil_empresa'").get()
   if (!tabelaExiste) return
   const colunas = db.prepare('PRAGMA table_info(perfil_empresa)').all()
   if (!colunas.some((coluna) => coluna.name === 'site_url')) {
     db.exec('ALTER TABLE perfil_empresa ADD COLUMN site_url TEXT')
+  }
+  if (!colunas.some((coluna) => coluna.name === 'instrucoes_extras')) {
+    db.exec("ALTER TABLE perfil_empresa ADD COLUMN instrucoes_extras TEXT NOT NULL DEFAULT ''")
   }
 }
 
