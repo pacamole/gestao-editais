@@ -41,6 +41,9 @@ export function AppLayout({ usuario }: { usuario: UsuarioLogado }) {
           <li>
             <NavLink to="/configuracoes">Configurações</NavLink>
           </li>
+          <li>
+            <NavLink to="/manuais">Manuais</NavLink>
+          </li>
         </ul>
         <div className="app-menu__usuario">
           <strong>{usuario.nome}</strong>

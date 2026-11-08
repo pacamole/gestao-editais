@@ -14,6 +14,7 @@ import { EditalDetalhePage } from './pages/EditalDetalhePage'
 import { EditaisPage } from './pages/EditaisPage'
 import { ErroPage } from './pages/ErroPage'
 import { LoginPage } from './pages/LoginPage'
+import { ManuaisPage } from './pages/ManuaisPage'
 import { NovaEntradaPage } from './pages/NovaEntradaPage'
 
 // Mapa de páginas (§5 da especificação).
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: 'editais', element: <EditaisPage /> }, // P03
       { path: 'editais/novo', element: <NovaEntradaPage /> }, // P05
       { path: 'editais/:id', element: <EditalDetalhePage /> }, // P04
+      { path: 'manuais', element: <ManuaisPage /> },
       // Configurações: uma página, com menu de seções.
       {
         path: 'configuracoes',
