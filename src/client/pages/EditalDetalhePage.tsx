@@ -7,6 +7,7 @@ import { ChatEdital } from './editalDetalhe/ChatEdital'
 import { DadosExtraidos } from './editalDetalhe/DadosExtraidos'
 import { RevisaoHistorico } from './editalDetalhe/RevisaoHistorico'
 import { Veredito } from './editalDetalhe/Veredito'
+import { TriagemElegibilidade } from './editalDetalhe/TriagemElegibilidade'
 import { NAO_LOCALIZADO, mensagemDoServidor } from './editalDetalhe/util'
 
 // Tarefas 10 e 11 — leitura de dados reais e revisão persistida.
@@ -49,8 +50,10 @@ export function EditalDetalhePage() {
 
   if (!dados) return <p className="vazio">Carregando edital...</p>
 
-  const { edital: e, avaliacao, evidencias = [], revisoes = [] } = dados
-  const textoDisponivel = Boolean(e.texto_extraido?.trim())
+  const { edital: e, avaliacao, evidencias = [], revisoes = [], analise_elegibilidade = null } = dados
+  const textoDisponivel = Boolean(
+    e.texto_extraido?.trim() && !/^\[Texto extraído do documento PDF:[^\]\r\n]*\]$/.test(e.texto_extraido.trim()),
+  )
 
   return (
     <section className="detalhe pilha pilha--lg">
@@ -82,6 +85,13 @@ export function EditalDetalhePage() {
         tentativas={e.tentativas_processamento}
         atualizadoEm={e.atualizado_em}
       />
+      <TriagemElegibilidade
+        id={id}
+        analise={analise_elegibilidade}
+        podeAnalisar={Boolean(textoDisponivel || e.url_documento || e.url_original)}
+        aoErro={setErro}
+        aoAtualizar={carregar}
+      />
       <DadosExtraidos
         id={id}
         edital={e}
@@ -91,7 +101,7 @@ export function EditalDetalhePage() {
         aoAtualizar={carregar}
       />
       <RevisaoHistorico id={id} status={e.status} revisoes={revisoes} aoErro={setErro} aoAtualizar={carregar} />
-      <ChatEdital id={id} textoDisponivel={textoDisponivel} aoErro={setErro} />
+      <ChatEdital id={id} textoDisponivel={textoDisponivel} aoErro={setErro} aoAtualizar={carregar} />
     </section>
   )
 }

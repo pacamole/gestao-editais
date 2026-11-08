@@ -14,6 +14,7 @@ import { NotificacaoLogRepositorio } from './NotificacaoLogRepositorio.js'
 import { PerfilEmpresaRepositorio } from './PerfilEmpresaRepositorio.js'
 import { RevisaoRepositorio } from './RevisaoRepositorio.js'
 import { SessaoRepositorio } from './SessaoRepositorio.js'
+import { TriagemElegibilidadeRepositorio } from './TriagemElegibilidadeRepositorio.js'
 import { UsuarioRepositorio } from './UsuarioRepositorio.js'
 
 // Uma instância de cada repositório, compartilhada pelo servidor.
@@ -31,6 +32,7 @@ export const repositorios = {
   coletaExecucao: new ColetaExecucaoRepositorio(),
   conversa: new ConversaRepositorio(),
   mensagem: new MensagemRepositorio(),
+  triagemElegibilidade: new TriagemElegibilidadeRepositorio(),
   notificacaoLog: new NotificacaoLogRepositorio(),
   configAlerta: new ConfigAlertaRepositorio(),
   destinatario: new DestinatarioRepositorio(),
@@ -56,5 +58,6 @@ export {
   PerfilEmpresaRepositorio,
   RevisaoRepositorio,
   SessaoRepositorio,
+  TriagemElegibilidadeRepositorio,
   UsuarioRepositorio,
 }

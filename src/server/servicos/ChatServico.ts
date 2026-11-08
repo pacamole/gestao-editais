@@ -3,9 +3,11 @@ import { ErroConflito, ErroLimiteExcedido, ErroNaoEncontrado, ErroValidacao } fr
 import { ErroModeloLinguagem, type ModeloLinguagemPorta } from '../portas/ModeloLinguagemPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { inicioDoDia } from '../../shared/datas.js'
-import type { EventoChat, HistoricoChatResposta } from '../../shared/tipos/chat.js'
+import type { EventoChat, HistoricoChatResposta, SugestaoCorrecaoChat } from '../../shared/tipos/chat.js'
 import { caracteresDisponiveis, contextoParaPergunta } from './ia/contextoEdital.js'
-import { mensagensDeChat } from './ia/promptsChat.js'
+import { mensagensDeChat, mensagensDeSugestoes } from './ia/promptsChat.js'
+import { validarCamposManuais } from '../dominio/validacaoCamposEdital.js'
+import { CAMPOS_EDITAVEIS } from '../../shared/camposEditaveis.js'
 
 type RepositoriosChat = Pick<Repositorios, 'edital' | 'conversa' | 'mensagem' | 'perfilEmpresa'>
 
@@ -113,6 +115,38 @@ export class ChatServico {
       return
     }
 
+    let sugestoes: SugestaoCorrecaoChat[] = []
+    let avisoSugestoes: string | undefined
+    try {
+      destino.aoEvento({ tipo: 'status', mensagem: 'Verificando se algum campo do edital precisa de correção...' })
+      const limite = caracteresDisponiveis(this.modelo.limiteDeContexto(), RESERVA_TOKENS)
+      const contextoSugestoes = contextoParaPergunta(edital.id, textoEdital, texto, limite)
+      const dados = await this.modelo.gerarJson(
+        mensagensDeSugestoes(contextoSugestoes, texto, conteudo, edital),
+        { maximoTokens: 1_500 },
+      )
+      if (Array.isArray(dados.sugestoes)) {
+        sugestoes = dados.sugestoes.flatMap((item): SugestaoCorrecaoChat[] => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+          const proposta = item as Record<string, unknown>
+          if (typeof proposta.campo !== 'string' || !(CAMPOS_EDITAVEIS as readonly string[]).includes(proposta.campo)) return []
+          if (typeof proposta.justificativa !== 'string' || typeof proposta.evidencia !== 'string') return []
+          const campo = proposta.campo as SugestaoCorrecaoChat['campo']
+          const camposValidados = validarCamposManuais({ [campo]: proposta.valor })
+          const valor = camposValidados[campo]
+          if (valor === undefined) return []
+          if (JSON.stringify(edital[campo]) === JSON.stringify(valor)) return []
+          const evidencia = proposta.evidencia.trim()
+          const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR')
+          if (evidencia.length < 8 || !normalizar(textoEdital).includes(normalizar(evidencia))) return []
+          return [{ campo, valor, justificativa: proposta.justificativa, evidencia }]
+        })
+      }
+    } catch (erro) {
+      avisoSugestoes = erro instanceof Error ? erro.message : 'Não foi possível verificar sugestões de correção.'
+      console.error('Falha ao identificar possíveis correções para os campos do edital:', erro)
+    }
+
     const agoraIso = new Date().toISOString()
     const conversa = transacao(() => {
       const atual =
@@ -128,6 +162,8 @@ export class ChatServico {
       mensagens: this.repos.mensagem.listarDaConversa(conversa.id),
       limite,
       restantes: Math.max(0, limite - (feitasHoje + 1)),
+      ...(sugestoes.length ? { sugestoes } : {}),
+      ...(avisoSugestoes ? { avisoSugestoes } : {}),
     })
   }
 

@@ -15,8 +15,11 @@ const MAXIMO_TOKENS_PADRAO = 2048
 const contextoDa = (conexao: ConexaoOllama) => (conexao.chave ? CONTEXTO_NUVEM : CONTEXTO_LOCAL)
 
 type RespostaOllama = {
-  message?: { content?: unknown }
+  message?: { content?: unknown; thinking?: unknown }
   done?: boolean
+  done_reason?: string
+  prompt_eval_count?: number
+  eval_count?: number
 }
 
 type Pedido = {
@@ -55,13 +58,32 @@ export class OllamaAdaptador implements ModeloLinguagemPorta {
       mensagens,
     })
 
-    let conteudo: unknown
+    let corpo: RespostaOllama
     try {
-      const corpo = (await resposta.json()) as RespostaOllama
-      conteudo = corpo.message?.content
-      if (typeof conteudo !== 'string' || !conteudo.trim()) throw new Error('Resposta vazia')
+      corpo = (await resposta.json()) as RespostaOllama
     } catch (erro) {
-      throw new ErroModeloLinguagem('O Ollama retornou uma resposta vazia ou inválida.', 502, { cause: erro })
+      console.error('Ollama respondeu com um corpo que não pôde ser interpretado como JSON.', erro)
+      throw new ErroModeloLinguagem('O Ollama respondeu em um formato inválido (corpo HTTP não é JSON). Verifique a versão e os logs do Ollama.', 502, { cause: erro })
+    }
+
+    const conteudo = corpo.message?.content
+    if (typeof conteudo !== 'string' || !conteudo.trim()) {
+      const motivo = corpo.done_reason ? ` Motivo informado pelo modelo: ${corpo.done_reason}.` : ''
+      const contagem = ` Tokens de entrada: ${corpo.prompt_eval_count ?? 'desconhecido'}; tokens gerados: ${corpo.eval_count ?? 'desconhecido'}.`
+      const somenteRaciocinio = typeof corpo.message?.thinking === 'string' && corpo.message.thinking.trim()
+      const orientacao = corpo.done_reason === 'length'
+        ? ' O modelo atingiu o limite de geração antes de produzir a resposta. Reduza o conteúdo enviado ou use um modelo com maior capacidade.'
+        : somenteRaciocinio
+          ? ' O modelo retornou raciocínio interno, mas não gerou conteúdo final. Tente outro modelo compatível com respostas estruturadas.'
+          : ' Verifique se há memória/VRAM suficiente, se o modelo está carregado e se a versão do Ollama está atualizada.'
+      console.error('Ollama concluiu sem conteúdo final.', {
+        modelo: this.lerConexao().modelo,
+        motivo: corpo.done_reason ?? null,
+        tokensEntrada: corpo.prompt_eval_count ?? null,
+        tokensGerados: corpo.eval_count ?? null,
+        retornouRaciocinio: Boolean(somenteRaciocinio),
+      })
+      throw new ErroModeloLinguagem(`O Ollama concluiu sem gerar conteúdo.${motivo}${contagem}${orientacao}`, 502)
     }
 
     try {
@@ -70,7 +92,12 @@ export class OllamaAdaptador implements ModeloLinguagemPorta {
       if (!dados || typeof dados !== 'object' || Array.isArray(dados)) throw new Error('Formato JSON inválido')
       return dados as Record<string, unknown>
     } catch (erro) {
-      throw new ErroModeloLinguagem('Não foi possível interpretar os dados estruturados retornados pelo Ollama.', 502, { cause: erro })
+      console.error('Ollama gerou conteúdo, mas ele não é JSON válido.', {
+        modelo: this.lerConexao().modelo,
+        caracteres: conteudo.length,
+        motivo: corpo.done_reason ?? null,
+      })
+      throw new ErroModeloLinguagem('O Ollama gerou conteúdo, mas ele não é JSON válido. Tente novamente ou use um modelo com suporte a saída estruturada.', 502, { cause: erro })
     }
   }
 

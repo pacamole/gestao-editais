@@ -235,18 +235,18 @@ export function DadosExtraidos({ id, edital: e, evidencias, textoDisponivel, aoE
                 disabled={lendoConteudo || (!temUrl && !textoDisponivel)}
                 title={!temUrl && !textoDisponivel ? 'Este edital ainda não tem URL nem texto extraído.' : undefined}
               >
-                {lendoConteudo ? 'Lendo conteúdo e extraindo...' : 'Ler edital com IA'}
+                {lendoConteudo ? 'Analisando edital...' : 'Fazer análise profunda'}
               </button>
             </>
           )}
         </div>
       </div>
       <div className="card__corpo card__corpo--justo">
-        <p className="discreto">
-          {editandoCampos
-            ? 'Edite os valores. Para listas, separe os itens por vírgulas; deixe vazio para marcar como não localizado.'
-            : 'Lê a página pública cadastrada ou analisa o texto do PDF já extraído. A IA preenche apenas campos vazios e exibe o trecho que comprova cada valor. Você também pode corrigir os dados manualmente.'}
-        </p>
+        {editandoCampos && (
+          <p className="discreto">
+            Edite os valores. Para listas, separe os itens por vírgulas; deixe vazio para marcar como não localizado.
+          </p>
+        )}
         {feedbackExtracao && <p role="status" className="discreto">{feedbackExtracao}</p>}
         <table className="tabela">
           <thead>

@@ -29,6 +29,7 @@ import { DestinatarioServico } from './servicos/DestinatarioServico.js'
 import { EditalServico } from './servicos/EditalServico.js'
 import { EntradaServico } from './servicos/EntradaServico.js'
 import { ExtracaoServico } from './servicos/ExtracaoServico.js'
+import { TriagemElegibilidadeServico } from './servicos/TriagemElegibilidadeServico.js'
 import { FonteServico } from './servicos/FonteServico.js'
 import { PendenciaServico } from './servicos/PendenciaServico.js'
 import { PerfilServico } from './servicos/PerfilServico.js'
@@ -51,7 +52,8 @@ export const gatilhosNotificacao = new GatilhosNotificacaoServico(notificacaoSer
 export const avaliacaoServico = new AvaliacaoServico(repositorios)
 export const revisaoServico = new RevisaoServico(repositorios)
 export const extracaoServico = new ExtracaoServico(repositorios, modeloLinguagem)
-export const processamentoEditalServico = new ProcessamentoEditalServico(repositorios, extracaoServico, avaliacaoServico, gatilhosNotificacao, () =>
+export const triagemElegibilidadeServico = new TriagemElegibilidadeServico(repositorios, modeloLinguagem)
+export const processamentoEditalServico = new ProcessamentoEditalServico(repositorios, extracaoServico, triagemElegibilidadeServico, avaliacaoServico, gatilhosNotificacao, () =>
   configSistemaServico.termosExcludentes(),
 )
 export const editalServico = new EditalServico(repositorios, (id) => processamentoEditalServico.reavaliar(id), () =>

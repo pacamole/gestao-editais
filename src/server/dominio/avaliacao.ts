@@ -19,7 +19,13 @@ export function classificar(nota: number): Classificacao {
  * Elegibilidade depende só dos eliminatórios: reprovação vence indeterminação.
  * A nota só é calculada para editais elegíveis; critérios sem dado saem da conta.
  */
-export function calcularAvaliacao(edital: Edital, perfil: PerfilEmpresa, criterios: Criterio[], agora = new Date()): ResultadoAvaliacao {
+export function calcularAvaliacao(
+  edital: Edital,
+  perfil: PerfilEmpresa,
+  criterios: Criterio[],
+  agora = new Date(),
+  considerarEliminatorios = true,
+): ResultadoAvaliacao {
   const ativos = criterios.filter((c) => c.ativo)
   const resultado: ResultadoAvaliacao = {
     status_elegibilidade: 'ELEGIVEL',
@@ -30,7 +36,7 @@ export function calcularAvaliacao(edital: Edital, perfil: PerfilEmpresa, criteri
     detalhamento_pontuacao: [],
   }
 
-  for (const criterio of ativos.filter((c) => c.tipo === 'ELIMINATORIO')) {
+  for (const criterio of ativos.filter((c) => considerarEliminatorios && c.tipo === 'ELIMINATORIO')) {
     const r = avaliarEliminatorio(criterio, edital, perfil, agora)
     if (r.resultado === 'REPROVA') {
       resultado.criterios_violados.push({ criterio_id: criterio.id, nome: criterio.nome, motivo: r.motivo, evidencia_id: null })

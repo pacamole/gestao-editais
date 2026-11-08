@@ -21,7 +21,7 @@ export type EntradaUrl = { url?: unknown }
 export class EntradaServico {
   constructor(
     private readonly repos: RepositoriosEntrada,
-    // Leva o edital recém-criado até a decisão (leitura por IA, avaliação, status e avisos).
+    // Leva o edital recém-criado até a triagem inicial, avaliação, status e avisos.
     private readonly processar: (editalId: string) => Promise<unknown>,
     private readonly lerPdf: typeof extrairPdf = extrairPdf,
   ) {}
@@ -146,7 +146,7 @@ export class EntradaServico {
     return { ok: true, id: edital.id }
   }
 
-  // A leitura por IA pode levar minutos: o usuário não espera; a tela mostra o edital "em processamento".
+  // A triagem por IA pode levar minutos: o usuário não espera; a tela mostra o edital "em processamento".
   private processarEmSegundoPlano(editalId: string): void {
     this.processar(editalId).catch((erro) => console.error('[entrada] falha ao processar o edital:', erro))
   }

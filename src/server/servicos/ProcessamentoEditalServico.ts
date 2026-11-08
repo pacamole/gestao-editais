@@ -8,8 +8,10 @@ import { ErroModeloLinguagem } from '../portas/ModeloLinguagemPorta.js'
 import type { Repositorios } from '../repositorios/index.js'
 import { podeTransicionarSistema } from '../../shared/statusEdital.js'
 import type { ExtracaoResposta } from '../../shared/tipos/edital.js'
+import type { StatusElegibilidade } from '../../shared/tipos/dominio.js'
 import type { AvaliacaoServico } from './AvaliacaoServico.js'
 import type { ExtracaoServico } from './ExtracaoServico.js'
+import type { TriagemElegibilidadeServico } from './TriagemElegibilidadeServico.js'
 
 type RepositoriosProcessamento = Pick<Repositorios, 'edital' | 'perfilEmpresa' | 'fonte' | 'revisao'>
 
@@ -42,7 +44,7 @@ function falhaTransitoria(erro: unknown): boolean {
 }
 
 /**
- * Leva um edital coletado até a decisão: lê com a IA, avalia o fit, define o status e avisa quem acompanha.
+ * Leva um edital coletado pela triagem de elegibilidade, registra o fit inicial e avisa quem acompanha.
  *
  *   COLETADO → FORA_DO_PERFIL (coleta automática que o filtro de relevância dispensa)
  *   COLETADO → EM_ANALISE → ANALISADO (elegível ou não) | EM_REVISAO (faltou dado) | FALHA (tenta de novo)
@@ -55,7 +57,8 @@ export class ProcessamentoEditalServico {
   constructor(
     private readonly repos: RepositoriosProcessamento,
     private readonly extracao: Pick<ExtracaoServico, 'extrairDados' | 'lerUrl'>,
-    private readonly avaliacao: Pick<AvaliacaoServico, 'registrar'>,
+    private readonly triagem: Pick<TriagemElegibilidadeServico, 'analisar'>,
+    private readonly avaliacao: Pick<AvaliacaoServico, 'registrar' | 'registrarTriagem'>,
     private readonly eventos: EventosProcessamento,
     private readonly termosExcludentes: () => string[] = () => [],
     private readonly agora: () => Date = () => new Date(),
@@ -108,10 +111,10 @@ export class ProcessamentoEditalServico {
     return { id: editalId, status }
   }
 
-  /** "Ler edital com IA" na tela: lê o texto (ou o endereço, sem texto) e reavalia com os campos novos. */
+  /** Análise profunda: extrai campos do documento e recalcula a avaliação com os eliminatórios. */
   async lerSobDemanda(editalId: string, origem: 'TEXTO' | 'URL'): Promise<ExtracaoResposta> {
     const resposta = origem === 'TEXTO' ? await this.extracao.extrairDados(editalId) : await this.extracao.lerUrl(editalId)
-    await this.registrarLeitura(editalId, resposta.atualizados > 0)
+    await this.registrarLeitura(editalId, true)
     return { ...resposta, edital: this.repos.edital.buscarPorId(editalId) ?? resposta.edital }
   }
 
@@ -179,10 +182,11 @@ export class ProcessamentoEditalServico {
 
     this.mover(edital, 'EM_ANALISE', { erro_processamento: null })
 
-    // 1. Leitura por IA. Se falhar, repete depois; esgotadas as tentativas, segue com o que há e pede revisão.
+    // 1. Triagem por IA. Se falhar, repete depois; esgotadas as tentativas, pede revisão em vez de presumir elegibilidade.
     let aviso: string | null = null
+    let statusTriagem: StatusElegibilidade | null = null
     try {
-      await this.lerComIa(edital)
+      statusTriagem = (await this.triagem.analisar(edital.id)).status
     } catch (erro) {
       const motivo = mensagemDe(erro)
       const tentativas = edital.tentativas_processamento + 1
@@ -197,19 +201,22 @@ export class ProcessamentoEditalServico {
         return { id: editalId, status: falho.status, motivo }
       }
       aviso = transitoria ? `A leitura por IA falhou ${tentativas} vezes (${motivo}). Confira e complete os dados à mão.` : motivo
+      statusTriagem = 'INDETERMINADO'
     }
 
-    return this.concluir(edital, aviso)
+    return this.concluir(edital, aviso, statusTriagem)
   }
 
   // Depois da leitura (ou da desistência dela): avalia, define o status final e avisa quem acompanha.
-  private async concluir(edital: Edital, aviso: string | null): Promise<ResultadoProcessamento> {
+  private async concluir(edital: Edital, aviso: string | null, statusTriagem: StatusElegibilidade | null = null): Promise<ResultadoProcessamento> {
     const editalId = edital.id
 
-    // 2. Avaliação do fit e status final.
+    // 2. Registra a decisão da triagem; os eliminatórios serão recalculados na análise profunda.
     let status: StatusEdital
     try {
-      const resultado = this.avaliacao.registrar(editalId)
+      const resultado = statusTriagem
+        ? this.avaliacao.registrarTriagem(editalId, statusTriagem)
+        : this.avaliacao.registrar(editalId)
       status = resultado.status_elegibilidade === 'INDETERMINADO' ? 'EM_REVISAO' : 'ANALISADO'
       this.mover(this.recarregar(edital), status, {
         erro_processamento: aviso,
@@ -239,17 +246,6 @@ export class ProcessamentoEditalServico {
     if (this.repos.revisao.listarDoEdital(edital.id).some((r) => r.acao === 'RESGATOU')) return null
     const resultado = avaliarRelevancia(edital, perfil, this.termosExcludentes())
     return resultado.relevante ? null : resultado.motivo
-  }
-
-  private async lerComIa(edital: Edital): Promise<void> {
-    const temTexto = Boolean(edital.texto_extraido?.trim()) && !ehMarcadorDeTextoPdf(edital.texto_extraido)
-    if (temTexto) {
-      // Retificação: refaz o que a IA preencheu antes, preservando o que foi editado à mão.
-      await this.extracao.extrairDados(edital.id, { refazCamposDaIa: edital.retificado })
-    } else if (edital.url_documento ?? edital.url_original) {
-      await this.extracao.lerUrl(edital.id)
-    }
-    // Sem texto nem endereço (cadastro manual): nada para ler; a avaliação usa os campos digitados.
   }
 
   private async avisar(editalId: string): Promise<void> {

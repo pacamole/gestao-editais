@@ -58,6 +58,7 @@ export class PerfilServico {
       capacidade_contrapartida_percentual: numeroOuNulo(payload.capacidade_contrapartida_percentual),
       valor_minimo_interesse: numeroOuNulo(payload.valor_minimo_interesse),
       prazo_minimo_preparo_dias: numeroOuNulo(payload.prazo_minimo_preparo_dias),
+      site_url: this.urlSite(payload.site_url),
     }
 
     const existente = this.repos.perfilEmpresa.obter()
@@ -72,5 +73,20 @@ export class PerfilServico {
     })
 
     return { ok: true, perfil: salvo!, reavaliacaoSolicitada: reavaliar, editaisReavaliados, chatsLimpos: true }
+  }
+
+  private urlSite(valor: unknown): string | null {
+    const texto = String(valor ?? '').trim()
+    if (!texto) return null
+    let url: URL
+    try {
+      url = new URL(texto)
+    } catch {
+      throw new ErroValidacao('Informe uma URL válida para o site da empresa.')
+    }
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+      throw new ErroValidacao('O site da empresa deve usar HTTP ou HTTPS e não pode conter credenciais.')
+    }
+    return url.toString()
   }
 }

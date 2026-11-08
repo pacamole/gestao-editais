@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { ErroApi, mensagemDeErro } from '../../api/cliente'
 import { chat } from '../../api/chat'
+import { edital as apiEdital } from '../../api/edital'
 import { TextoFormatado } from '../../components/TextoFormatado'
-import type { ErroChatDados, MensagemChat } from '../../../shared/tipos/chat'
+import type { ErroChatDados, MensagemChat, SugestaoCorrecaoChat } from '../../../shared/tipos/chat'
+import type { CampoEditavel } from '../../../shared/tipos/edital'
+import { CAMPOS_EDITAL } from '../../../shared/rotulos'
 import { SEM_CONEXAO, mensagemDoServidor, type AoErro } from './util'
 
 const SUGESTOES = [
@@ -15,9 +18,12 @@ type Props = {
   id: string
   textoDisponivel: boolean
   aoErro: AoErro
+  aoAtualizar: () => Promise<void>
 }
 
-export function ChatEdital({ id, textoDisponivel, aoErro }: Props) {
+const valorTexto = (valor: unknown) => Array.isArray(valor) ? valor.join(', ') : valor == null ? 'Não localizado' : String(valor)
+
+export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) {
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
   const [pergunta, setPergunta] = useState('')
   const [restantes, setRestantes] = useState(20)
@@ -25,6 +31,10 @@ export function ChatEdital({ id, textoDisponivel, aoErro }: Props) {
   const [enviando, setEnviando] = useState(false)
   const [respostaParcial, setRespostaParcial] = useState('')
   const [statusChat, setStatusChat] = useState('')
+  const [sugestoes, setSugestoes] = useState<SugestaoCorrecaoChat[]>([])
+  const [camposSelecionados, setCamposSelecionados] = useState<Set<CampoEditavel>>(new Set())
+  const [aplicandoSugestoes, setAplicandoSugestoes] = useState(false)
+  const [feedbackSugestoes, setFeedbackSugestoes] = useState('')
 
   // Histórico é opcional: se falhar, o chat começa vazio.
   useEffect(() => {
@@ -47,6 +57,9 @@ export function ChatEdital({ id, textoDisponivel, aoErro }: Props) {
     if (!texto || enviando) return
     setEnviando(true)
     setRespostaParcial('')
+    setSugestoes([])
+    setCamposSelecionados(new Set())
+    setFeedbackSugestoes('')
     setStatusChat('Iniciando o chat...')
     aoErro('')
     let textoParcial = ''
@@ -64,6 +77,9 @@ export function ChatEdital({ id, textoDisponivel, aoErro }: Props) {
         } else if (evento.tipo === 'concluido') {
           setMensagens(evento.mensagens || [])
           setRestantes((atual) => evento.restantes ?? atual)
+          setSugestoes(evento.sugestoes ?? [])
+          setCamposSelecionados(new Set())
+          setFeedbackSugestoes(evento.avisoSugestoes ? `Não foi possível verificar correções: ${evento.avisoSugestoes}` : '')
           setPergunta('')
           setRespostaParcial('')
           setStatusChat('')
@@ -98,6 +114,28 @@ export function ChatEdital({ id, textoDisponivel, aoErro }: Props) {
       setMensagens([])
     } catch (erro) {
       aoErro(mensagemDoServidor(erro))
+    }
+  }
+
+  async function aplicarCorrecoes() {
+    const campos: Partial<Record<CampoEditavel, string | number | boolean | string[] | null>> = {}
+    for (const sugestao of sugestoes) {
+      if (camposSelecionados.has(sugestao.campo)) campos[sugestao.campo] = sugestao.valor
+    }
+    if (!Object.keys(campos).length || aplicandoSugestoes) return
+    setAplicandoSugestoes(true)
+    setFeedbackSugestoes('')
+    aoErro('')
+    try {
+      const resultado = await apiEdital.salvarCampos(id, campos)
+      setFeedbackSugestoes(resultado.mensagem)
+      setSugestoes([])
+      setCamposSelecionados(new Set())
+      await aoAtualizar()
+    } catch (erro) {
+      aoErro(mensagemDeErro(erro, SEM_CONEXAO))
+    } finally {
+      setAplicandoSugestoes(false)
     }
   }
 
@@ -175,6 +213,37 @@ export function ChatEdital({ id, textoDisponivel, aoErro }: Props) {
                 {respostaParcial && <TextoFormatado texto={respostaParcial} />}
               </div>
             )}
+            {sugestoes.length > 0 && (
+              <section className="card" aria-label="Correções sugeridas pela IA">
+                <div className="card__corpo pilha">
+                  <h3>Possíveis correções nos dados do edital</h3>
+                  <p className="discreto">A IA encontrou possíveis divergências. Marque as correções que você autoriza salvar.</p>
+                  {sugestoes.map((sugestao) => (
+                    <label className="checkbox" key={sugestao.campo}>
+                      <input
+                        type="checkbox"
+                        checked={camposSelecionados.has(sugestao.campo)}
+                        onChange={(evento) => {
+                          const selecionados = new Set(camposSelecionados)
+                          if (evento.target.checked) selecionados.add(sugestao.campo)
+                          else selecionados.delete(sugestao.campo)
+                          setCamposSelecionados(selecionados)
+                        }}
+                      />
+                      <span>
+                        <strong>{CAMPOS_EDITAL[sugestao.campo].rotulo}</strong>: {valorTexto(sugestao.valor)}
+                        <br />{sugestao.justificativa}
+                        {sugestao.evidencia && <><br /><em>“{sugestao.evidencia}”</em></>}
+                      </span>
+                    </label>
+                  ))}
+                  <button type="button" className="btn btn--sucesso" onClick={() => void aplicarCorrecoes()} disabled={!camposSelecionados.size || aplicandoSugestoes}>
+                    {aplicandoSugestoes ? 'Salvando...' : 'Autorizar e salvar selecionados'}
+                  </button>
+                </div>
+              </section>
+            )}
+            {feedbackSugestoes && <p className="aviso" role="status">{feedbackSugestoes}</p>}
           </div>
 
           <form

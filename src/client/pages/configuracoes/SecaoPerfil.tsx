@@ -23,6 +23,7 @@ type FormPerfil = {
   capacidade_contrapartida_percentual: string
   valor_minimo_interesse: string
   prazo_minimo_preparo_dias: string
+  site_url: string
 }
 
 const perfilInicial: FormPerfil = {
@@ -44,6 +45,7 @@ const perfilInicial: FormPerfil = {
   capacidade_contrapartida_percentual: '',
   valor_minimo_interesse: '',
   prazo_minimo_preparo_dias: '',
+  site_url: '',
 }
 
 const listaParaTexto = (lista: string[] | null) => (Array.isArray(lista) ? lista.join(', ') : '')
@@ -70,6 +72,7 @@ function paraFormulario(p: PerfilEmpresa): FormPerfil {
     capacidade_contrapartida_percentual: numeroParaTexto(p.capacidade_contrapartida_percentual),
     valor_minimo_interesse: numeroParaTexto(p.valor_minimo_interesse),
     prazo_minimo_preparo_dias: numeroParaTexto(p.prazo_minimo_preparo_dias),
+    site_url: p.site_url ?? '',
   }
 }
 
@@ -143,6 +146,7 @@ export function SecaoPerfil() {
             <div className="campo"><label htmlFor="faturamento_anual">Faturamento anual</label><input id="faturamento_anual" type="number" className="input" value={perfil.faturamento_anual} onChange={(e) => atualizar('faturamento_anual', e.target.value)} /></div>
             <div className="campo"><label htmlFor="uf">Estado</label><input id="uf" className="input" maxLength={2} value={perfil.uf} onChange={(e) => atualizar('uf', e.target.value.toUpperCase())} /></div>
             <div className="campo"><label htmlFor="municipio">Município</label><input id="municipio" className="input" value={perfil.municipio} onChange={(e) => atualizar('municipio', e.target.value)} /></div>
+            <div className="campo"><label htmlFor="site_url">Site da empresa</label><input id="site_url" type="url" className="input" placeholder="https://www.empresa.com.br" value={perfil.site_url} onChange={(e) => atualizar('site_url', e.target.value)} /><small>Na triagem, percorremos até 500 páginas públicas do domínio (links internos e sitemap), priorizando conteúdo relevante para a comparação.</small></div>
             <div className="campo"><label htmlFor="areas_atuacao">Áreas de atuação</label><input id="areas_atuacao" className="input" value={perfil.areas_atuacao} onChange={(e) => atualizar('areas_atuacao', e.target.value)} /></div>
             <div className="campo"><label htmlFor="palavras_chave">Palavras-chave</label><input id="palavras_chave" className="input" value={perfil.palavras_chave} onChange={(e) => atualizar('palavras_chave', e.target.value)} /></div>
             <div className="campo"><label htmlFor="certidoes_disponiveis">Certidões disponíveis</label><input id="certidoes_disponiveis" className="input" value={perfil.certidoes_disponiveis} onChange={(e) => atualizar('certidoes_disponiveis', e.target.value)} /></div>

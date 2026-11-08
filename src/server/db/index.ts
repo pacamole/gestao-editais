@@ -26,6 +26,8 @@ function abrir(config: ConfigConexao): void {
   const nova = config.modo === "NUVEM" ? abrirRemota(config.url, config.token) : abrirLocal();
   fecharAtual();
   db = nova;
+  garantirColunaSitePerfil();
+  garantirTabelaTriagem();
   Object.assign(estado, { modo: config.modo, url: config.modo === "NUVEM" ? config.url : "", erroNuvem: null });
 }
 
@@ -47,6 +49,31 @@ try {
   abrir({ modo: "LOCAL", url: "", token: "" });
   estado.erroNuvem = (erro as Error).message;
   estado.url = configInicial.url;
+}
+
+function garantirColunaSitePerfil(): void {
+  const tabelaExiste = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'perfil_empresa'").get()
+  if (!tabelaExiste) return
+  const colunas = db.prepare('PRAGMA table_info(perfil_empresa)').all()
+  if (!colunas.some((coluna) => coluna.name === 'site_url')) {
+    db.exec('ALTER TABLE perfil_empresa ADD COLUMN site_url TEXT')
+  }
+}
+
+function garantirTabelaTriagem(): void {
+  const editalExiste = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'edital'").get()
+  if (!editalExiste) return
+  db.exec(`
+  CREATE TABLE IF NOT EXISTS triagem_elegibilidade (
+    id TEXT PRIMARY KEY,
+    edital_id TEXT NOT NULL REFERENCES edital(id) ON DELETE CASCADE,
+    status TEXT NOT NULL CHECK (status IN ('ELEGIVEL', 'INELEGIVEL', 'INDETERMINADO')),
+    analise_json TEXT NOT NULL,
+    perfil_atualizado_em TEXT,
+    criado_em TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_triagem_edital ON triagem_elegibilidade(edital_id, criado_em);
+`)
 }
 
 export function estadoBase(): Readonly<Estado> {

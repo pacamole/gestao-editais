@@ -96,6 +96,7 @@ export type PerfilEmpresa = {
   capacidade_contrapartida_percentual: number | null
   valor_minimo_interesse: number | null
   prazo_minimo_preparo_dias: number | null
+  site_url: string | null
   atualizado_em: string
 }
 

@@ -3,6 +3,7 @@
 import type { CampoEditavel } from '../camposEditaveis.js'
 import type { AcaoTransicao } from '../statusEdital.js'
 import type { Avaliacao, Edital, Evidencia, Revisao } from './dominio.js'
+import type { AnaliseElegibilidade } from './triagem.js'
 
 export type {
   AcaoRevisao,
@@ -18,6 +19,7 @@ export type {
   StatusEdital,
   StatusElegibilidade,
 } from './dominio.js'
+export type { AnaliseElegibilidade, RequisitoTriagem, StatusRequisitoTriagem } from './triagem.js'
 export type { CampoEditavel } from '../camposEditaveis.js'
 
 // O detalhe devolve o edital completo.
@@ -37,6 +39,12 @@ export type DetalheEditalResposta = {
   avaliacao: Avaliacao | null
   evidencias: Evidencia[]
   revisoes: Revisao[]
+  analise_elegibilidade: AnaliseElegibilidade | null
+}
+
+export type TriagemElegibilidadeResposta = {
+  analise: AnaliseElegibilidade
+  avaliacao: Avaliacao
 }
 
 // ---- Edição manual e extração de campos ----

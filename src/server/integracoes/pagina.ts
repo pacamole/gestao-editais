@@ -15,6 +15,7 @@ type ResolverPublico = (
 export type ConteudoPagina = {
   titulo: string | null;
   texto: string;
+  links?: string[];
 };
 
 function ipv4Publico(endereco: string): boolean {
@@ -129,6 +130,16 @@ async function lerResposta(resposta: Response): Promise<Uint8Array> {
 
 function textoHtml(html: string): ConteudoPagina {
   const $ = load(html);
+  const linksSitemap = $("loc")
+    .map((_, elemento) => $(elemento).text().trim())
+    .get()
+    .filter(Boolean)
+    .slice(0, 10_000);
+  const links = $("a[href]")
+    .map((_, elemento) => $(elemento).attr("href"))
+    .get()
+    .filter((href): href is string => Boolean(href))
+    .slice(0, 500);
   $(
     'script,style,nav,header,footer,noscript,iframe,svg,form,button,aside,[role="navigation"],[role="banner"],[role="contentinfo"]',
   ).remove();
@@ -153,11 +164,11 @@ function textoHtml(html: string): ConteudoPagina {
     .join("\n")
     .slice(0, LIMITE_CARACTERES)
     .trim();
-  if (conteudo.length < 80)
+  if (conteudo.length < 80 && !linksSitemap.length)
     throw new Error(
       "A página não contém texto suficiente para consultar. Confira o link ou envie o PDF do edital.",
     );
-  return { titulo, texto: conteudo };
+  return { titulo, texto: conteudo || 'Sitemap público.', links: [...linksSitemap, ...links] };
 }
 
 export async function lerPaginaPublica(
@@ -211,6 +222,9 @@ export async function lerPaginaPublica(
   if (
     tipo !== "text/html" &&
     tipo !== "application/xhtml+xml" &&
+    tipo !== "application/xml" &&
+    tipo !== "text/xml" &&
+    tipo !== "application/xml+rss" &&
     tipo !== "application/pdf"
   ) {
     throw new Error("O endereço não retornou uma página HTML nem um PDF.");
@@ -227,8 +241,16 @@ export async function lerPaginaPublica(
   }
 
   const pagina = textoHtml(Buffer.from(bytes).toString("utf8"));
+  const links = (pagina.links ?? []).flatMap((link) => {
+    try {
+      return [new URL(link, url).href]
+    } catch {
+      return []
+    }
+  })
   return {
     titulo: pagina.titulo,
     texto: `${marcadorDeUrl(url.href)}\n${pagina.texto}`,
-  };
+    links,
+  }
 }

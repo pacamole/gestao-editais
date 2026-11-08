@@ -1,3 +1,5 @@
+import type { StatusElegibilidade } from './tipos/dominio.js'
+
 // Rótulos de exibição e metadados de campos, usados pela interface e pelos e-mails.
 
 export type TipoCampo = 'texto' | 'moeda' | 'percentual' | 'inteiro' | 'data' | 'booleano' | 'lista' | 'modalidade'
@@ -88,6 +90,17 @@ export const ELEGIBILIDADE: Record<string, string> = {
   ELEGIVEL: 'Elegível',
   INELEGIVEL: 'Inelegível',
   INDETERMINADO: 'Indeterminado',
+}
+
+export function resumoDaElegibilidade(status: StatusElegibilidade): string {
+  switch (status) {
+    case 'ELEGIVEL':
+      return 'Todos os requisitos obrigatórios identificados foram atendidos.'
+    case 'INELEGIVEL':
+      return 'Pelo menos um requisito obrigatório não foi atendido.'
+    case 'INDETERMINADO':
+      return 'Não há informações suficientes para confirmar todos os requisitos de elegibilidade.'
+  }
 }
 
 export const CLASSIFICACAO: Record<string, string> = {

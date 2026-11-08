@@ -5,6 +5,7 @@ import type {
   RevisarResposta,
   SalvarCamposEntrada,
   SalvarCamposResposta,
+  TriagemElegibilidadeResposta,
 } from '../../shared/tipos/edital'
 import { requisicao } from './cliente'
 
@@ -26,4 +27,7 @@ export const edital = {
   // Lê a página pública cadastrada e extrai os campos. Erro 502 com dados.textoSalvo = página salva.
   lerUrl: (id: string) =>
     requisicao<ExtracaoResposta>(`${base(id)}/ler-url`, { metodo: 'POST' }),
+
+  analisarElegibilidade: (id: string) =>
+    requisicao<TriagemElegibilidadeResposta>(`${base(id)}/triagem-elegibilidade`, { metodo: 'POST' }),
 }

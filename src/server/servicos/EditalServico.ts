@@ -10,7 +10,7 @@ import { ELEGIBILIDADE, MODALIDADES, rotuloDaFonte, STATUS_EDITAL } from '../../
 import type { DetalheEditalResposta, SalvarCamposResposta } from '../../shared/tipos/edital.js'
 import type { ItemListaEdital, ListaEditaisResposta } from '../../shared/tipos/editais.js'
 
-type RepositoriosEdital = Pick<Repositorios, 'edital' | 'avaliacao' | 'evidencia' | 'revisao'>
+type RepositoriosEdital = Pick<Repositorios, 'edital' | 'avaliacao' | 'evidencia' | 'revisao' | 'triagemElegibilidade'>
 
 const DIA_MS = 86_400_000
 const JANELA_URGENTE_DIAS = 7
@@ -121,6 +121,7 @@ export class EditalServico {
       avaliacao: this.repos.avaliacao.ultimaDoEdital(edital.id) ?? null,
       evidencias: this.repos.evidencia.listarDoEdital(edital.id),
       revisoes: this.repos.revisao.listarDoEdital(edital.id),
+      analise_elegibilidade: this.repos.triagemElegibilidade.ultimaDoEdital(edital.id),
     }
   }
 

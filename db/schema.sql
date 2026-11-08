@@ -1,5 +1,6 @@
 -- Esquema completo do banco, traduzido da especificação para SQLite.
--- Não há migrações: altere este arquivo e rode `npm run db:reset`.
+-- A URL do site e a tabela de triagem são migradas automaticamente em bases existentes;
+-- alterações estruturais restantes devem ser refletidas aqui e aplicadas conforme a migração do projeto.
 --
 -- Convenções:
 --   uuid         -> TEXT (gerado na aplicação com crypto.randomUUID)
@@ -157,8 +158,19 @@ CREATE TABLE perfil_empresa (
   capacidade_contrapartida_percentual  REAL,
   valor_minimo_interesse               REAL,
   prazo_minimo_preparo_dias            INTEGER,
+  site_url                             TEXT,
   atualizado_em                        TEXT NOT NULL
 );
+
+CREATE TABLE triagem_elegibilidade (
+  id              TEXT PRIMARY KEY,
+  edital_id       TEXT NOT NULL REFERENCES edital(id) ON DELETE CASCADE,
+  status          TEXT NOT NULL CHECK (status IN ('ELEGIVEL', 'INELEGIVEL', 'INDETERMINADO')),
+  analise_json    TEXT NOT NULL,
+  perfil_atualizado_em TEXT,
+  criado_em       TEXT NOT NULL
+);
+CREATE INDEX idx_triagem_edital ON triagem_elegibilidade(edital_id, criado_em);
 
 CREATE TABLE criterio (
   id                   TEXT PRIMARY KEY,

@@ -28,6 +28,7 @@ export type SalvarPerfilEntrada = {
   capacidade_contrapartida_percentual: NumeroEntrada
   valor_minimo_interesse: NumeroEntrada
   prazo_minimo_preparo_dias: NumeroEntrada
+  site_url: string | null
   // Reavalia todos os editais ativos com o perfil salvo.
   reavaliar: boolean
 }

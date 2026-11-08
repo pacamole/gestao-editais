@@ -66,7 +66,7 @@ Abra <http://localhost:3000>. Na primeira vez, clique em **Criar conta**.
 
 ## 6. (Opcional) Configurar a IA
 
-O chat e o botão **Ler edital com IA** usam o Ollama. Para rodar localmente:
+O chat, a triagem de elegibilidade e a análise profunda usam o Ollama. Para rodar localmente:
 
 ```bash
 ollama pull gemma2:latest
@@ -74,6 +74,14 @@ ollama serve                 # se o serviço ainda não estiver rodando
 ```
 
 Para usar o Ollama Cloud em vez disso, informe a chave de API em **Configurações** no sistema.
+
+## Como testar as etapas de análise
+
+1. Em **Configurações › Perfil da empresa**, preencha os dados e o endereço público do site da empresa.
+2. Abra um edital com texto extraído. A etapa inicial é executada automaticamente para editais novos; em um edital existente, use **Analisar elegibilidade** para executar novamente.
+3. Confira a lista de requisitos em forma de perguntas e as comparações com o perfil e o site. O sistema valida primeiro a página principal e depois descobre páginas por links internos e sitemaps, percorrendo até 500 páginas e 10 milhões de caracteres. Páginas relevantes são priorizadas dentro do limite de contexto da IA; a tela informa se a leitura ou o contexto foram limitados e mostra as páginas que sustentam cada comparação.
+4. Clique em **Fazer análise profunda**. A IA extrai os campos e a elegibilidade é recalculada com os critérios eliminatórios; a pontuação continua sendo calculada apenas para editais elegíveis.
+5. No chat, pergunte sobre algum dado incorreto do edital. Se a IA localizar uma divergência com evidência, selecione a correção sugerida e clique em **Autorizar e salvar selecionados**. Sem essa confirmação, os campos não são alterados.
 
 ## 7. (Opcional) Configurar o e-mail
 
