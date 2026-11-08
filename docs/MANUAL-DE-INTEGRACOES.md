@@ -7,27 +7,18 @@
 
 ## 1. O que são as "Integrações" do Sistema?
 
-Pense no **Gestor de Editais** como uma central de trabalho inteligente na I9+. Sozinho, ele já consegue guardar informações. Mas para não dar trabalho para ninguém ficar caçando editais na internet o dia todo ou lendo documentos de 80 páginas linha por linha, o sistema constrói **"pontes" automáticas** com outros serviços.
+Pense no **Gestor de Editais** como uma central de trabalho inteligente na I9+. Sozinho, ele já consegue guardar informações. Mas para não dar trabalho para ninguém ficar caçando editais na internet o dia todo ou lendo documentos de 80 páginas linha por linha, o sistema constrói **"pontes" automáticas** com outros serviços e plataformas.
 
-Essas pontes são as **integrações**. Hoje, o sistema possui 4 grandes integrações:
+Essas pontes são as **integrações**. No sistema, elas estão divididas em 4 pilares práticos:
 
-```
-                  ┌────────────────────────────────────────┐
-                  │       GESTOR DE EDITAIS (I9+)          │
-                  └──────────────────┬─────────────────────┘
-                                     │
-       ┌──────────────┬──────────────┴──────────────┬──────────────┐
-       ▼              ▼                             ▼              ▼
- 🤖 Inteligência   🗄️ Base de                    📧 E-mail      🌐 Fontes de
-    Artificial       Dados (Nuvem)                 (SMTP)          Editais
-  Lê os editais   Compartilha os dados           Avisa quando    Visita portais
-   e tira dúvidas  ao vivo com a equipe          há novidades    e traz editais
-```
-
-1. **Inteligência Artificial (IA):** É o nosso leitor assistente. Ela lê os PDFs dos editais, extrai valores, prazos e regras de elegibilidade, e responde suas perguntas no chat de cada edital.
-2. **Base de Dados (Nuvem):** É onde tudo fica guardado. Pode funcionar só no seu computador ou ligada na nuvem (Turso) para que toda a equipe da I9+ veja as mesmas informações ao mesmo tempo.
-3. **Serviço de E-mail:** É o mensageiro. Quando sai um edital muito bom ou o prazo de inscrição está acabando, ele manda um e-mail avisando as pessoas certas.
-4. **Fontes de Editais:** São os robôs que visitam os sites de fomento (como FINEP e portais estaduais) todos os dias para conferir se tem edital novo.
+* **1. Inteligência Artificial (O nosso Leitor e Assistente):**  
+  Conecta o sistema aos modelos de linguagem (locais ou em nuvem). A IA atua na triagem inicial dos editais, lê os documentos em PDF, extrai dados cruciais (valores, prazos, exigências de contrapartida), compara com as páginas do site da I9+ e atende você no chat interativo de cada edital.
+* **2. Base de Dados Compartilhada (A Memória da Empresa):**  
+  Conecta o sistema a um banco de dados centralizado na nuvem (Turso). Dessa forma, quando alguém cadastra ou revisa um edital, todos os outros computadores da equipe da I9+ veem a informação atualizada no mesmo segundo.
+* **3. Serviço de E-mail (O Mensageiro):**  
+  Conecta o sistema ao servidor de e-mail institucional (como Gmail ou Outlook) para disparar avisos automáticos: quando surge um edital de alto fit, quando os prazos de submissão estão perto do fim ou quando um edital sofreu retificação.
+* **4. Fontes e Portais de Editais (Os Rastreadores):**  
+  Conecta o sistema aos portais oficiais de fomento (como a API direta da FINEP e páginas de chamadas públicas). Os robôs visitam esses sites todos os dias no horário programado para coletar e cadastrar novas oportunidades automaticamente.
 
 ---
 

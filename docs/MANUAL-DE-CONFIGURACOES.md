@@ -45,9 +45,10 @@ No menu lateral esquerdo, clique em **Configurações** e depois na opção **Pe
 6. **Estado (UF) e Município:**
    * No campo *Estado*, digite `PR` e em *Município* digite `Curitiba`.
    * *Para que serve?* Editais estaduais (como da Fundação Araucária do Paraná ou FAPESP de São Paulo) exigem sede no estado. O sistema usa isso para saber se a I9+ pode participar.
-7. **Link da página da empresa:**
-   * Digite o site da I9+: `https://i9mais.com.br`.
-   * *O que o sistema faz com isso?* Antes de analisar um edital, o robô do sistema dá uma olhada nas páginas públicas do nosso próprio site para entender ainda melhor o que a empresa faz e enriquecer a comparação com o edital!
+7. **Link da página da empresa (Novo campo com leitura automática de até 500 páginas):**
+   * Informe o endereço público do site da I9+, começando obrigatoriamente com `https://` ou `http://` (ex: `https://i9mais.com.br`).
+   * *Como a IA usa o site:* Na etapa de **Triagem de Elegibilidade**, o sistema valida a página inicial e tenta ler as páginas públicas do mesmo domínio através de links internos e sitemaps (rastreando até **500 páginas**). Em seguida, prioriza o conteúdo mais relevante (lendo até 10 páginas / 30.000 caracteres) para comparar a empresa com as exigências do edital!
+   * *Importante:* A URL é validada ao clicar em salvar, e o site é lido automaticamente sempre que uma triagem é executada.
 8. **Áreas de atuação e Palavras-chave:**
    * Em *Áreas de atuação*, digite: `software, inteligencia artificial, transformacao digital, automacao`.
    * Em *Palavras-chave*, digite termos que você quer encontrar: `ia, deep learning, fomento a inovacao, subvencao economica`.
@@ -58,9 +59,11 @@ No menu lateral esquerdo, clique em **Configurações** e depois na opção **Pe
     * Digite `300000` (R$ 300.000,00). Editais com verbas muito pequenas não serão destacados.
 11. **Possui parceria com instituição de pesquisa (ICT):**
     * Se a I9+ tiver convênio ou parceria com universidades (ex: UTFPR, UFPR ou institutos de pesquisa), **marque esta caixinha**. Editais que exigem consórcio com universidade vão ganhar pontos extras.
-12. **Instruções extras (Campo grande de texto):**
-    * Aqui você pode falar em português claro com a IA! Exemplo do que escrever:
-      > *"A I9+ prioriza projetos de pesquisa e desenvolvimento em inteligência artificial e softwares em nuvem. Não temos interesse em editais voltados para construção civil pesada, agronegócio de lavoura ou compra de maquinário agrícola."*
+12. **Instruções extras (Novo campo para enriquecer a análise da IA):**
+    * Permite informar todo o contexto complementar que não cabe nos outros campos pré-definidos — por exemplo: uma experiência específica de mercado, uma tecnologia proprietária, premiações recebidas ou uma linha de pesquisa em andamento.
+    * Exemplo real do que escrever:
+      > *"A I9+ possui plataforma própria de processamento de linguagem natural e histórico comprovado em projetos de inteligência artificial aplicada ao setor corporativo e logístico. Não temos interesse em editais voltados exclusivamente para obras de infraestrutura física, agronegócio de lavoura ou aquisição de máquinas agrícolas pesadas."*
+    * *Como a IA interpreta:* A IA utiliza esse texto como **informação complementar estratégica**. Ela ajuda a desempatar dúvidas de aderência temática, mas **não substitui os requisitos objetivos do edital** (como porte e regularidade fiscal).
 13. **Finalizando e Salvando:**
     * Deixe marcada a opção **"Reavaliar todos os editais ativos com o novo perfil"**.
     * Clique no botão azul **"Salvar perfil"**. O sistema vai atualizar tudo e reavaliar os editais abertos na hora!
@@ -105,7 +108,7 @@ Na mesma tela, você verá a lista de critérios pontuáveis. Cada um tem um bot
 > * **Verde (70 a 100 pontos):** É um edital de **Alto Fit**! Tem tudo a ver com a I9+ e dispara o alerta imediato para a equipe.
 > * **Amarelo (40 a 69 pontos):** É um edital de **Médio Fit**. Vale a pena dar uma olhada, mas pode exigir alguma adaptação.
 > * **Cinza (1 a 39 pontos):** **Baixo Fit**. Não tem muita prioridade para nós.
-> * **Vermelho (0 pontos):** **Não Elegível**. Foi reprovado em alguma regra eliminatória.
+> * **Vermelho (0 pontos):** **Não Elegível**. Foi reprovado em alguma regra eliminatória ou na triagem inicial.
 
 ---
 

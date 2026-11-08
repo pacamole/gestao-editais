@@ -1,21 +1,52 @@
-# Documentação de Uso do Sistema — Gestor Inteligente de Editais (I9+)
+# Documentação de Uso do Sistema — Gestor de Editais I9+
 
 > **Público-alvo:** Equipe técnica, administradores de TI e gestores de inovação da I9+.  
-> **Objetivo:** Orientar sobre o uso do sistema, requisitos computacionais para execução de Inteligência Artificial (LLM) localmente e requisitos para hospedagem e implantação em servidor corporativo.
+> **Objetivo:** Orientar sobre o uso do sistema, o fluxo completo de avaliação de editais (Triagem, Análise Profunda e Chat), requisitos computacionais para execução de IA (LLM) localmente e requisitos para hospedagem e implantação em servidor corporativo.
 
 ---
 
-## 1. Visão Geral do Sistema
+## 1. Visão Geral do Sistema e Fluxo de Avaliação dos Editais
 
-O **Gestor Inteligente de Editais** foi concebido para transformar o processo de captação de recursos públicos e privados de fomento na **I9+**. Ele monitora fontes oficiais (FINEP, EMBRAPII, FAPs, ministérios, agências estaduais e plataformas de inovação), analisa automaticamente a documentação em PDF via Inteligência Artificial, avalia a elegibilidade e a aderência estratégica da empresa (calculando a Nota de Fit) e avisa a equipe por e-mail e painel antes que os prazos expirem.
+O **Gestor de Editais I9+** foi concebido para transformar o processo de captação de recursos públicos e privados de fomento na **I9+**. Ele monitora fontes oficiais (FINEP, EMBRAPII, FAPs estaduais e ministérios), analisa automaticamente a documentação em PDF via Inteligência Artificial, avalia a elegibilidade e a aderência estratégica da empresa (calculando a Nota de Fit) e avisa a equipe antes que os prazos expirem.
 
-### Principais Módulos Operacionais:
-1. **Dashboard (`/`):** Visão executiva com totalizadores, editais urgentes (prazos nos próximos 7 dias), distribuição de classificação, editais de alto fit e integridade das fontes monitoradas.
-2. **Editais (`/editais`):** Tabela analítica de oportunidades captadas, filtros avançados por relevância, status, faixa de fit, busca textual e ações em lote.
-3. **Nova Entrada (`/editais/novo`):** Cadastro assistido de editais via envio de arquivo PDF, endereço web (URL) ou preenchimento manual completo.
-4. **Detalhes do Edital (`/editais/:id`):** Dossiê completo do edital contendo justificativa da nota, avaliação de cada critério, dados extraídos do PDF, histórico de revisões e **Chat interativo com IA** para tirar dúvidas sobre o documento.
-5. **Configurações (`/configuracoes`):** Gestão integrada de perfil da I9+, critérios de fit, fontes, alertas e integrações técnicas.
-6. **Manuais (`/manuais`):** Central de documentação operacional, guias de integração e parâmetros do sistema.
+### 🔄 Como Funciona a Avaliação em Duas Etapas e o Chat Interativo:
+
+A avaliação de cada oportunidade segue um fluxo inteligente e seguro dividido em duas etapas principais e uma etapa intermediária assistida:
+
+* **1ª ETAPA: TRIAGEM DE ELEGIBILIDADE**
+  * Verifica se a I9+ pode participar antes de gastar tempo ou processamento.
+  * Compara o perfil da empresa com a leitura de até 10 páginas do site da I9+.
+  * Se INELIGÍVEL: encerra aqui (economiza tempo e recursos).
+  * Se ELEGÍVEL: calcula a nota de fit e libera a próxima fase.
+* **2ª ETAPA: FAZER ANÁLISE PROFUNDA**
+  * Disparada pelo botão **"Fazer análise profunda"**.
+  * Extrai todos os dados do edital em PDF e recalcula a elegibilidade considerando os critérios eliminatórios e a triagem anterior.
+* **ETAPA INTERMEDIÁRIA: CHAT COM CORREÇÕES ASSISTIDAS**
+  * Tire dúvidas pontuais sobre o documento em linguagem natural.
+  * A IA sugere correções com evidências do edital.
+  * Para sua segurança, você seleciona quais sugestões aceita e clica em **"Autorizar e salvar selecionados"**.
+
+---
+
+### Detalhamento das Etapas Operacionais:
+
+#### 1. Triagem (1ª Etapa — Avaliação Inicial de Elegibilidade):
+* **O que é:** É o processo de avaliação inicial que determina se a I9+ tem condições básicas de participar do edital.
+* **Como funciona:** 
+  * Para editais novos captados pelas fontes, a triagem é executada de forma **automática**.
+  * Em editais já cadastrados, você pode dispará-la a qualquer momento clicando no botão **"Analisar elegibilidade"**.
+* **O que a IA faz:** A IA formula os requisitos do edital em forma de perguntas e responde a si mesma comparando os dados do perfil da empresa com o conteúdo público do site da I9+ (a leitura percorre até **10 páginas internas mais relevantes do domínio**, limitada a **30.000 caracteres**).
+* **Importante:** A pontuação de critérios e pesos (Nota de Fit de 0 a 100) **só é calculada quando a triagem considera o edital elegível**, evitando que a equipe perca tempo pontuando editais dos quais a empresa não pode participar!
+
+#### 2. Análise Profunda (2ª Etapa de Extração Completa):
+* Na tela de detalhes do edital, o botão principal agora se chama **"Fazer análise profunda"** (antigo "Ler edital com IA").
+* Ao clicar nele, o sistema realiza a leitura exaustiva de todas as páginas do PDF do edital, extrai valores, contrapartidas, datas e obrigações.
+* Após a extração, o sistema **recalcula a elegibilidade** combinando o resultado da triagem anterior com todos os critérios eliminatórios configurados.
+
+#### 3. Chat com Correções Assistidas (Etapa Intermediária):
+* No painel lateral do edital, você pode conversar com a IA em linguagem natural para tirar qualquer dúvida sobre regras, anexos ou cláusulas.
+* Se durante a conversa você notar ou a IA identificar que algum campo do edital foi preenchido incorretamente, **a IA pode sugerir correções com as evidências exatas do texto do edital**.
+* **Segurança total:** As sugestões vêm **desmarcadas por padrão**. Nenhum dado é alterado no banco de dados sem a sua autorização! Você confere as sugestões, marca as caixinhas que concorda e clica no botão **"Autorizar e salvar selecionados"**.
 
 ---
 
@@ -61,13 +92,13 @@ O modelo padrão homologado para o sistema é o **`gemma2:latest`** (Gemma 2 9B)
    ```bash
    ollama list
    ```
-5. No Gestor de Editais, acesse `Configurações › Inteligência Artificial` e confirme se o status exibe **"Conectado ao Ollama local"**.
+5. No Gestor de Editais I9+, acesse `Configurações › Inteligência Artificial` e confirme se o status exibe **"Conectado ao Ollama local"**.
 
 ---
 
 ## 3. Requisitos Computacionais para Hospedagem em Servidor
 
-O Gestor Inteligente de Editais foi arquitetado em **Node.js (Express + TypeScript)** integrado a banco de dados relacional (SQLite nativo ou Turso na nuvem) e um navegador invisível (**Playwright Chromium**) para raspagem de páginas dinâmicas.
+O Gestor de Editais I9+ foi arquitetado em **Node.js (Express + TypeScript)** integrado a banco de dados relacional (SQLite nativo ou Turso na nuvem) e um navegador invisível (**Playwright Chromium**) para raspagem de páginas dinâmicas.
 
 A hospedagem em servidor corporativo pode ser estruturada em dois cenários principais:
 
@@ -171,7 +202,6 @@ pm2 save
 ```
 
 ### 4.6. Configuração de Proxy Reverso com Nginx (Opcional, com HTTPS)
-Para disponibilizar o sistema na porta 80 ou 443 com certificado SSL corporativo:
 ```nginx
 server {
     listen 80;
@@ -192,25 +222,3 @@ server {
     }
 }
 ```
-
----
-
-## 5. Resolução de Dúvidas Frequentes
-
-1. **A aplicação precisa de internet para funcionar?**  
-   O núcleo do sistema funciona 100% offline em rede local caso seja utilizado Ollama local e banco SQLite. A internet é necessária apenas para:
-   - Coletar novos editais nas fontes externas (FINEP, portais web);
-   - Enviar notificações por e-mail externo (SMTP Gmail/Office365);
-   - Acessar o banco na nuvem caso o modo Turso esteja ativo.
-
-2. **Como atualizar a aplicação após novas versões do Git?**  
-   No servidor, execute:
-   ```bash
-   git pull origin main
-   npm install
-   npm run build
-   pm2 restart gestao-editais
-   ```
-
-3. **O que fazer se o processamento de um edital falhar?**  
-   Verifique em `Configurações › Inteligência Artificial` se o Ollama está respondendo. O sistema realiza 3 tentativas automáticas com intervalo de 15 minutos. Se a falha persistir, o edital é movido para `EM_REVISAO`, permitindo que a equipe edite os dados manualmente sem perder nenhuma oportunidade.
