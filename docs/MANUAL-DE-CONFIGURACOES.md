@@ -1,157 +1,178 @@
-# Manual de Configurações de Parâmetros do Sistema — Gestor Inteligente de Editais (I9+)
+# Manual Prático de Configurações do Sistema — Gestor de Editais I9+
 
-> **Público-alvo:** Administradores do sistema, analistas de negócios e gestores de projetos da I9+.  
-> **Objetivo:** Explicar detalhadamente cada parâmetro, campo configurável e regra do sistema, demonstrando como suas alterações impactam diretamente a coleta, a análise por IA, os cálculos de notas e o envio de alertas.
-
----
-
-## 1. Visão Geral da Central de Configurações
-
-O menu **Configurações** (`/configuracoes`) centraliza todas as variáveis operacionais e estratégicas da aplicação. 
-
-Ao contrário de sistemas legados que exigem reinicialização de serviços ou edição de arquivos de texto complexos, **todas as alterações realizadas nesta tela são gravadas no banco de dados e entram em vigor imediatamente**, sem derrubar o servidor ou desconectar os usuários.
-
-A central está estruturada em quatro grandes eixos:
-1. **Empresa:** Perfil da I9+ e Critérios com Pesos de Avaliação.
-2. **Coleta:** Fontes e Portais de Editais Monitorados.
-3. **Notificações:** Alertas (E01 a E06), Lista de Destinatários e Servidor SMTP de E-mail.
-4. **Sistema:** Parâmetros de Inteligência Artificial e Gerenciamento da Base de Dados.
+> **Para quem é este manual:** Para qualquer pessoa da equipe da I9+ que precise cadastrar ou ajustar as regras do sistema. Você não precisa saber nada de programação! Este guia foi feito como se um colega estivesse sentado ao seu lado, mostrando em quais botões clicar e explicando o porquê de cada campo.
 
 ---
 
-## 2. Eixo Empresa: Perfil da I9+ (`Configurações › Perfil`)
+## 1. O Nosso Caso Real de Exemplo (Para entender na prática)
 
-O perfil corporativo representa a "identidade estratégica" da I9+ dentro do motor de decisão. A IA e o motor de critérios utilizam estes campos para verificar se a empresa cumpre os requisitos de participação de cada edital.
+Para ficar muito fácil de acompanhar, vamos seguir um **caso real da I9+** do começo ao fim:
 
-| Campo | O que representa | Impacto direto no funcionamento da aplicação |
-| :--- | :--- | :--- |
-| **Razão Social e Nome Fantasia** | Identificação cadastral oficial da empresa. | Utilizado em relatórios gerados, resumos executivos e na saudação dos alertas automáticos. |
-| **CNPJ** | Número do Cadastro Nacional de Pessoa Jurídica. | **Campo Crítico:** Se o CNPJ estiver em branco ou com formato inválido/zerado, o processamento de novos editais fica retido em status `COLETADO` com aviso de pendência cadastral, pois editais exigem validação de CNPJ ativo. |
-| **Porte da Empresa** | Microempresa (ME), Empresa de Pequeno Porte (EPP), Média ou Grande Empresa. | **Campo de Alta Sensibilidade:** Inúmeros editais de inovação (como PIPE-FAPESP ou editais FINEP Mulher/Inovacred) são exclusivos para micro ou pequenas empresas. Se a I9+ estiver configurada como "Pequena Empresa" e o edital exigir "Média/Grande", o critério eliminatório reprova o edital imediatamente como **Não Elegível (Fit 0)**. |
-| **Faturamento Anual (R$)** | Receita bruta contábil do último exercício fiscal. | Comparado com o teto de faturamento estipulado pelo edital. Também define o valor máximo de subvenção que a empresa tem capacidade de pleitear sem violar regras de alavancagem financeira. |
-| **CNAE Principal e Secundários** | Códigos Nacionais de Atividade Econômica. | Utilizado pela IA para atestar compatibilidade de objeto social. Se um edital exigir atuação exclusiva no setor aeroespacial e o CNAE for de consultoria em TI, a IA gera um apontamento de risco ou reprovação de elegibilidade. |
-| **Setor de Atuação e Especialidades** | Áreas em que a I9+ atua (ex: Software, IA, Transformação Digital, Indústria 4.0). | Alimenta o vetor semântico de aderência temático da IA, pontuando os editais focados nessas verticais. |
-| **Localização (UF e Município)** | Estado da federação e município da sede da empresa. | Impacta editais de Fundações Estaduais de Amparo à Pesquisa (FAPs) e editais de superintendências regionais (SUDENE, SUDAM). Editais restritos a outros estados são classificados como não elegíveis para a I9+. |
-| **Histórico de Fomento e Projetos Anteriores** | Relação de projetos já executados com recursos públicos ou privados. | Pontua positivamente nos critérios de experiência prévia da empresa, elevando a Nota de Fit em chamadas de maior maturidade tecnológica (TRL 6 a 9). |
-| **Certificações (ISO, CMMI, etc.)** | Títulos de conformidade e qualidade técnica. | Editais que exigem ou bonificam certificações internacionais utilizam este campo para conceder pontuação extra no cômputo do fit. |
+* **Nossa Empresa:** `I9+ Tecnologia e Inovação Ltda`
+* **Local:** Sede em `Curitiba / PR`.
+* **Porte da Empresa:** `EPP (Empresa de Pequeno Porte)` / `Média`.
+* **O que fazemos:** Projetos de Software, Inteligência Artificial e Automação de Processos.
+* **O nosso objetivo:** Queremos que o sistema ache editais da **FINEP, FAPESP, EMBRAPII e Fundação Araucária** voltados para inovação e tecnologia, com valores entre **R$ 300 mil e R$ 2,5 milhões**, nos quais a I9+ não precise colocar mais do que **20% de contrapartida**.
+* **Nossa equipe:**
+  * **Ana (Comercial / Captação):** precisa receber um e-mail urgente assim que surgir um edital com nota alta (alto fit).
+  * **Carlos (Técnico / Projetos):** precisa ser avisado quando faltarem poucos dias para o encerramento das inscrições.
+  * **Lucas (TI / Suporte):** precisa ser avisado se algum site de editais cair ou parar de responder.
 
----
-
-## 3. Eixo Empresa: Critérios e Pesos (`Configurações › Critérios`)
-
-O motor de decisão (`motorCriterios.ts`) executa duas operações matemáticas a cada novo edital:
-1. **Validação de Eliminatórias:** Se reprovado em qualquer regra eliminatória, o edital recebe **Fit 0 (Não Elegível)** e não avança para o pipeline prioritário.
-2. **Ponderação de Pontuáveis:** Soma ponderada dos critérios aprovados que resulta em uma nota de **0 a 100**.
-
-### 3.1. Campos Disponíveis para Criação de Critérios
-
-- `porte_empresa`: Avalia se o porte da I9+ atende ao público-alvo do edital.
-- `contrapartida_minima`: Percentual de contrapartida financeira exigida.
-- `valor_financiamento`: Faixa orçamentária do projeto (mínimo e máximo).
-- `prazo_execucao`: Duração máxima do projeto em meses.
-- `exige_ict_parceira`: Se é obrigatório firmar parceria com Universidade/Instituto de Pesquisa.
-- `area_tematica`: Alinhamento das áreas de pesquisa com as competências da I9+.
-
-### 3.2. Operadores Lógicos Suportados
-- **Igual a (`=`) / Diferente de (`!=`)**: Checagens categóricas exatas.
-- **Maior que (`>`) / Menor que (`<`)**: Checagens de valores numéricos de orçamento, prazos ou contrapartidas.
-- **Maior ou igual (`>=`) / Menor ou igual (`<=`)**: Faixas inclusivas.
-- **Contém (`contem`)**: Busca textual dentro de exigências ou descrições do edital.
-- **Está na lista (`em_lista`)**: Comparações com múltiplos valores possíveis.
-
-### 3.3. Configuração de Pesos e Impacto na Classificação
-
-Cada critério pontuável recebe um peso de **1 (baixa relevância) a 5 (alta prioridade estratégica)**. A nota final categoriza o edital nas seguintes faixas visuais e operacionais:
-
-| Faixa de Nota | Classificação | Cor Visual | Impacto no Sistema |
-| :---: | :---: | :---: | :--- |
-| **70 a 100** | **Alto Fit** | Verde | Destaque no topo do Dashboard, inclusão no bloco "Top Fit" e disparo imediato do **Alerta E01**. |
-| **40 a 69** | **Médio Fit** | Amarelo | Edital viável. Exibido na listagem com recomendação de revisão técnica prévia da viabilidade orçamentária. |
-| **1 a 39** | **Baixo Fit** | Cinza | Baixa compatibilidade com os interesses atuais da empresa. Não gera alertas intrusivos. |
-| **0** | **Não Elegível** | Vermelho | Reprovado por restrição legal, de porte ou territorial. O sistema impede submissão sem justificativa manual de resgate. |
-
-> **Importante:** Ao alterar a fórmula ou peso de um critério, os editais que estão sendo processados ou reavaliados passam a utilizar a nova regra no mesmo instante.
+Vamos ver agora, passo a passo, em quais telas e botões você vai clicar para deixar tudo configurado para a I9+!
 
 ---
 
-## 4. Eixo Coleta: Fontes Monitoradas (`Configurações › Fontes`)
+## 2. Passo 1: Cadastrando o Perfil da Empresa (A Identidade da I9+)
 
-Gerencia quais portais oficiais são vasculhados periodicamente em busca de novas oportunidades.
+O primeiro passo é ensinar para o sistema quem é a I9+. É com base nesses dados que a Inteligência Artificial vai saber se a gente tem direito de concorrer a cada edital.
 
-| Campo | Opções / Formato | Impacto no Sistema |
-| :--- | :--- | :--- |
-| **Nome da Fonte** | Texto livre (ex: "FINEP Chamadas Públicas") | Identifica a procedência do edital na listagem, no dashboard e no histórico. |
-| **URL Base** | Endereço web completo | Ponto de entrada que o robô de coleta acessa para iniciar a varredura. |
-| **Tipo de Coleta** | `API`, `HTML` ou `PAGINA_JS` | **Define o motor de execução:**<br>• `API`: Chamada JSON de alta velocidade sem carregar interface gráfica.<br>• `HTML`: Download rápido via HTTP e parsing de tags com `cheerio`.<br>• `PAGINA_JS`: Inicia o navegador invisível **Playwright (Chromium)** para portais que só montam tabelas via JavaScript. |
-| **Periodicidade** | Minutos / Horas (padrão: 60 min) | Intervalo de tempo entre as execuções automáticas do agendador (`agendador.ts`). |
-| **Seletor CSS / Padrão**| Expressão CSS (ex: `.card-edital a`) | Localizador dos links dos editais dentro da página HTML. |
-| **Ativa / Pausada** | Alternador (Toggle) | Quando desativada, o sistema interrompe as varreduras nessa fonte sem apagar os editais já coletados anteriormente. |
+### Onde ir:
+No menu lateral esquerdo, clique em **Configurações** e depois na opção **Perfil da empresa** (`/configuracoes/perfil`).
 
----
+### O que fazer na tela (passo a passo dos campos):
 
-## 5. Eixo Notificações: Alertas (`Configurações › Alertas`)
-
-O sistema conta com 6 eventos automáticos (E01 a E06). Cada alerta possui parâmetros próprios de disparo e canais de notificação (painel interno e/ou e-mail).
-
-### 5.1. Detalhamento dos Gatilhos
-
-1. **Alerta E01 — Novo Edital com Alto Fit:**
-   - **Parâmetro configurável:** *Nota Mínima de Fit* (padrão: 70 pontos).
-   - **Impacto:** Dispara assim que a IA conclui a análise de um edital e a nota alcançada é maior ou igual ao parâmetro. Envia notificação detalhada com resumo do edital e pontos de destaque para os analistas comerciais.
-2. **Alerta E02 — Prazo Próximo:**
-   - **Parâmetros configuráveis:** *Dias de Antecedência* (ex: 5 dias e 2 dias antes).
-   - **Impacto:** A rotina diária analisa os editais elegíveis em andamento e notifica os responsáveis para evitar perda de prazo de submissão de propostas.
-3. **Alerta E03 — Verificação Necessária:**
-   - **Impacto:** Dispara automaticamente quando a IA detecta inconsistência nos dados (ex: orçamento ambíguo no edital) ou quando o edital é encaminhado para `EM_REVISAO`.
-4. **Alerta E04 — Resumo Semanal:**
-   - **Parâmetros configuráveis:** *Dia da Semana* e *Horário de Envio* (ex: Toda segunda-feira às 08:00).
-   - **Impacto:** Consolida um boletim executivo com todos os editais abertos, editais com prazo na semana e novas oportunidades captadas.
-5. **Alerta E05 — Edital Retificado:**
-   - **Impacto:** Monitora editais já cadastrados. Caso a fonte publique nova errata, retificação de cronograma ou termo aditivo, o sistema atualiza o registro e avisa os gestores imediatamente.
-6. **Alerta E06 — Falha na Coleta:**
-   - **Impacto:** Alerta exclusivo para administradores de TI quando uma fonte monitorada fica fora do ar ou tem sua estrutura alterada por mais de 3 tentativas.
-
----
-
-## 6. Eixo Notificações: Destinatários e E-mail (`Configurações › Destinatários e E-mail`)
-
-### 6.1. Destinatários
-Permite cadastrar membros da equipe interna da I9+ ou parceiros externos que devem receber comunicados.
-- Cada destinatário pode ser associado seletivamente a alertas específicos (ex: equipe comercial recebe E01 e E02; equipe técnica recebe E03 e E05; TI recebe E06).
-- Desativar um destinatário interrompe o recebimento sem necessidade de recadastrá-lo no futuro.
-
-### 6.2. Servidor SMTP (E-mail)
-- `smtp_host`: Endereço do servidor SMTP (ex: `smtp.gmail.com` ou `smtp.office365.com`).
-- `smtp_porta`: Porta de conexão (`465` para SSL, `587` para TLS).
-- `smtp_usuario`: Conta de e-mail institucional remetente.
-- `smtp_senha`: Senha de aplicativo protegida.
-- `smtp_nome_remetente`: Nome exibido na caixa de entrada (ex: `Editais I9+ <notificacoes@i9mais.com.br>`).
-- *Impacto do campo vazio:* Se `smtp_host` for deixado em branco, o sistema não emite erros e ativa o **modo terminal**, apenas imprimindo o e-mail no console do servidor.
+1. **Razão social:** Digite `I9+ Tecnologia e Inovação Ltda`.
+2. **Nome fantasia:** Digite `I9+`.
+3. **CNPJ:** Digite o CNPJ da empresa (ex: `12.345.678/0001-90`).
+   > ⚠️ **Atenção:** Nunca deixe o CNPJ em branco nem zerado! Se deixar vazio, o sistema bloqueia a análise dos editais novos por segurança, porque quase todo edital exige CNPJ válido.
+4. **CNAE principal e secundários:**
+   * No *CNAE principal*, coloque o código da atividade principal (ex: `6201-5/01` - Desenvolvimento de programas de computador sob encomenda).
+   * Nos *CNAEs secundários*, coloque os outros códigos separados por vírgula (ex: `6202-3/00, 6209-1/00`).
+   * *Para que serve isso?* A IA confere se o edital exige que a empresa tenha autorização formal para atuar naquela área.
+5. **Porte da empresa (Caixa de seleção):**
+   * Clique na caixinha e selecione **`EPP`** (ou `Média`, conforme o enquadramento atual da I9+).
+   * *Por que isso é fundamental?* Muitos editais da FINEP e FAPESP são exclusivos para micro e pequenas empresas. Se você selecionar o porte correto, o sistema já elimina automaticamente editais que não aceitam o tamanho da I9+, poupando seu tempo!
+6. **Estado (UF) e Município:**
+   * No campo *Estado*, digite `PR` e em *Município* digite `Curitiba`.
+   * *Para que serve?* Editais estaduais (como da Fundação Araucária do Paraná ou FAPESP de São Paulo) exigem sede no estado. O sistema usa isso para saber se a I9+ pode participar.
+7. **Link da página da empresa:**
+   * Digite o site da I9+: `https://i9mais.com.br`.
+   * *O que o sistema faz com isso?* Antes de analisar um edital, o robô do sistema dá uma olhada nas páginas públicas do nosso próprio site para entender ainda melhor o que a empresa faz e enriquecer a comparação com o edital!
+8. **Áreas de atuação e Palavras-chave:**
+   * Em *Áreas de atuação*, digite: `software, inteligencia artificial, transformacao digital, automacao`.
+   * Em *Palavras-chave*, digite termos que você quer encontrar: `ia, deep learning, fomento a inovacao, subvencao economica`.
+9. **Capacidade de contrapartida (%):**
+   * Digite `20`.
+   * *Para que serve?* Se um edital exigir que a empresa pague 40% do projeto do próprio bolso, o sistema saberá que está acima da nossa capacidade habitual.
+10. **Valor mínimo de interesse:**
+    * Digite `300000` (R$ 300.000,00). Editais com verbas muito pequenas não serão destacados.
+11. **Possui parceria com instituição de pesquisa (ICT):**
+    * Se a I9+ tiver convênio ou parceria com universidades (ex: UTFPR, UFPR ou institutos de pesquisa), **marque esta caixinha**. Editais que exigem consórcio com universidade vão ganhar pontos extras.
+12. **Instruções extras (Campo grande de texto):**
+    * Aqui você pode falar em português claro com a IA! Exemplo do que escrever:
+      > *"A I9+ prioriza projetos de pesquisa e desenvolvimento em inteligência artificial e softwares em nuvem. Não temos interesse em editais voltados para construção civil pesada, agronegócio de lavoura ou compra de maquinário agrícola."*
+13. **Finalizando e Salvando:**
+    * Deixe marcada a opção **"Reavaliar todos os editais ativos com o novo perfil"**.
+    * Clique no botão azul **"Salvar perfil"**. O sistema vai atualizar tudo e reavaliar os editais abertos na hora!
 
 ---
 
-## 7. Eixo Sistema: Inteligência Artificial (`Configurações › IA`)
+## 3. Passo 2: Configurando Critérios e Pesos (Como a IA dá a Nota de 0 a 100)
 
-Controla o motor cognitivo que realiza a leitura dos PDFs e atende o chat.
+Agora que o sistema já conhece a I9+, vamos definir as **regras do jogo**: o que desclassifica um edital na hora e o que faz ele ganhar uma nota alta.
 
-| Parâmetro | Valores Possíveis | Impacto no Funcionamento da Aplicação |
-| :--- | :--- | :--- |
-| **Modo de Operação** | `LOCAL` ou `NUVEM` | Alterna entre o Ollama rodando na própria máquina/servidor ou o serviço Ollama Cloud. |
-| **URL do Ollama** | URL HTTP (padrão: `http://localhost:11434`) | Endereço do daemon Ollama. Permite apontar para outro servidor com GPU na mesma rede local. |
-| **Chave de API (Nuvem)** | Token Bearer secreto | Utilizado exclusivamente no modo `NUVEM` para autenticar na infraestrutura gerenciada do Ollama. |
-| **Modelo Selecionado** | Ex: `gemma2:latest` | Define qual modelo LLM realiza a extração e a síntese. |
-| **Limite Diário de Chat** | Número inteiro (padrão: 20) | Quantidade máxima de perguntas que cada usuário pode fazer à IA por dia. Protege o servidor contra sobrecarga de GPU e controla custos de tokens no modo nuvem. |
+### Onde ir:
+No menu lateral esquerdo, em **Configurações**, clique em **Critérios e pesos** (`/configuracoes/criterios`).
 
 ---
 
-## 8. Eixo Sistema: Base de Dados (`Configurações › Base`)
+### Exemplo Prático A: Criando uma Regra Eliminatória (Porte da Empresa)
+*Objetivo:* Se o edital não aceitar o nosso porte de empresa, ele deve ser reprovado na hora (ficando com etiqueta vermelha **Não elegível**).
 
-Controla a persistência e compartilhamento das informações entre os membros da equipe.
+1. No topo da página, clique no botão azul **"+ Novo critério"**.
+2. Uma janelinha vai se abrir:
+   * **Tipo do critério:** Selecione **"Eliminatório"** (isso significa: se reprovar aqui, está fora!).
+   * **Nome do critério:** Digite `Porte aceito pelo edital`.
+   * **Campo do edital:** Selecione na lista `Porte aceito`.
+   * **Como comparar:** Escolha `Lista contém`.
+   * **Comparar com:** Escolha a opção **"Campo do perfil da empresa"** e na caixinha selecione `Porte`.
+   * **Mensagem de reprovação:** Digite `O edital exige um porte empresarial diferente do cadastrado pela I9+`.
+3. Clique em **"Salvar critério"**. Pronto! Qualquer edital novo que chegar e exigir um porte que não é o nosso será descartado imediatamente.
 
-| Opção / Recurso | Como funciona | Impacto no Funcionamento da Aplicação |
-| :--- | :--- | :--- |
-| **Modo da Base** | `LOCAL` (neste computador) ou `NUVEM` (Turso) | No modo local, usa o arquivo `data/editais.db`. No modo nuvem, conecta-se ao cluster distribuído do Turso, sincronizando em tempo real com toda a equipe da I9+. |
-| **URL do Turso e Auth Token** | `libsql://...` e token JWT | Credenciais de acesso ao cluster. Salvas em `data/base-conexao.json` de forma segura. |
-| **Baixar Base (Exportar)** | Gera arquivo `.db` | Cria um instantâneo seguro de todos os editais, usuários e configurações para migração ou cópia de segurança. |
-| **Importar Base** | Substitui a base atual por um arquivo `.db` | Valida o esquema, cria um backup automático de restauração prévia em `data/backups/` e carrega os novos dados na hora. |
-| **Restaurar Backup** | Lista de snapshots anteriores | Permite desfazer importações acidentais com um único clique. |
+---
+
+### Exemplo Prático B: Ajustando os Pesos dos Critérios Pontuáveis (De 1 a 5)
+*Objetivo:* Editais que tenham mais a ver com as nossas prioridades devem receber notas mais altas (de 0 a 100).
+
+Na mesma tela, você verá a lista de critérios pontuáveis. Cada um tem um botão de peso de **1 (pouco importante) a 5 (super importante)**:
+
+1. **Alinhamento com áreas de atuação:** Deixe com **Peso 5** (porque fazer projetos na nossa área de software/IA é a prioridade número 1).
+2. **Valor financiado dentro do interesse:** Deixe com **Peso 4** (queremos projetos entre R$ 300 mil e R$ 2,5 milhões).
+3. **Contrapartida exigida:** Deixe com **Peso 4** (se pedir menos de 20%, ganha nota máxima).
+4. **Prazo de execução adequado:** Deixe com **Peso 3**.
+
+> 💡 **Como interpretar as cores da nota final no sistema:**
+> * **Verde (70 a 100 pontos):** É um edital de **Alto Fit**! Tem tudo a ver com a I9+ e dispara o alerta imediato para a equipe.
+> * **Amarelo (40 a 69 pontos):** É um edital de **Médio Fit**. Vale a pena dar uma olhada, mas pode exigir alguma adaptação.
+> * **Cinza (1 a 39 pontos):** **Baixo Fit**. Não tem muita prioridade para nós.
+> * **Vermelho (0 pontos):** **Não Elegível**. Foi reprovado em alguma regra eliminatória.
+
+---
+
+## 4. Passo 3: Cadastrando Fontes de Editais (Onde o Robô vai Procurar)
+
+O sistema pode visitar portais de editais sozinho todo dia.
+
+### Onde ir:
+Clique em **Configurações › Fontes monitoradas** (`/configuracoes/fontes`).
+
+### Como cadastrar a FINEP como exemplo prático:
+1. Clique no botão **"+ Adicionar fonte"**.
+2. Na janela:
+   * **Nome:** Digite `FINEP - Chamadas Públicas Abertas`.
+   * **Endereço do site (URL):** Cole `http://www.finep.gov.br/chamadas-publicas`.
+   * **Horário:** Escolha `06:00` (o robô fará a varredura logo cedo).
+3. Clique no botão **"Verificar endereço"** para o sistema conferir se a página abre normalmente.
+4. Se der tudo certo, clique em **"Salvar fonte"**.
+5. **Para testar na hora:** Vá na tabela de fontes, clique no botão de três pontinhos `...` ao lado da FINEP e escolha **"Buscar agora"**. O sistema vai rodar a busca naquele mesmo segundo!
+
+---
+
+## 5. Passo 4: Cadastrando a Equipe e Configurando os Alertas
+
+Agora vamos cadastrar a **Ana**, o **Carlos** e o **Lucas** para que cada um receba os avisos certos no seu e-mail.
+
+### A) Cadastrando os Destinatários:
+1. No menu de configurações, clique em **Destinatários** (`/configuracoes/destinatarios`).
+2. Clique em **"+ Novo destinatário"**:
+   * Digite o nome: `Ana - Captação`.
+   * Digite o e-mail: `ana.comercial@i9mais.com.br`.
+   * Nos botõezinhos de alertas abaixo, marque:
+     * `E01 - Novo edital de alto fit` (para ela correr e preparar a proposta comercial!).
+     * `E04 - Resumo semanal` (para ver o balanço da semana na segunda de manhã).
+   * Clique em **"Salvar"**.
+3. Repita para o **Carlos**:
+   * Nome: `Carlos - Gerente de Projetos`.
+   * E-mail: `carlos.projetos@i9mais.com.br`.
+   * Marque: `E02 - Prazo de submissão próximo` (para não deixar vencer o prazo) e `E05 - Edital retificado` (se houver prorrogação ou errata).
+   * Clique em **"Salvar"**.
+4. Repita para o **Lucas (TI)**:
+   * Nome: `Lucas - TI`.
+   * E-mail: `lucas.suporte@i9mais.com.br`.
+   * Marque apenas: `E06 - Falha na coleta` (ele só é incomodado se algum site de editais cair ou quebrar).
+
+---
+
+### B) Configurando o Envio do E-mail (SMTP):
+1. Clique na aba **E-mail (SMTP)** (`/configuracoes/email`).
+2. Em **Provedor**, selecione `Gmail` (ou `Outlook`).
+3. Em **E-mail de envio**, digite o e-mail da I9+ (ex: `notificacoes@i9mais.com.br`).
+4. Em **Senha de aplicativo**, cole a senha de 16 letras gerada no painel de segurança do Google/Microsoft.
+5. Em **Nome do remetente**, coloque `Editais I9+`.
+6. Clique em **"Salvar configuração de e-mail"**.
+7. No bloco abaixo de teste, digite o seu e-mail pessoal e clique no botão **"Enviar e-mail de teste"**. Assim que chegar na sua caixa de entrada, está 100% pronto!
+
+---
+
+## 6. Passo 5: Configurações de Inteligência Artificial e Compartilhamento
+
+Para fechar com chave de ouro:
+
+1. **Inteligência Artificial (`Configurações › Inteligência artificial`):**
+   * Se você usa o modelo instalado no seu computador, deixe marcado **"Neste computador (Ollama)"**.
+   * Se for usar pela nuvem, marque **"Ollama Cloud"** e cole a chave fornecida pela equipe.
+   * Em **Limite diário de perguntas no chat**, deixe o padrão de `20` perguntas por usuário por dia (isso serve para ninguém sobrecarregar o processador do servidor à toa).
+2. **Base de Dados (`Configurações › Base de dados`):**
+   * Se você trabalha sozinho na máquina, pode deixar em **"Neste computador"**.
+   * Se a equipe inteira da I9+ vai acessar o sistema ao mesmo tempo, marque **"Na nuvem (Turso)"**, cole o link e o token de acesso e clique em **"Usar a base na nuvem"**.
+   * **Quer fazer uma cópia de segurança?** Basta clicar no botão **"Baixar base"** a qualquer momento e você terá um arquivo salvo com todos os dados da I9+ em segurança.
