@@ -16,6 +16,12 @@ export const auth = {
   entrar: (dados: LoginEntrada) =>
     requisicao<OkResposta>('/api/auth/login', { metodo: 'POST', corpo: dados, redirecionarSe401: false }),
 
+  atualizarConta: (dados: { nome: string; senhaAtual: string; novaSenha?: string }) =>
+  requisicao<{ ok: true; usuario: UsuarioLogado }>('/api/auth/conta', {
+    metodo: 'PATCH',
+    corpo: dados
+  }),
+
   sair: () => requisicao<OkResposta>('/api/auth/sair', { metodo: 'POST', redirecionarSe401: false }),
 
   // Usuário logado, ou null sem sessão; outros erros (rede, 500) são propagados.

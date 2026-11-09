@@ -23,6 +23,16 @@ rotasAuth.get('/sessao', (req, res) => {
   res.json({ autenticado: true, usuario } satisfies SessaoResposta)
 })
 
+rotasAuth.patch('/conta', async (req, res) => {
+  const usuario = await authServico.atualizarConta(
+    tokenDaRequisicao(req),
+    req.body
+  )
+
+  res.json({ ok: true, usuario })
+})
+
+
 rotasAuth.post('/sair', (req, res) => {
   authServico.sair(tokenDaRequisicao(req))
   res.setHeader('Set-Cookie', cookieDeSessaoExpirado())

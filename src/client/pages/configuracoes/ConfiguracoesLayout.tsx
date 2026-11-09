@@ -4,6 +4,16 @@ type Secao = { to: string; rotulo: string; descricao: string }
 
 // Seções da página de configurações, agrupadas no menu lateral.
 export const gruposConfiguracoes: { grupo: string; secoes: Secao[] }[] = [
+ {
+  grupo: 'Conta',
+  secoes: [
+    {
+      to: 'conta',
+      rotulo: 'Minha conta',
+      descricao: 'Altere seu nome e senha de acesso.'
+    }
+  ],
+},
   {
     grupo: 'Empresa',
     secoes: [
