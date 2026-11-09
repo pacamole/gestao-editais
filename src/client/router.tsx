@@ -16,6 +16,7 @@ import { ErroPage } from './pages/ErroPage'
 import { LoginPage } from './pages/LoginPage'
 import { ManuaisPage } from './pages/ManuaisPage'
 import { NovaEntradaPage } from './pages/NovaEntradaPage'
+import { SecaoConta } from './pages/configuracoes/SecaoConta'
 
 // Mapa de páginas (§5 da especificação).
 export const router = createBrowserRouter([
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
         element: <ConfiguracoesLayout />,
         children: [
           { index: true, element: <Navigate to="perfil" replace /> },
+          { path: 'conta', element: <SecaoConta /> },
           { path: 'perfil', element: <SecaoPerfil /> }, // P06
           { path: 'criterios', element: <SecaoCriterios /> }, // P07
           { path: 'fontes', element: <SecaoFontes /> }, // P08

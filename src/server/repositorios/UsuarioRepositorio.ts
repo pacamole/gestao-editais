@@ -22,6 +22,36 @@ export class UsuarioRepositorio extends Repositorio<Usuario, string, 'id' | 'cri
     )
     return this.buscarPorId(id)!
   }
+/**
+ * Tarefa 4 — Atualização da conta do usuário.
+ *
+ * Atualiza somente os campos informados.
+ * A verificação da senha atual é feita pelo AuthServico.
+ * A nova senha já chega convertida em hash.
+ */
+atualizarConta(
+  id: string,
+  dados: { nome?: string; senha_hash?: string }
+): void {
+  // Atualiza o nome somente quando ele foi informado.
+  if (dados.nome !== undefined) {
+    this.executar(
+      'UPDATE usuario SET nome = ? WHERE id = ?',
+      dados.nome,
+      id
+    )
+  }
+
+  // Atualiza a senha somente quando há um novo hash.
+  if (dados.senha_hash !== undefined) {
+    this.executar(
+      'UPDATE usuario SET senha_hash = ? WHERE id = ?',
+      dados.senha_hash,
+      id
+    )
+  }
+}
+
 
   // E-mail é único e comparado sem diferenciar maiúsculas (COLLATE NOCASE).
   buscarPorEmail(email: string): Usuario | undefined {
