@@ -25,7 +25,7 @@ export function Veredito({ avaliacao: a, status, aviso, tentativas = 0, atualiza
   return (
     <div className="card detalhe-bloco">
       <div className="card__cabecalho">
-        <h2>Veredito</h2>
+        <h2>Veredito final</h2>
       </div>
       <div className="card__corpo">
         {aviso && (

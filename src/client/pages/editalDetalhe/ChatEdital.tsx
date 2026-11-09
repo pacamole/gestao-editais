@@ -5,8 +5,10 @@ import { edital as apiEdital } from '../../api/edital'
 import { TextoFormatado } from '../../components/TextoFormatado'
 import type { ErroChatDados, MensagemChat, SugestaoCorrecaoChat } from '../../../shared/tipos/chat'
 import type { CampoEditavel } from '../../../shared/tipos/edital'
+import type { AnaliseElegibilidade } from '../../../shared/tipos/triagem'
 import { CAMPOS_EDITAL } from '../../../shared/rotulos'
 import { SEM_CONEXAO, mensagemDoServidor, type AoErro } from './util'
+import { TriagemElegibilidade } from './TriagemElegibilidade'
 
 const SUGESTOES = [
   'Quais são os requisitos de elegibilidade deste edital?',
@@ -17,13 +19,15 @@ const SUGESTOES = [
 type Props = {
   id: string
   textoDisponivel: boolean
+  analiseTriagem: AnaliseElegibilidade | null
+  podeAnalisarTriagem: boolean
   aoErro: AoErro
   aoAtualizar: () => Promise<void>
 }
 
 const valorTexto = (valor: unknown) => Array.isArray(valor) ? valor.join(', ') : valor == null ? 'Não localizado' : String(valor)
 
-export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) {
+export function ChatEdital({ id, textoDisponivel, analiseTriagem, podeAnalisarTriagem, aoErro, aoAtualizar }: Props) {
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
   const [pergunta, setPergunta] = useState('')
   const [restantes, setRestantes] = useState(20)
@@ -145,25 +149,27 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
     <div className="card detalhe-bloco">
       <div className="card__cabecalho linha linha--entre">
         <div>
-          <h2>Chat sobre o edital</h2>
+          <h2>Chat com IA</h2>
           <small className="discreto">
             {textoDisponivel
               ? `${restantes} de ${limiteDiario} perguntas restantes hoje`
               : 'Este edital não tem texto extraído. Envie o PDF com texto selecionável para habilitar o chat.'}
           </small>
         </div>
-        <button
-          type="button"
-          className="btn btn--sm btn--fantasma"
-          onClick={limpar}
-          disabled={!textoDisponivel}
-        >
+        <button type="button" className="btn btn--sm btn--fantasma" onClick={limpar} disabled={!textoDisponivel}>
           Limpar conversa
         </button>
       </div>
       <div className="card__corpo">
         <div className="pilha">
           <div className="chat-historico">
+            <TriagemElegibilidade
+              id={id}
+              analise={analiseTriagem}
+              podeAnalisar={podeAnalisarTriagem}
+              aoErro={aoErro}
+              aoAtualizar={aoAtualizar}
+            />
             {!mensagens.length && (
               <div className="chat-sugestoes">
                 <p className="discreto">Perguntas sugeridas:</p>

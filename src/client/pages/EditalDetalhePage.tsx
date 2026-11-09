@@ -7,7 +7,6 @@ import { ChatEdital } from './editalDetalhe/ChatEdital'
 import { DadosExtraidos } from './editalDetalhe/DadosExtraidos'
 import { RevisaoHistorico } from './editalDetalhe/RevisaoHistorico'
 import { Veredito } from './editalDetalhe/Veredito'
-import { TriagemElegibilidade } from './editalDetalhe/TriagemElegibilidade'
 import { NAO_LOCALIZADO, mensagemDoServidor } from './editalDetalhe/util'
 
 // Tarefas 10 e 11 — leitura de dados reais e revisão persistida.
@@ -85,10 +84,12 @@ export function EditalDetalhePage() {
         tentativas={e.tentativas_processamento}
         atualizadoEm={e.atualizado_em}
       />
-      <TriagemElegibilidade
+      <RevisaoHistorico id={id} status={e.status} revisoes={revisoes} aoErro={setErro} aoAtualizar={carregar} />
+      <ChatEdital
         id={id}
-        analise={analise_elegibilidade}
-        podeAnalisar={Boolean(textoDisponivel || e.url_documento || e.url_original)}
+        textoDisponivel={textoDisponivel}
+        analiseTriagem={analise_elegibilidade}
+        podeAnalisarTriagem={Boolean(textoDisponivel || e.url_documento || e.url_original)}
         aoErro={setErro}
         aoAtualizar={carregar}
       />
@@ -100,8 +101,6 @@ export function EditalDetalhePage() {
         aoErro={setErro}
         aoAtualizar={carregar}
       />
-      <RevisaoHistorico id={id} status={e.status} revisoes={revisoes} aoErro={setErro} aoAtualizar={carregar} />
-      <ChatEdital id={id} textoDisponivel={textoDisponivel} aoErro={setErro} aoAtualizar={carregar} />
     </section>
   )
 }

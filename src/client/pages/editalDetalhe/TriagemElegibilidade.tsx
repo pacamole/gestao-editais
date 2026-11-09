@@ -36,24 +36,32 @@ export function TriagemElegibilidade({ id, analise, podeAnalisar, aoErro, aoAtua
   }
 
   return (
-    <div className="card detalhe-bloco">
-      <div className="card__cabecalho linha linha--entre">
+    <article
+      className="chat-msg chat-msg--assistente"
+      style={{
+        padding: '12px 16px',
+        margin: '6px 0',
+        borderRadius: 'var(--raio-2)',
+        background: 'var(--cinza-fundo)',
+      }}
+    >
+      <div className="linha linha--entre">
         <div>
-          <h2>Triagem de elegibilidade</h2>
-          <small className="discreto">Compara os requisitos do edital com o perfil e o site cadastrado da empresa.</small>
+          <strong>Assistente · Análise de triagem</strong>
+          <p className="discreto" style={{ margin: 0 }}>Compara os requisitos do edital com o perfil e o site cadastrado da empresa.</p>
         </div>
         <button
           type="button"
-          className="btn btn--primario"
+          className="btn btn--sm btn--fantasma"
           onClick={() => void analisar()}
           disabled={analisando || !podeAnalisar}
           title={!podeAnalisar ? 'O edital ainda não tem texto nem endereço para leitura.' : undefined}
         >
-          {analisando ? 'Analisando...' : 'Analisar elegibilidade'}
+          {analisando ? 'Analisando...' : analise ? 'Refazer análise' : 'Analisar elegibilidade'}
         </button>
       </div>
       {analise ? (
-        <div className="card__corpo">
+        <div className="texto-formatado">
           <p><strong>Resultado: {ELEGIBILIDADE[analise.status]}</strong></p>
           <p>{resumoDaElegibilidade(analise.status)}</p>
           {analise.aviso_leitura && <p className="aviso">{analise.aviso_leitura}</p>}
@@ -88,7 +96,7 @@ export function TriagemElegibilidade({ id, analise, podeAnalisar, aoErro, aoAtua
             ))}
           </div>
         </div>
-      ) : null}
-    </div>
+      ) : <p className="discreto">A análise de elegibilidade ainda não foi realizada.</p>}
+    </article>
   )
 }
