@@ -25,6 +25,10 @@ Abra **Configurações** no menu lateral. Cada seção abaixo corresponde a uma 
 | **Reavaliar todos os editais ativos com o novo perfil** | Solicita a reavaliação dos editais ativos ao salvar. |
 | **Salvar perfil** | Grava os dados, limpa as conversas existentes do chat e executa a reavaliação se a opção estiver marcada. |
 
+Antes de salvar, confira os campos exigidos pelo servidor: razão social, CNPJ real, CNAE principal, porte, natureza jurídica, data de fundação, estado com duas letras e município. Os campos complementares ajudam a avaliar as condições que se aplicam à empresa. Nas instruções extras, descreva fatos que ajudem a interpretar as regras dos editais, como o estágio de desenvolvimento da tecnologia ou as parcerias que a empresa de fato possui.
+
+Exemplo hipotético para a equipe de baterias. Registre termos relacionados à atuação da empresa em **Palavras-chave**, como «armazenamento de energia» e «baterias», se refletirem a atividade real. Use **Capacidade de contrapartida (%)** para o percentual que a empresa consegue aportar e **Prazo mínimo de preparo (dias)** para o tempo necessário à preparação da proposta.
+
 ## Critérios e pesos
 
 | Campo ou botão | Efeito |
@@ -46,6 +50,15 @@ Abra **Configurações** no menu lateral. Cada seção abaixo corresponde a uma 
 
 **É igual a** e **É diferente de** comparam os valores. **É maior ou igual a** e **É menor ou igual a** incluem o limite. **Tem faixa que inclui** verifica se a referência pertence à faixa de faturamento indicada pelo edital. **Contém** e **Não contém** verificam presença ou ausência em lista ou texto. **Não restringe ou contém** aceita uma lista vazia ou a presença da referência. **Tem item em comum com** exige pelo menos um item em comum. **Está contido em** exige que os itens do edital estejam na referência. **É verdadeiro** exige a condição afirmativa. **É falso (ou a empresa atende)** aceita a ausência da exigência ou a condição alternativa indicada no perfil.
 
+### Criar, testar e interpretar uma regra
+
+1. Clique em **+ Novo critério** na seção correspondente. Para conferir se uma chamada aceita o porte da empresa, por exemplo, escolha **Eliminatório**, selecione **Portes aceitos**, escolha **não restringe ou contém** e selecione **Porte** do perfil como referência.
+2. Confira a frase e a fórmula que o formulário apresenta. Digite um nome e, para uma regra eliminatória, preencha o motivo a exibir em caso de reprovação.
+3. Ative **Usar este critério na avaliação** e salve. Criar, editar, ativar, desativar ou excluir uma regra reavalia os editais já avaliados que estão **Analisado**, **Em revisão** ou **Aprovado**.
+4. Em **Testar com um edital**, selecione um registro e clique em **Testar** para ver o resultado com as regras atuais. A simulação apresenta as violações, as verificações pendentes e a pontuação calculada sem gravar uma nova avaliação.
+
+Para os critérios pontuáveis, a nota é a média ponderada das pontuações aplicáveis, convertida para a escala de 0 a 100. Critérios sem dados suficientes ficam fora da conta. Exemplo hipotético: um critério com peso 3 e pontuação 1, combinado com outro com peso 2 e pontuação 0, resulta em 60. A nota de fit e o limiar do alerta **Novo edital com fit alto** são configurações distintas: alterar o limiar do alerta não muda as faixas de classificação do sistema.
+
 ## Fontes monitoradas
 
 | Campo ou botão | Efeito |
@@ -65,6 +78,12 @@ Abra **Configurações** no menu lateral. Cada seção abaixo corresponde a uma 
 | **⋯ › Pausar / Retomar** | Desativa ou reativa a coleta programada da fonte. |
 | **⋯ › Editar / Excluir** | Edita ou remove uma fonte adicionada. |
 
+### Efeito do filtro e do agendamento
+
+O filtro procura os termos excludentes no título e nos primeiros 2.000 caracteres do texto disponível. A entrada automática fica **Fora do perfil** quando há termo excludente e nenhuma área de atuação ou palavra-chave cadastrada aparece no título. A lista inicial inclui termos como «bolsa», «pessoa física», «mestrado» e «doutorado». A equipe pode recuperá-la pela ação **Resgatar para análise** no detalhe do edital. A busca diária tem horário inicial de 06:00, e a rotina de expiração verifica os registros a partir das 07:00, no horário de Brasília.
+
+O limite é de 20 fontes adicionadas pela equipe. As fontes integradas podem ter o horário alterado ou a coleta pausada. Ao excluir uma fonte adicionada, os editais que ela trouxe permanecem na lista, identificados pela origem excluída. **Pausar** é adequado para suspender a rotina e preservar a possibilidade de **Retomar**.
+
 ## Alertas e destinatários
 
 O interruptor de cada alerta controla sua ativação. Clique no nome para abrir os parâmetros. **Todos da lista** usa a lista de destinatários cadastrados. **Escolher** permite selecionar um subconjunto. **Gerenciar lista** abre a seção **Destinatários**.
@@ -75,12 +94,16 @@ O interruptor de cada alerta controla sua ativação. Clique no nome para abrir 
 | **Prazo próximo** | Dias de antecedência entre 1 e 90. Os padrões são 15, 7 e 2 dias. Inclua os dias no campo e remova cada valor pelo controle correspondente. |
 | **Verificação necessária** | Avisa quando um critério precisa de verificação. Possui opções de ativação e destinatários. |
 | **Resumo semanal** | Dia da semana e horário da rotina. O padrão é segunda-feira às 08:00. |
-| **Edital retificado** | Variação de nota entre 1 e 100 pontos. A regra dispara quando a variação ultrapassa o valor configurado, cujo padrão é 10. |
+| **Edital retificado** | Variação de nota entre 1 e 100 pontos, com padrão de 10. Uma retificação pode disparar o alerta se mudar o prazo, a elegibilidade ou a existência da nota, ou se a diferença entre duas notas ultrapassar o limite. |
 | **Falha de coleta** | Quantidade de falhas consecutivas da mesma fonte, de 1 a 20. O padrão é 2. |
 
 **Salvar tudo** grava as alterações dos alertas. **Descartar** desfaz as alterações pendentes. **Simular envio** envia uma mensagem de exemplo aos destinatários da simulação com SMTP ativo, ou a registra no terminal com SMTP desligado. **Histórico de envios** permite filtrar pelo tipo de alerta e pelas opções **Todos**, **Enviados** e **Falhas**.
 
 Em **Destinatários**, **Adicionar** inclui o endereço digitado na lista, **Buscar e-mail** filtra os endereços exibidos e **Remover** retira o endereço selecionado da lista.
+
+A rotina de **Prazo próximo** consulta diariamente os editais com prazo exatamente na antecedência configurada, a partir das 07:00. Considera os registros analisados, em revisão ou aprovados. O **Resumo semanal** consolida os últimos sete dias, destaca até cinco oportunidades e lista prazos de até 15 dias entre os registros acompanhados. **Falha de coleta** acompanha a sequência de falhas de cada fonte.
+
+Para configurar um alerta, abra seu nome, ative o interruptor, ajuste os campos e confira os destinatários antes de clicar em **Salvar tudo**. **Simular envio** pode enviar e-mail de verdade. Confira a seleção antes de usar o botão e verifique o resultado exibido.
 
 ## E-mail (SMTP)
 
@@ -118,6 +141,13 @@ Em **Destinatários**, **Adicionar** inclui o endereço digitado na lista, **Bus
 | **Baixar base** | Baixa uma cópia SQLite da base ativa. |
 | **Seleção de arquivo / Trocar** | Seleciona ou substitui o arquivo de importação antes de aplicar a operação. |
 | **Substituir os dados deste computador / Substituir os dados da nuvem / Restaurar** | Substituem os dados da base ativa pelo arquivo selecionado ou pelo backup indicado. A operação pede confirmação, cria uma cópia da base anterior e exige novo login. |
+
+### Exportar, importar e restaurar
+
+1. Em **Levar para outro computador**, use **Baixar base** para obter o arquivo da base em uso.
+2. Em **Trazer de outro computador**, arraste o arquivo `.db` ou clique na área de seleção. Use **Trocar** se o arquivo exibido for diferente do pretendido.
+3. Confira a indicação **Base em uso**. Se estiver na nuvem, **Substituir os dados da nuvem** afeta toda a equipe que usa essa base. Se estiver em modo local, **Substituir os dados deste computador** altera a base local da instalação.
+4. Leia a confirmação antes de prosseguir. Depois da troca, entre com uma conta presente na base carregada. Em **Backups automáticos**, **Restaurar** aplica o backup selecionado e também exige confirmação.
 
 ## Parâmetros do servidor
 
