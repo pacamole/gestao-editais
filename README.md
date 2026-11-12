@@ -123,6 +123,8 @@ A IA continua dependendo do Ollama na máquina ou da chave do Ollama Cloud em **
 
 ## Mais documentação
 
+- [Manuais](docs/MANUAIS.md) — uso do sistema, integrações e configuração.
+
 - [docs/BASE-DE-DADOS.md](docs/BASE-DE-DADOS.md) — base na nuvem (Turso), exportar e importar entre computadores
 - [docs/especificacao-gestao-editais.md](docs/especificacao-gestao-editais.md) — especificação completa gerada para o início do desenvolvimento
 - [docs/ESTRUTURA.md](docs/ESTRUTURA.md) — pastas do código e chaves da tabela `config`
