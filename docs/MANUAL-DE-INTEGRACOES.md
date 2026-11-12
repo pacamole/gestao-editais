@@ -1,119 +1,36 @@
-# Manual de Integrações do Sistema — Gestor de Editais I9+
+# Manual de integrações do Gestor de Editais I9+
 
-> **Para quem é este manual:** Para qualquer membro da equipe da I9+, gestores de inovação e administradores que precisam entender como o sistema conversa com outros serviços, como ligar novas fontes de editais e quais cuidados tomar no dia a dia.  
-> **Linguagem:** Clara, prática e sem termos técnicos desnecessários.
+[Manuais](MANUAIS.md)
 
----
+## Inteligência artificial
 
-## 1. O que são as "Integrações" do Sistema?
+A integração com Ollama atende à triagem de elegibilidade, à extração estruturada, ao chat e a etapas de descoberta e leitura de fontes. A triagem pode consultar o site público da empresa indicado no perfil.
 
-Pense no **Gestor de Editais** como uma central de trabalho inteligente na I9+. Sozinho, ele já consegue guardar informações. Mas para não dar trabalho para ninguém ficar caçando editais na internet o dia todo ou lendo documentos de 80 páginas linha por linha, o sistema constrói **"pontes" automáticas** com outros serviços e plataformas.
+- **Ollama local.** Instale o modelo `gemma2:latest` e inicie o serviço na máquina de inferência. Em **Configurações › Inteligência artificial**, selecione o modo local. O endereço padrão é `http://localhost:11434`, visto a partir do servidor da aplicação. Para um serviço em outra máquina, informe seu endereço HTTP ou HTTPS no campo **Endereço do Ollama**. Clique em **Testar**, salve o endereço e, se estiver trocando de modo, use **Usar este computador**.
+- **Ollama Cloud.** Selecione **Ollama Cloud**, informe a chave de API, clique em **Conferir chave** para carregar os modelos disponíveis e escolha o modelo. Use **Salvar e usar o Ollama Cloud** para ativar o modo ou **Salvar** para atualizar a configuração já ativa. Nesse modo, o provedor recebe o contexto das solicitações de IA, que pode conter dados do perfil e trechos do edital.
+- **Verificação.** O painel de status informa se o serviço responde e se o modelo está disponível. Em caso de erro, verifique o endereço e o serviço local ou a chave e o modelo em nuvem, conforme a mensagem apresentada.
 
-Essas pontes são as **integrações**. No sistema, elas estão divididas em 4 pilares práticos:
+## Base de dados
 
-* **1. Inteligência Artificial (O nosso Leitor e Assistente):**  
-  Conecta o sistema aos modelos de linguagem (locais ou em nuvem). A IA atua na triagem inicial dos editais, lê os documentos em PDF, extrai dados cruciais (valores, prazos, exigências de contrapartida), compara com as páginas do site da I9+ e atende você no chat interativo de cada edital.
-* **2. Base de Dados Compartilhada (A Memória da Empresa):**  
-  Conecta o sistema a um banco de dados centralizado na nuvem (Turso). Dessa forma, quando alguém cadastra ou revisa um edital, todos os outros computadores da equipe da I9+ veem a informação atualizada no mesmo segundo.
-* **3. Serviço de E-mail (O Mensageiro):**  
-  Conecta o sistema ao servidor de e-mail institucional (como Gmail ou Outlook) para disparar avisos automáticos: quando surge um edital de alto fit, quando os prazos de submissão estão perto do fim ou quando um edital sofreu retificação.
-* **4. Fontes e Portais de Editais (Os Rastreadores):**  
-  Conecta o sistema aos portais oficiais de fomento (como a API direta da FINEP e páginas de chamadas públicas). Os robôs visitam esses sites todos os dias no horário programado para coletar e cadastrar novas oportunidades automaticamente.
+- **SQLite local.** O sistema usa o arquivo indicado por `DATABASE_PATH`, cujo padrão é `data/editais.db`. Em uma instalação hospedada, esse arquivo fica no servidor. Use **Configurações › Base de dados** para exportar a base ou importar uma cópia compatível.
+- **Turso.** Em **Base de dados › Na nuvem (Turso)**, informe a URL `libsql://` e o token, depois clique em **Testar conexão**. Se a base estiver vazia, escolha entre enviar os dados locais e iniciar com uma base vazia. Se a base já contiver dados, a aplicação passará a usar o conteúdo existente. Confirme com **Usar a base na nuvem**.
+- **Armazenamento.** Textos extraídos, análises e demais registros persistidos ficam na base ativa. Os arquivos PDF ficam no armazenamento local da instalação que os coletou. A configuração de conexão Turso fica em `base-conexao.json`, ao lado do banco local.
+- **Verificação.** Consulte a indicação **em uso** e o resumo dos dados. Se a conexão falhar, confira o acesso à rede e as credenciais. **Reconectar** tenta restabelecer a conexão configurada. Consulte [Base de dados](BASE-DE-DADOS.md) para os procedimentos de cópia.
 
----
+## E-mail SMTP
 
-## 2. Como os Usuários Podem Adicionar Mais Integrações?
+Em **Configurações › E-mail (SMTP)**, selecione um provedor predefinido ou **Outro**. Informe a conta remetente, a credencial aceita pelo provedor e o nome exibido. Para **Outro**, preencha também o servidor e a porta SMTP. Clique em **Salvar**. Em **Testar envio**, informe o endereço de destino e clique em **Enviar e-mail de teste**. Confirme o recebimento na caixa de entrada.
 
-Você não precisa mexer em linhas de código para adicionar ou configurar essas integrações. Tudo é feito por telas simples no menu **Configurações**.
+A lista em **Destinatários** fornece os endereços que podem receber notificações. Em **Alertas**, defina os eventos ativos e os destinatários de cada um. Com o SMTP desligado, o adaptador registra os envios no terminal do servidor.
 
----
+## Fontes monitoradas e leitura de documentos
 
-### A) Adicionando uma Nova Fonte de Coleta de Editais
+| Integração | Funcionamento e verificação |
+| --- | --- |
+| **FINEP** | Fonte integrada com consulta à API pública da FINEP. Confira o resultado por **Buscar agora** e pelo painel de saúde da coleta. [API da FINEP](API-FINEP.md) |
+| **EMBRAPII** | Fonte integrada com rotina própria de leitura das chamadas publicadas. Pode ter o horário alterado e ser pausada ou retomada. |
+| **Fontes adicionadas** | Cadastre a página de listagem em **Fontes monitoradas › + Adicionar fonte**. Use **Verificar página** para verificar a leitura antes de confirmar o cadastro. O resultado pode oferecer um endereço alternativo ou o cadastro avulso de uma publicação. |
+| **Leitura de páginas e PDFs** | A aplicação lê o HTML das páginas, pode abrir páginas dependentes de JavaScript com Playwright e extrai texto de PDFs com PDF.js. A leitura de um PDF digitalizado depende de uma camada de texto disponível no arquivo. |
+| **Site da empresa** | A triagem parte do endereço público cadastrado no perfil e procura páginas por links internos e sitemaps. A descoberta é limitada a 500 páginas e 10 milhões de caracteres. O texto enviado ao modelo respeita o limite de contexto, com prioridade para trechos relevantes. A triagem mostra as páginas usadas como evidência, quando disponíveis. |
 
-Quer que o sistema comece a vigiar um novo portal de editais da internet (por exemplo, um portal estadual de inovação ou ministério)?
-
-1. No menu lateral esquerdo, clique em **Configurações › Fontes monitoradas**.
-2. No topo da tela, clique no botão azul **"+ Adicionar fonte"**.
-3. Na janela que se abrir, preencha:
-   - **Nome da fonte:** Um nome fácil de reconhecer (ex: `FAPESP - Chamadas Vigentes` ou `EMBRAPII Editais`).
-   - **Endereço do site (URL):** Cole o link da página onde fica a lista de editais abertos (ex: `https://fapesp.br/chamadas`).
-   - **Horário da visita:** Escolha a hora em que o robô deve passar lá todo dia (ex: `06:30` da manhã).
-4. Clique no botão **"Verificar endereço"**:
-   - O sistema vai dar uma espiada no site na hora para confirmar se consegue ler a página e se achou editais lá dentro.
-5. Se der tudo certo, clique em **"Salvar fonte"**.
-6. **Quer testar na mesma hora?** Na tabela de fontes, vá na linha da fonte que você acabou de criar, clique no menu de três pontinhos `...` e escolha **"Buscar agora"**. O sistema fará a varredura naquele instante!
-
----
-
-### B) Conectando o E-mail da I9+ para Envio de Alertas
-
-Para o sistema conseguir enviar e-mails de aviso para a equipe:
-
-1. Acesse **Configurações › E-mail (SMTP)**.
-2. No campo **Provedor**, escolha o que a sua empresa usa: `Gmail`, `Outlook` ou `Outro`.
-3. Digite o e-mail remetente (ex: `projetos@i9mais.com.br`).
-4. **Senha de aplicativo:** Se for Gmail ou Outlook com autenticação de duas etapas, você deve gerar uma "Senha de aplicativo" na sua conta de e-mail e colar aqui (nunca use a sua senha pessoal do dia a dia!).
-5. Em **Nome do remetente**, escreva como o e-mail deve chegar na caixa das pessoas (ex: `Editais I9+`).
-6. Clique em **"Salvar configuração de e-mail"**.
-7. Logo abaixo, no bloco de teste, digite o seu próprio e-mail e clique em **"Enviar e-mail de teste"**. Se a mensagem apitar na sua caixa de entrada, a integração está perfeita!
-
----
-
-### C) Conectando a Base de Dados na Nuvem (Turso)
-
-Se você quer que tudo o que você cadastre apareça automaticamente no computador dos seus colegas de equipe:
-
-1. Acesse **Configurações › Base de dados**.
-2. Em **Onde ficam os dados**, marque **"Na nuvem (Turso)"**.
-3. Cole o **Endereço do banco** (que começa com `libsql://...`) e a **Chave de acesso (Token)** fornecidos pelo administrador.
-4. Clique em **"Testar conexão"**.
-5. Se aparecer a mensagem verde de sucesso, clique em **"Usar a base na nuvem"**. Pronto: a partir de agora todo mundo trabalha na mesma base compartilhada!
-
----
-
-### D) Alternando a Inteligência Artificial (Computador vs. Nuvem)
-
-1. Acesse **Configurações › Inteligência artificial**.
-2. Se você tem um computador forte com placa de vídeo, escolha **"Neste computador (Ollama)"**.
-3. Se você está em um notebook mais modesto ou prefere não instalar nada pesado, escolha **"Ollama Cloud"**, cole a chave de acesso que a equipe possui e clique em **"Salvar"**.
-
----
-
-## 3. As Implicações de Adicionar uma Nova Fonte Manualmente (E por que isso pode falhar)
-
-A equipe precisa saber com total transparência: **adicionar uma nova fonte de internet para o robô vigiar automaticamente é muito útil, mas é um processo que pode falhar com facilidade**.
-
-Entenda abaixo por que isso acontece e quais são os cuidados obrigatórios:
-
-### ⚠️ Por que fontes manuais falham com tanta frequência na internet?
-
-1. **Os sites do governo e portais mudam de visual do nada:**
-   - O robô aprendeu a procurar editais num botão azul com texto "Baixar Edital". Se amanhã o desenvolvedor do portal mudar o site e colocar uma tabela diferente ou um menu suspenso, o robô fica "cego" e não encontra mais os links.
-2. **Páginas que demoram para carregar (feitas em JavaScript moderno):**
-   - Alguns portais abrem uma tela em branco e demoram 3 a 5 segundos puxando as informações de outro lugar. Se a conexão oscilar ou o site estiver lento, o robô tenta ler antes da hora e acha que a página está vazia.
-3. **Bloqueios de segurança e "Não sou um robô" (CAPTCHA):**
-   - Vários portais públicos possuem proteção contra robôs (como Cloudflare ou telas com fotos para clicar em semáforos). Como o nosso sistema é um robô automático de madrugada, ele é barrado na porta e não consegue entrar.
-4. **Colocar o link errado:**
-   - **Erro mais comum:** a pessoa clica no edital número 05/2026, copia o link direto daquele edital e cadastra como fonte. O robô só vai ver aquele mesmo edital para sempre e nunca vai achar novos! A fonte precisa ser a **página geral de listagem**, onde todos os editais novos são publicados.
-5. **Portais que exigem pesquisa ou preencher formulário:**
-   - Se o site só mostra editais depois que você escolhe "Ano 2026" e clica em "Filtrar", o robô padrão não consegue adivinhar o que preencher e não vê nada.
-
----
-
-### 🚦 O que acontece no sistema quando uma fonte falha?
-
-* Na tela de **Fontes monitoradas**, a fonte passará a exibir uma etiqueta amarela **"Com avisos"** ou vermelha **"Com erro"**.
-* O sistema não trava o resto do programa! Ele simplesmente anota o erro no histórico e tenta de novo no dia seguinte.
-* Se a fonte continuar falhando por 3 dias seguidos, o sistema dispara o **Alerta E06 (Falha na Coleta)** para o e-mail dos responsáveis técnicos para avisar que o site mudou ou caiu.
-
----
-
-### 🛡️ A Alternativa Recomendada (À prova de falhas)
-
-Quando um portal de editais for muito complicado, tiver senhas ou o robô não conseguir ler de jeito nenhum, **não se preocupe!** O sistema tem uma porta de entrada manual 100% garantida:
-
-1. Vá no menu principal e clique em **"Nova entrada"** (`/editais/novo`).
-2. Você tem duas opções super fáceis:
-   - **Por Link (URL):** Basta colar o link direto da página daquele edital específico e clicar em "Adicionar edital".
-   - **Por Envio de PDF:** Baixe o arquivo PDF do edital no seu computador, arraste para dentro da tela e clique em "Enviar edital".
-3. A Inteligência Artificial vai ler o documento com a mesma qualidade e você não corre nenhum risco de o robô da internet falhar!
+Use **Buscar agora** para executar uma coleta imediata. Compare a última execução, a quantidade de novos registros e a situação da fonte. Se uma fonte falhar, confira o endereço, o acesso a partir do servidor e a disponibilidade do Chromium quando a página depender de JavaScript.
