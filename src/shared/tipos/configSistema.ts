@@ -47,7 +47,8 @@ export type TestarEmailResposta = { ok: true }
 // Campos ausentes usam o que está salvo (permite testar antes de salvar).
 export type TestarOllamaEntrada = { modo?: ModoOllama; url?: string; chave?: string; modelo?: string }
 // Responde sempre 200 com a situação, para a tela saber qual passo falta.
-export type SituacaoOllama = 'OK' | 'SEM_MODELO' | 'SEM_CONEXAO' | 'ACESSO_NEGADO' | 'SEM_CHAVE'
+// SEM_CREDITO (HTTP 402) e LIMITE_USO (HTTP 429): a chave vale, mas a conta do Ollama Cloud não pode gerar agora.
+export type SituacaoOllama = 'OK' | 'SEM_MODELO' | 'SEM_CONEXAO' | 'ACESSO_NEGADO' | 'SEM_CREDITO' | 'LIMITE_USO' | 'SEM_CHAVE'
 export type TestarOllamaResposta = {
   situacao: SituacaoOllama
   modo: ModoOllama

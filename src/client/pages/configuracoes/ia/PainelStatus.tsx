@@ -26,7 +26,7 @@ const hostDe = (url: string) => {
   }
 }
 
-const hora = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+const hora = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
 function Comando({ texto }: { texto: string }) {
   const [copiado, setCopiado] = useState(false)
@@ -111,6 +111,14 @@ export function PainelStatus({ modo, modelo, verificacao, onVerificar }: Props) 
         titulo = 'Chave recusada'
         detalhe = 'O Ollama Cloud recusou a chave de API. Confira se ela foi copiada inteira ou gere uma nova.'
         break
+      case 'SEM_CREDITO':
+        titulo = 'Conta sem créditos'
+        detalhe = 'A chave foi aceita, mas a conta do Ollama Cloud está sem créditos de uso. Adicione créditos ou assine um plano em ollama.com/plans e clique em Verificar.'
+        break
+      case 'LIMITE_USO':
+        titulo = 'Limite de uso atingido'
+        detalhe = 'A chave foi aceita, mas a conta do Ollama Cloud atingiu o limite de uso. Aguarde um pouco ou amplie o plano em ollama.com/plans.'
+        break
       case 'SEM_MODELO':
         titulo = 'Escolha o modelo'
         detalhe = resultado.modelo
@@ -132,6 +140,8 @@ export function PainelStatus({ modo, modelo, verificacao, onVerificar }: Props) 
       case 'SEM_CONEXAO':
       case 'SEM_CHAVE':
       case 'ACESSO_NEGADO':
+      case 'SEM_CREDITO':
+      case 'LIMITE_USO':
         titulo = 'Não está funcionando'
         detalhe = 'O Ollama não respondeu. Siga os passos abaixo e clique em Verificar.'
         corpo = <GuiaLocal semConexao modelo={modelo} />
@@ -152,7 +162,13 @@ export function PainelStatus({ modo, modelo, verificacao, onVerificar }: Props) 
   const classe = verificando || !verificacao ? 'status-ia' : ok ? 'status-ia status-ia--ok' : 'status-ia status-ia--erro'
 
   return (
-    <div className={`card ${classe}`} role="status" aria-live="polite">
+    // key muda a cada verificação concluída: o card é recriado e a animação de destaque roda de novo.
+    <div
+      key={verificacao?.estado === 'pronto' ? verificacao.em.getTime() : verificacao?.estado}
+      className={`card ${classe}${verificacao && !verificando ? ' status-ia--novo' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
       <div className="card__corpo pilha">
         <div className="linha linha--entre">
           <div className="pilha pilha--sm">

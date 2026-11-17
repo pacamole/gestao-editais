@@ -211,6 +211,8 @@ export class ConfigSistemaServico {
     const motivos: Record<string, string> = {
       SEM_CHAVE: 'falta a chave do Ollama Cloud em Configurações › IA.',
       ACESSO_NEGADO: 'a chave do Ollama Cloud foi recusada; confira em Configurações › IA.',
+      SEM_CREDITO: 'a conta do Ollama Cloud está sem créditos; adicione créditos em ollama.com/plans.',
+      LIMITE_USO: 'a conta do Ollama Cloud atingiu o limite de uso; aguarde ou amplie o plano em ollama.com/plans.',
       SEM_MODELO: 'o modelo escolhido não está disponível; confira em Configurações › IA.',
       SEM_CONEXAO: modo === 'LOCAL' ? 'o Ollama local não está respondendo (ele está aberto?).' : 'o Ollama Cloud não está respondendo.',
     }
