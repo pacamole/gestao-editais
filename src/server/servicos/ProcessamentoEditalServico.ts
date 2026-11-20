@@ -118,8 +118,16 @@ export class ProcessamentoEditalServico {
     return { ...resposta, edital: this.repos.edital.buscarPorId(editalId) ?? resposta.edital }
   }
 
+  /** Triagem por IA pedida pelo usuário. Se der certo, também tira o aviso de falha de leitura anterior. */
+  async triarSobDemanda(editalId: string) {
+    const analise = await this.triagem.analisar(editalId)
+    const avaliacao = this.avaliacao.registrarTriagem(editalId, analise.status)
+    await this.registrarLeitura(editalId, false, analise.status)
+    return { analise, avaliacao }
+  }
+
   // A leitura deu certo: tira o aviso da falha anterior. Edital em FALHA nem precisava esperar a nova tentativa.
-  private async registrarLeitura(editalId: string, temCamposNovos: boolean): Promise<void> {
+  private async registrarLeitura(editalId: string, temCamposNovos: boolean, statusTriagem: StatusElegibilidade | null = null): Promise<void> {
     const edital = this.repos.edital.buscarPorId(editalId)
     if (!edital || !STATUS_COM_FALHA_DE_LEITURA.includes(edital.status)) return
 
@@ -127,12 +135,16 @@ export class ProcessamentoEditalServico {
     if (edital.status === 'FALHA') {
       const perfil = this.repos.perfilEmpresa.obter()
       if (!perfil || perfilProvisorio(perfil)) return
-      await this.concluir(this.mover(edital, 'EM_ANALISE', { erro_processamento: aviso }), aviso)
+      await this.concluir(this.mover(edital, 'EM_ANALISE', { erro_processamento: aviso }), aviso, statusTriagem)
       return
     }
 
     if (edital.erro_processamento !== aviso) this.repos.edital.atualizar(editalId, { erro_processamento: aviso })
     if (temCamposNovos) this.reavaliar(editalId)
+    else if (statusTriagem && (edital.status === 'ANALISADO' || edital.status === 'EM_REVISAO')) {
+      const alvo: StatusEdital = statusTriagem === 'INDETERMINADO' ? 'EM_REVISAO' : 'ANALISADO'
+      if (alvo !== edital.status) this.mover(this.recarregar(edital), alvo)
+    }
   }
 
   /**
