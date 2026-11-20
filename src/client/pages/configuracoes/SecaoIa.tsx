@@ -7,7 +7,7 @@ import { PainelStatus, type Verificacao } from './ia/PainelStatus'
 
 type Aviso = { tipo: 'sucesso' | 'atencao' | 'erro'; texto: string } | null
 
-const ROTULO_MODO: Record<ModoOllama, string> = { LOCAL: 'Neste computador', NUVEM: 'Conexões por API' }
+const ROTULO_MODO: Record<ModoOllama, string> = { LOCAL: 'Neste computador', NUVEM: 'Conexões de IA por API' }
 
 export function SecaoIa() {
   const [config, setConfig] = useState<ConfigSistema | null>(null)
@@ -103,7 +103,7 @@ export function SecaoIa() {
 
       {modoPendente && modo === 'LOCAL' ? (
         <div className="aviso aviso--atencao linha linha--entre">
-          <span>Hoje a IA usa {config.ia_api_selecionada ? 'uma conexão por API' : 'o Ollama Cloud'}.</span>
+          <span>Hoje a IA usa {config.ia_api_selecionada ? 'uma conexão por API' : 'uma conexão de IA na nuvem'}.</span>
           <button
             type="button"
             className="btn btn--sm btn--primario"
@@ -119,7 +119,7 @@ export function SecaoIa() {
         <div className="pilha">
           {config.ollama_chave_definida && !config.ia_api_selecionada ? (
             <p className="aviso aviso--atencao">
-              A configuração anterior do Ollama Cloud continua ativa. Para gerenciá-la junto a outros provedores, cadastre uma conexão compatível com OpenAI abaixo.
+              A conexão de IA na nuvem configurada anteriormente continua salva. Para usar outro provedor, cadastre uma conexão de IA por API abaixo.
             </p>
           ) : null}
           <CardConexoesIa
@@ -162,7 +162,7 @@ export function SecaoIa() {
             {nuvemAtiva
               ? config.ia_api_selecionada
                 ? `Com ${config.ia_api_conexoes.find((item) => item.id === config.ia_api_selecionada)?.nome ?? 'a conexão selecionada'}, os dados dos editais são enviados ao provedor para análise.`
-                : 'Com o Ollama Cloud, o texto dos editais é enviado ao ollama.com para ser analisado.'
+                : 'Com a conexão de IA na nuvem, o texto dos editais é enviado ao provedor conectado para ser analisado.'
               : 'Tudo roda neste computador: o texto dos editais não é enviado para serviços externos.'}
           </p>
         </div>

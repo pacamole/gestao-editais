@@ -59,7 +59,7 @@ npm run db:reset                          # base nova, vazia
 npm run db:importar -- caminho/base.db    # base exportada por um colega
 ```
 
-## 5. Subir o sistema
+## 5. Subir o sistema 
 
 ```bash
 npm run dev

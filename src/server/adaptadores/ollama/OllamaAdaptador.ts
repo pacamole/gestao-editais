@@ -32,9 +32,9 @@ type Pedido = {
 }
 
 const MENSAGENS_RECUSA: Record<RecusaOllama, string> = {
-  ACESSO_NEGADO: 'O Ollama Cloud recusou a chave de API. Confira em Configurações › Inteligência artificial.',
-  SEM_CREDITO: 'A conta do Ollama Cloud está sem créditos de uso. Adicione créditos ou assine um plano em ollama.com/plans.',
-  LIMITE_USO: 'A conta do Ollama Cloud atingiu o limite de uso. Aguarde um pouco ou amplie o plano em ollama.com/plans.',
+  ACESSO_NEGADO: 'O provedor recusou a chave de API. Confira a conexão em Configurações › Inteligência artificial.',
+  SEM_CREDITO: 'A conta do provedor está sem créditos de uso. Confira o saldo e os planos disponíveis no painel do provedor.',
+  LIMITE_USO: 'A conta do provedor atingiu o limite de uso. Aguarde ou confira os limites no painel do provedor.',
 }
 
 // 401/403 (chave), 402 (sem créditos) e 429 (limite de uso): o Ollama recusou o pedido.

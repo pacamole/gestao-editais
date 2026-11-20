@@ -278,7 +278,7 @@ export class ConfigSistemaServico {
       } else {
         const comChave = chaveNova || (atual.ollama_chave_definida && !entrada.remover_ollama_chave)
         if (!comChave) throw new ErroValidacao('Informe uma conexão de IA por API.')
-        if (!modeloNuvem) throw new ErroValidacao('Escolha o modelo do Ollama Cloud.')
+        if (!modeloNuvem) throw new ErroValidacao('Escolha o modelo da conexão de IA na nuvem.')
       }
     }
     if (!Number.isInteger(limiteChat) || limiteChat < 1 || limiteChat > CHAT_LIMITE_MAXIMO) {
@@ -362,12 +362,12 @@ export class ConfigSistemaServico {
     }
     const { situacao, modo } = await this.testarOllama({})
     const motivos: Record<string, string> = {
-      SEM_CHAVE: 'falta a chave do Ollama Cloud em Configurações › IA.',
-      ACESSO_NEGADO: 'a chave do Ollama Cloud foi recusada; confira em Configurações › IA.',
-      SEM_CREDITO: 'a conta do Ollama Cloud está sem créditos; adicione créditos em ollama.com/plans.',
-      LIMITE_USO: 'a conta do Ollama Cloud atingiu o limite de uso; aguarde ou amplie o plano em ollama.com/plans.',
+      SEM_CHAVE: 'falta a chave da conexão de IA na nuvem em Configurações › IA.',
+      ACESSO_NEGADO: 'a chave da conexão de IA na nuvem foi recusada; confira em Configurações › IA.',
+      SEM_CREDITO: 'a conta do provedor está sem créditos; confira saldo e planos no painel do provedor.',
+      LIMITE_USO: 'a conta do provedor atingiu o limite de uso; confira os limites no painel do provedor.',
       SEM_MODELO: 'o modelo escolhido não está disponível; confira em Configurações › IA.',
-      SEM_CONEXAO: modo === 'LOCAL' ? 'o Ollama local não está respondendo (ele está aberto?).' : 'o Ollama Cloud não está respondendo.',
+      SEM_CONEXAO: modo === 'LOCAL' ? 'o Ollama local não está respondendo (ele está aberto?).' : 'a conexão de IA na nuvem não está respondendo.',
     }
     return situacao === 'OK' ? null : (motivos[situacao] ?? 'a IA não está respondendo.')
   }

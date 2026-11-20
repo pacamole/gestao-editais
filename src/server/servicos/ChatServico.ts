@@ -89,8 +89,8 @@ export class ChatServico {
     destino.aoEvento({
       tipo: 'status',
       mensagem: contexto.completo
-        ? 'Enviando o edital completo ao Ollama. A resposta pode demorar um pouco mais…'
-        : 'O edital é longo: enviando ao Ollama as partes ligadas à sua pergunta…',
+        ? 'Enviando o edital completo à IA. A resposta pode demorar um pouco mais…'
+        : 'O edital é longo: enviando à IA as partes relacionadas à sua pergunta…',
     })
 
     let conteudo = ''
