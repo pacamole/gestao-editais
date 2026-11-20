@@ -1,7 +1,7 @@
 import { load } from 'cheerio'
 import { baixar } from '../integracoes/http.js'
 import { abrirPagina, ErroNavegadorIndisponivel } from '../integracoes/navegador.js'
-import type { ModeloLinguagemPorta } from '../portas/ModeloLinguagemPorta.js'
+import { ErroModeloLinguagem, type ModeloLinguagemPorta } from '../portas/ModeloLinguagemPorta.js'
 import type { FormatoDadosFonte } from '../../shared/tipos/dominio.js'
 import { hoje } from '../../shared/datas.js'
 import {
@@ -107,7 +107,8 @@ export class DescobertaFonteServico {
           const analise = await this.classificar(fonte.url, fonte.nome, leitura)
           if (analise.tipo === 'LISTA') return { chamadas: analise.chamadas }
         }
-      } catch {
+      } catch (erro) {
+        if (erro instanceof ErroModeloLinguagem) throw erro
         // endereço de dados mudou ou saiu do ar: refaz a descoberta abaixo
       }
     }
