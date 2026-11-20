@@ -170,6 +170,10 @@ export class ApiOpenAIAdaptador implements ModeloLinguagemPorta {
         ? 'A API de IA recusou a chave cadastrada. Confira a conexão em Configurações › Inteligência artificial.'
         : resposta.status === 402
           ? 'O provedor recusou a solicitação por cobrança pendente ou saldo/créditos insuficientes. Confira faturamento, saldo e limites no painel do provedor.'
+        : resposta.status === 404
+          ? 'A API de IA não encontrou o endpoint ou modelo solicitado (HTTP 404). Confira se a URL é a base correta, sem /chat/completions, e se o modelo selecionado está disponível e aceita chat nesse provedor. Atualize a lista de modelos e selecione-o novamente.'
+        : resposta.status === 413
+          ? 'A solicitação enviada à API excedeu o limite de tamanho (HTTP 413). O edital, a pergunta ou as instruções podem estar grandes demais. Tente reduzir o conteúdo enviado; se persistir, confira o limite de requisição do provedor ou proxy.'
         : resposta.status === 429
           ? 'A API de IA limitou as requisições. Aguarde um pouco ou confira a cota da conta.'
           : `A API de IA respondeu HTTP ${resposta.status}. Confira o modelo e as configurações do provedor.`

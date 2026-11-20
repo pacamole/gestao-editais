@@ -179,6 +179,8 @@ export class ConfigSistemaServico {
         ? 'A chave de API foi recusada.'
         : resposta.status === 402
           ? 'O provedor exige pagamento ou a conta está sem saldo/créditos. Confira faturamento e limites.'
+          : resposta.status === 404
+            ? 'A API não encontrou o endpoint de modelos (HTTP 404). Confira se a URL cadastrada é a URL-base correta, sem /models, e se o provedor oferece esse endpoint compatível.'
           : resposta.status === 429
             ? 'A conta atingiu o limite de requisições. Aguarde ou confira a cota no painel do provedor.'
         : `A API respondeu HTTP ${resposta.status}.`
