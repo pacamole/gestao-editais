@@ -9,6 +9,8 @@ import { RevisaoHistorico } from './editalDetalhe/RevisaoHistorico'
 import { Veredito } from './editalDetalhe/Veredito'
 import { TriagemElegibilidade } from './editalDetalhe/TriagemElegibilidade'
 import { NAO_LOCALIZADO, mensagemDoServidor } from './editalDetalhe/util'
+import { ComentariosEdital } from './editalDetalhe/ComentariosEdital'
+
 
 // Tarefas 10 e 11 — leitura de dados reais e revisão persistida.
 export function EditalDetalhePage() {
@@ -101,7 +103,8 @@ export function EditalDetalhePage() {
         aoAtualizar={carregar}
       />
       <RevisaoHistorico id={id} status={e.status} revisoes={revisoes} aoErro={setErro} aoAtualizar={carregar} />
-      <ChatEdital id={id} textoDisponivel={textoDisponivel} aoAtualizar={carregar} />
+      <ComentariosEdital id={id} />
+      <ChatEdital id={id} textoDisponivel={textoDisponivel} aoErro={setErro} aoAtualizar={carregar} />
     </section>
   )
 }

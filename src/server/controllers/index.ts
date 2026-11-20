@@ -14,6 +14,7 @@ import { rotasExtracao } from './ExtracaoController.js'
 import { rotasFontes } from './FonteController.js'
 import { rotasPendencias } from './PendenciaController.js'
 import { rotasPerfil } from './PerfilController.js'
+import { rotasComentarios } from './ComentarioController.js'
 
 // Todas as rotas da API, montadas em /api.
 export const rotasApi = Router()
@@ -35,6 +36,7 @@ rotasApi.use(rotasDestinatarios)
 rotasApi.use(rotasFontes)
 rotasApi.use(rotasDashboard)
 rotasApi.use(rotasEditais)
+rotasApi.use(rotasComentarios)
 rotasApi.use(rotasEntrada)
 rotasApi.use(rotasExtracao)
 rotasApi.use(rotasChat)

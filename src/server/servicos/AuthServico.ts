@@ -66,6 +66,74 @@ export class AuthServico {
       expira_em: new Date(Date.now() + DURACAO_SESSAO_SEGUNDOS * 1000).toISOString(),
     }).id
   }
+/**
+ * Tarefa 4: atualização dos dados pessoais da conta.
+ * Exige a senha atual, inclusive quando apenas o nome é alterado.
+ */
+async atualizarConta(
+  token: string | undefined,
+  corpo: unknown
+): Promise<UsuarioLogado> {
+  // Identifica a conta por meio da sessão atual.
+  const id = this.usuarioIdDaSessao(token)
+
+  if (!id) {
+    throw new ErroNaoAutenticado('Faça login para editar sua conta.')
+  }
+
+  // Busca o usuário registrado no banco de dados.
+  const usuario = this.repos.usuario.buscarPorId(id)
+
+  if (!usuario?.ativo) {
+    throw new ErroNaoAutenticado('Usuário não encontrado.')
+  }
+
+  const dados = (corpo ?? {}) as Record<string, unknown>
+
+  // Verifica os valores recebidos.
+  const nome = typeof dados.nome === 'string'
+    ? dados.nome.trim()
+    : ''
+
+  const senhaAtual = typeof dados.senhaAtual === 'string'
+    ? dados.senhaAtual
+    : ''
+
+  const novaSenha = typeof dados.novaSenha === 'string'
+    ? dados.novaSenha
+    : ''
+
+  // Valida o nome.
+  if (nome.length < 2 || nome.length > 100) {
+    throw new ErroValidacao('O nome deve ter entre 2 e 100 caracteres.')
+  }
+
+  // Confirma que a senha atual pertence ao usuário.
+  if (!(await this.conferirSenha(senhaAtual, usuario.senha_hash))) {
+    throw new ErroValidacao('Senha atual incorreta.')
+  }
+
+  // Se houver nova senha, valida seu tamanho.
+  if (novaSenha && (novaSenha.length < 8 || novaSenha.length > 128)) {
+    throw new ErroValidacao(
+      'A nova senha deve ter entre 8 e 128 caracteres.'
+    )
+  }
+
+  // Gera um novo hash apenas quando a senha é alterada.
+  const senha_hash = novaSenha
+    ? await this.gerarHash(novaSenha)
+    : undefined
+
+  // Salva as alterações no repositório.
+  this.repos.usuario.atualizarConta(id, { nome, senha_hash })
+
+  return {
+    nome,
+    email: usuario.email
+  }
+}
+
 
   sair(token: string | undefined): void {
     if (token) this.repos.sessao.excluir(token)

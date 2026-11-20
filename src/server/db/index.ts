@@ -28,6 +28,7 @@ function abrir(config: ConfigConexao): void {
   db = nova;
   garantirColunasPerfil();
   garantirTabelaTriagem();
+garantirTabelaComentarios();
   Object.assign(estado, { modo: config.modo, url: config.modo === "NUVEM" ? config.url : "", erroNuvem: null });
 }
 
@@ -78,6 +79,29 @@ function garantirTabelaTriagem(): void {
   CREATE INDEX IF NOT EXISTS idx_triagem_edital ON triagem_elegibilidade(edital_id, criado_em);
 `)
 }
+
+
+
+function garantirTabelaComentarios(): void {
+  if (!db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'edital'"
+  ).get()) return
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS comentario_edital (
+      id TEXT PRIMARY KEY,
+      edital_id TEXT NOT NULL REFERENCES edital(id) ON DELETE CASCADE,
+      usuario_id TEXT NOT NULL REFERENCES usuario(id),
+      tipo TEXT NOT NULL CHECK (tipo IN ('GERAL', 'APROVACAO', 'REPROVACAO')),
+      texto TEXT NOT NULL CHECK (length(trim(texto)) > 0),
+      criado_em TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_comentario_edital
+    ON comentario_edital(edital_id, criado_em);
+  `)
+}
+
 
 export function estadoBase(): Readonly<Estado> {
   return { ...estado };
