@@ -13,13 +13,17 @@ const TEMPO_LIMITE_MS = 20_000
 const TAMANHO_MAXIMO_JSON = 2 * 1024 * 1024
 const MAXIMO_RESPOSTAS = 40
 // No executável não vai o Chromium: usa o navegador do computador (o Edge vem com o Windows).
-const CANAIS_EXECUTAVEL = ['msedge', 'chrome']
+// No Linux, o Google Chrome ou, sem ele, o Chromium do Playwright (undefined), se instalado.
+const linux = process.platform === 'linux'
+const CANAIS_EXECUTAVEL = linux ? ['chrome', undefined] : ['msedge', 'chrome']
 
 export class ErroNavegadorIndisponivel extends Error {
   constructor() {
     super(
       ehExecutavel
-        ? 'Este site precisa do Microsoft Edge ou do Google Chrome, e nenhum dos dois foi encontrado neste computador.'
+        ? linux
+          ? 'Este site precisa do Google Chrome, que não foi encontrado neste servidor. Instale o pacote google-chrome-stable.'
+          : 'Este site precisa do Microsoft Edge ou do Google Chrome, e nenhum dos dois foi encontrado neste computador.'
         : 'Este site precisa do navegador invisível, que não está instalado. Rode "npx playwright install chromium" no servidor.',
     )
     this.name = 'ErroNavegadorIndisponivel'

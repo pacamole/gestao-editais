@@ -81,7 +81,8 @@ function iniciar(): void {
   app.listen(porta, (erro) => {
     if (erro) {
       console.error(`Não foi possível abrir o sistema na porta ${porta}: ${erro.message}`);
-      if (!ehExecutavel) process.exit(1);
+      // No Linux sai logo: o serviço (systemd) registra o erro e tenta de novo.
+      if (!ehExecutavel || process.platform !== "win32") process.exit(1);
       // Aberto com dois cliques: mantém a janela para a mensagem ser lida.
       console.error(`Outro programa (ou o próprio sistema, já aberto) está usando a porta. Feche-o ou troque a porta com APP_URL num arquivo .env em ${root}.`);
       console.error("Tecle Enter para fechar.");
@@ -89,8 +90,9 @@ function iniciar(): void {
       return;
     }
     console.log(appUrl);
-    if (ehExecutavel) {
-      console.log(`Dados em ${root}`);
+    if (ehExecutavel) console.log(`Dados em ${root}`);
+    // Só no Windows abre o navegador: no Linux o executável roda num servidor, sem tela.
+    if (ehExecutavel && process.platform === "win32") {
       console.log("Gestor de Editais aberto no navegador. Feche esta janela para encerrar o sistema.");
       spawn("cmd", ["/c", "start", "", appUrl], { detached: true, stdio: "ignore" }).unref();
     }

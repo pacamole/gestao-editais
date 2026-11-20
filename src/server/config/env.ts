@@ -1,10 +1,9 @@
-import path from 'node:path'
-import { ehExecutavel, pastaDadosExecutavel } from './executavel.js'
+import { arquivoEnvExecutavel, ehExecutavel } from './executavel.js'
 
 // Carrega o .env (se existir) antes de qualquer leitura de process.env.
-// No executável, o da pasta de dados: não depende da pasta de onde o .exe foi aberto.
+// No executável, o de ENV_PATH (definido no build) ou o da pasta do usuário.
 try {
-  process.loadEnvFile(ehExecutavel ? path.join(pastaDadosExecutavel, '.env') : undefined)
+  process.loadEnvFile(ehExecutavel ? arquivoEnvExecutavel : undefined)
 } catch {
   // sem .env: segue com as variáveis do ambiente
 }

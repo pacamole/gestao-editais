@@ -1,20 +1,30 @@
-// Gera dist/gestao-editais.exe: o servidor num arquivo só (esbuild) injetado numa cópia do node.exe
-// (Node SEA), com o front-end, o db/schema.sql e o binário do libsql embutidos.
-// Roda depois do vite build, que gera dist/client. Quem usa o .exe não precisa instalar nada.
+// Gera o executável do sistema em que roda: dist/gestao-editais.exe no Windows, dist/gestao-editais no Linux.
+// O servidor num arquivo só (esbuild) injetado numa cópia do node (Node SEA), com o front-end, o
+// db/schema.sql e o binário do libsql embutidos. Roda depois do vite build, que gera dist/client.
+// Para o Linux, gere numa máquina Linux (WSL, VM ou o próprio servidor). Quem usa não precisa instalar nada.
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { parseEnv } from 'node:util'
 
-if (process.platform !== 'win32') {
-  console.error('O executável é gerado só no Windows.')
+// Pacote do binário do libsql para este sistema (o mesmo nome que o libsql procura).
+function pacoteLibsql() {
+  const { platform, arch } = process
+  if (platform === 'win32' && arch === 'x64') return '@libsql/win32-x64-msvc'
+  if (platform === 'linux' && (arch === 'x64' || arch === 'arm64')) {
+    const glibc = Boolean(process.report?.getReport().header.glibcVersionRuntime)
+    return `@libsql/linux-${arch}-${glibc ? 'gnu' : 'musl'}`
+  }
+  console.error(`O executável é gerado só no Windows x64 e no Linux x64/arm64 (este é ${platform}-${arch}).`)
   process.exit(1)
 }
 
 const require = createRequire(import.meta.url)
+const binarioLibsql = pacoteLibsql()
 const pastaTemp = 'dist/exe'
-const executavel = 'dist/gestao-editais.exe'
+const executavel = process.platform === 'win32' ? 'dist/gestao-editais.exe' : 'dist/gestao-editais'
 const servidor = path.join(pastaTemp, 'servidor.cjs')
 const blob = path.join(pastaTemp, 'servidor.blob')
 const configSea = path.join(pastaTemp, 'sea-config.json')
@@ -46,6 +56,11 @@ const libsqlNativo = {
   },
 }
 
+function lerEnvPath() {
+  if (!fs.existsSync('.env')) return ''
+  return parseEnv(fs.readFileSync('.env', 'utf8')).ENV_PATH?.trim() ?? ''
+}
+
 // CommonJS: o Node SEA não roda ESM. vite (só em dev) e playwright ficam de fora do arquivo único:
 // o playwright-core vai embutido como arquivos e é carregado da pasta extraída (integracoes/navegador.ts).
 await build({
@@ -56,7 +71,8 @@ await build({
   format: 'cjs',
   target: 'node24',
   external: ['vite', 'playwright'],
-  define: { 'import.meta.url': 'importMetaUrl' },
+  // ENV_PATH do .env do projeto: onde o .exe vai procurar o .env no servidor (vazio: pasta do usuário).
+  define: { 'import.meta.url': 'importMetaUrl', __ENV_PATH__: JSON.stringify(lerEnvPath()) },
   banner: { js: 'const importMetaUrl = require("node:url").pathToFileURL(__filename).href;' },
   plugins: [libsqlNativo],
   logLevel: 'error',
@@ -65,7 +81,7 @@ await build({
 // Arquivos embutidos, pelo caminho em que são extraídos (o mesmo do projeto, para paths.ts).
 const assets = {
   'db/schema.sql': 'db/schema.sql',
-  'libsql.node': createRequire(require.resolve('libsql')).resolve('@libsql/win32-x64-msvc'),
+  'libsql.node': createRequire(require.resolve('libsql')).resolve(binarioLibsql),
 }
 for (const arquivo of fs.readdirSync('dist/client', { recursive: true })) {
   const caminho = path.join('dist/client', arquivo)
@@ -93,6 +109,7 @@ fs.writeFileSync(
 execFileSync(process.execPath, ['--experimental-sea-config', configSea], { stdio: 'inherit' })
 
 fs.copyFileSync(process.execPath, executavel)
+fs.chmodSync(executavel, 0o755)
 execFileSync(
   process.execPath,
   [
