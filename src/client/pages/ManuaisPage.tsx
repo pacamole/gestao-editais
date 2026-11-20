@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { manuaisLista, type ManualInfo } from './manuais/conteudoManuais'
+import { manuaisLista } from './manuais/conteudoManuais'
 
 export function ManuaisPage() {
-  const [manualAtivoId, setManualAtivoId] = useState<ManualInfo['id']>('uso')
+  const [parametros, definirParametros] = useSearchParams()
 
-  const manualAtual = manuaisLista.find((m) => m.id === manualAtivoId) ?? manuaisLista[0]
+  const manualAtual = manuaisLista.find((m) => m.id === parametros.get('manual')) ?? manuaisLista[0]
 
   // Função para baixar o arquivo Markdown (.md) diretamente
   function baixarMarkdown() {
@@ -212,14 +212,14 @@ export function ManuaisPage() {
       {/* Navegação entre os 3 manuais atribuídos */}
       <nav className="abas" aria-label="Seleção de manual">
         {manuaisLista.map((manual) => {
-          const selecionado = manual.id === manualAtivoId
+          const selecionado = manual.id === manualAtual.id
           return (
             <button
               key={manual.id}
               type="button"
               className="aba"
               aria-selected={selecionado}
-              onClick={() => setManualAtivoId(manual.id)}
+              onClick={() => definirParametros({ manual: manual.id })}
             >
               {manual.titulo}
             </button>
@@ -229,7 +229,21 @@ export function ManuaisPage() {
 
       {/* Conteúdo formatado do manual ativo */}
       <article className="pagina-manuais__conteudo">
-        <Markdown remarkPlugins={[remarkGfm]}>
+        <Markdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            a: ({ node, href, children, ...props }) => {
+              const manual = manuaisLista.find((item) => item.nomeArquivo === href)
+              if (manual) return <Link to={`?manual=${manual.id}`}>{children}</Link>
+              if (href === 'MANUAIS.md') return <Link to="/manuais">{children}</Link>
+
+              const destino = href === 'BASE-DE-DADOS.md' || href === 'API-FINEP.md'
+                ? `https://github.com/pacamole/gestao-editais/blob/main/docs/${href}`
+                : href
+              return <a {...props} href={destino}>{children}</a>
+            },
+          }}
+        >
           {manualAtual.conteudo}
         </Markdown>
       </article>

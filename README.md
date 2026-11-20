@@ -59,7 +59,7 @@ npm run db:reset                          # base nova, vazia
 npm run db:importar -- caminho/base.db    # base exportada por um colega
 ```
 
-## 5. Subir o sistema 
+## 5. Subir o sistema
 
 ```bash
 npm run dev
@@ -125,6 +125,8 @@ A IA depende do Ollama local ou de uma conexão de API cadastrada em **Configura
 | `npm run editais:reler`               | Relê com a IA os editais já analisados (preenche só campos vazios, sem e-mails) |
 
 ## Mais documentação
+
+- [Manuais](docs/MANUAIS.md) — uso do sistema, integrações e configuração.
 
 - [docs/BASE-DE-DADOS.md](docs/BASE-DE-DADOS.md) — base na nuvem (Turso), exportar e importar entre computadores
 - [docs/especificacao-gestao-editais.md](docs/especificacao-gestao-editais.md) — especificação completa gerada para o início do desenvolvimento
