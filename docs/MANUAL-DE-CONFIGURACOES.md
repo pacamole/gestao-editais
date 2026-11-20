@@ -124,8 +124,8 @@ Para configurar um alerta, abra seu nome, ative o interruptor, ajuste os campos 
 | --- | --- |
 | **Neste computador** | Abre a configuração do modo local. **Usar este computador** ativa o modo. O servidor usa o modelo fixo `gemma2:latest`. |
 | **Endereço do Ollama** | Define o serviço local ou de rede consultado pelo servidor. O padrão é `http://localhost:11434`. **Testar** verifica a conexão e o modelo. **Salvar** grava o endereço. |
-| **Ollama Cloud** | Abre a configuração do serviço em nuvem. **Chave de API** autentica o acesso e **Modelo** define o modelo usado. **Conferir chave** consulta os modelos disponíveis. |
-| **Salvar e usar o Ollama Cloud / Salvar** | Ativa o modo em nuvem ou atualiza as opções já em uso. |
+| **Conexões de IA por API** | Abre o cadastro de provedores compatíveis com OpenAI. **IA conectada** escolhe uma conexão salva ou **Nova conexão…**. **Nome do provedor** identifica o cadastro. **URL base da API** recebe o endereço HTTPS base, sem /models ou /chat/completions. **Chave de API** autentica o acesso. Deixe-a vazia ao editar para manter a chave salva. **Modelo** seleciona uma opção carregada automaticamente. |
+| **Salvar e usar esta IA / Usar esta IA / Remover** | O primeiro botão salva e ativa a conexão e o modelo. O segundo ativa uma conexão já salva. **Em uso** indica a conexão ativa e **Salve antes de usar** indica alterações pendentes. **Remover** solicita confirmação para excluir a conexão selecionada. |
 | **Perguntas por usuário por dia** | Limita o uso diário do chat por usuário. O padrão é 20 e o intervalo aceito é de 1 a 500. O botão **Salvar** dessa seção aplica o novo limite. |
 
 ## Base de dados
@@ -155,6 +155,8 @@ Para configurar um alerta, abra seu nome, ative o interruptor, ajuste os campos 
 | --- | --- |
 | `APP_URL` | Define o endereço usado nos links dos e-mails e a porta de escuta da aplicação. O padrão é `http://localhost:3000`. Sem porta explícita, o código usa 80 para HTTP e 443 para HTTPS. |
 | `DATABASE_PATH` | Define o caminho do SQLite local. O padrão é `data/editais.db`, relativo à raiz de dados da instalação. |
+| `IA_CHAVE_CRIPTOGRAFIA` | Segredo de 32 bytes aleatórios em hexadecimal, usado para cifrar as chaves das conexões de IA. Preserve o mesmo valor após cadastrar conexões. |
+| `ENV_PATH` | No build do executável Windows, define o caminho do arquivo .env usado pela instalação. Vazio utiliza o arquivo da pasta de dados do usuário. |
 | `NODE_ENV` | O comando `npm start` define `production` e o servidor entrega os arquivos da interface compilada. O modo de desenvolvimento usa o Vite. |
 
 Reinicie o processo após alterar o arquivo `.env`. Consulte o [manual de uso](MANUAL-DE-USO.md) para os comandos de implantação.

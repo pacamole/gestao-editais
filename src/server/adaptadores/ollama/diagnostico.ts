@@ -1,5 +1,5 @@
 import type { ModoOllama, SituacaoOllama } from '../../../shared/tipos/configSistema.js'
-import { cabecalhosOllama, enderecoOllama, type ConexaoOllama } from './conexao.js'
+import { cabecalhosOllama, enderecoOllama, recusaDoStatus, type ConexaoOllama } from './conexao.js'
 
 const TIMEOUT_TESTE_OLLAMA_MS = 5_000
 const TIMEOUT_TESTE_NUVEM_MS = 20_000
@@ -24,7 +24,8 @@ export async function diagnosticarOllama(
   } catch {
     return { situacao: 'SEM_CONEXAO', modelos: [] }
   }
-  if (tags.status === 401 || tags.status === 403) return { situacao: 'ACESSO_NEGADO', modelos: [] }
+  const recusaTags = recusaDoStatus(tags.status)
+  if (recusaTags) return { situacao: recusaTags, modelos: [] }
   if (!tags.ok) return { situacao: 'SEM_CONEXAO', modelos: [] }
 
   const dados = (await tags.json().catch(() => ({}))) as { models?: { name?: string }[] }
@@ -43,7 +44,8 @@ export async function diagnosticarOllama(
         options: { num_predict: 1 },
       }),
     })
-    if (chat.status === 401 || chat.status === 403) return { situacao: 'ACESSO_NEGADO', modelos }
+    const recusaChat = recusaDoStatus(chat.status)
+    if (recusaChat) return { situacao: recusaChat, modelos }
     return { situacao: chat.ok ? 'OK' : 'SEM_CONEXAO', modelos }
   } catch {
     return { situacao: 'SEM_CONEXAO', modelos }

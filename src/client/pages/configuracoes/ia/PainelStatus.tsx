@@ -26,7 +26,7 @@ const hostDe = (url: string) => {
   }
 }
 
-const hora = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+const hora = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
 function Comando({ texto }: { texto: string }) {
   const [copiado, setCopiado] = useState(false)
@@ -101,25 +101,33 @@ export function PainelStatus({ modo, modelo, verificacao, onVerificar }: Props) 
     switch (resultado.situacao) {
       case 'OK':
         titulo = 'Funcionando'
-        detalhe = `Ollama Cloud · modelo ${resultado.modelo}`
+        detalhe = `Conexão de IA por API · modelo ${resultado.modelo}`
         break
       case 'SEM_CHAVE':
         titulo = 'Falta a chave de API'
-        detalhe = 'Cole a chave de API da sua conta Ollama e escolha o modelo.'
+        detalhe = 'Cadastre uma chave de API e escolha o modelo da conexão de IA na nuvem.'
         break
       case 'ACESSO_NEGADO':
         titulo = 'Chave recusada'
-        detalhe = 'O Ollama Cloud recusou a chave de API. Confira se ela foi copiada inteira ou gere uma nova.'
+        detalhe = 'O provedor recusou a chave de API. Confira se ela foi copiada inteira ou gere uma nova.'
+        break
+      case 'SEM_CREDITO':
+        titulo = 'Conta sem créditos'
+        detalhe = 'A chave foi aceita, mas a conta do provedor está sem créditos de uso. Confira o saldo e os planos disponíveis no painel do provedor.'
+        break
+      case 'LIMITE_USO':
+        titulo = 'Limite de uso atingido'
+        detalhe = 'A chave foi aceita, mas a conta do provedor atingiu o limite de uso. Aguarde ou confira os limites no painel do provedor.'
         break
       case 'SEM_MODELO':
         titulo = 'Escolha o modelo'
         detalhe = resultado.modelo
-          ? `O modelo ${resultado.modelo} não está mais disponível no Ollama Cloud. Escolha outro na lista.`
+          ? `O modelo ${resultado.modelo} não está mais disponível no provedor. Escolha outro na lista.`
           : 'Escolha na lista qual modelo de IA usar.'
         break
       case 'SEM_CONEXAO':
         titulo = 'Não está funcionando'
-        detalhe = 'Não foi possível falar com o Ollama Cloud. Confira a internet e tente de novo.'
+        detalhe = 'Não foi possível conectar ao provedor de IA. Confira a URL e a conexão de rede.'
         break
     }
   } else if (resultado) {
@@ -132,6 +140,8 @@ export function PainelStatus({ modo, modelo, verificacao, onVerificar }: Props) 
       case 'SEM_CONEXAO':
       case 'SEM_CHAVE':
       case 'ACESSO_NEGADO':
+      case 'SEM_CREDITO':
+      case 'LIMITE_USO':
         titulo = 'Não está funcionando'
         detalhe = 'O Ollama não respondeu. Siga os passos abaixo e clique em Verificar.'
         corpo = <GuiaLocal semConexao modelo={modelo} />
@@ -152,7 +162,13 @@ export function PainelStatus({ modo, modelo, verificacao, onVerificar }: Props) 
   const classe = verificando || !verificacao ? 'status-ia' : ok ? 'status-ia status-ia--ok' : 'status-ia status-ia--erro'
 
   return (
-    <div className={`card ${classe}`} role="status" aria-live="polite">
+    // key muda a cada verificação concluída: o card é recriado e a animação de destaque roda de novo.
+    <div
+      key={verificacao?.estado === 'pronto' ? verificacao.em.getTime() : verificacao?.estado}
+      className={`card ${classe}${verificacao && !verificando ? ' status-ia--novo' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
       <div className="card__corpo pilha">
         <div className="linha linha--entre">
           <div className="pilha pilha--sm">

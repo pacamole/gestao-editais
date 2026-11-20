@@ -2374,3 +2374,15 @@ a.contador:hover {
     display: none;
   }
 }
+
+/* Destaque rápido quando uma verificação termina, mesmo com o resultado igual ao anterior. */
+.status-ia--novo {
+  animation: status-ia-destaque 0.9s ease-out;
+}
+@keyframes status-ia-destaque {
+  0% { box-shadow: 0 0 0 3px currentColor; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-ia--novo { animation: none; }
+}

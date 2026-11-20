@@ -7,8 +7,8 @@
 A integração com Ollama atende à triagem de elegibilidade, à extração estruturada, ao chat e a etapas de descoberta e leitura de fontes. A triagem pode consultar o site público da empresa indicado no perfil.
 
 - **Ollama local.** Instale o modelo `gemma2:latest` e inicie o serviço na máquina de inferência. Em **Configurações › Inteligência artificial**, selecione o modo local. O endereço padrão é `http://localhost:11434`, visto a partir do servidor da aplicação. Para um serviço em outra máquina, informe seu endereço HTTP ou HTTPS no campo **Endereço do Ollama**. Clique em **Testar**, salve o endereço e, se estiver trocando de modo, use **Usar este computador**.
-- **Ollama Cloud.** Selecione **Ollama Cloud**, informe a chave de API, clique em **Conferir chave** para carregar os modelos disponíveis e escolha o modelo. Use **Salvar e usar o Ollama Cloud** para ativar o modo ou **Salvar** para atualizar a configuração já ativa. Nesse modo, o provedor recebe o contexto das solicitações de IA, que pode conter dados do perfil e trechos do edital.
-- **Verificação.** O painel de status informa se o serviço responde e se o modelo está disponível. Em caso de erro, verifique o endereço e o serviço local ou a chave e o modelo em nuvem, conforme a mensagem apresentada.
+- **Conexões de IA por API.** No servidor, configure `IA_CHAVE_CRIPTOGRAFIA` com 32 bytes aleatórios em hexadecimal (64 caracteres) antes de cadastrar conexões. Em **Configurações › Inteligência artificial › Conexões de IA por API**, selecione **Nova conexão…**, informe **Nome do provedor**, **URL base da API** HTTPS compatível com OpenAI e **Chave de API**. A lista de modelos é atualizada automaticamente quando a URL ou chave muda. Escolha **Modelo** e clique em **Salvar e usar esta IA**. Para alternar entre conexões salvas, selecione a conexão e clique em **Usar esta IA**. As chaves são cifradas no banco. Preserve o segredo do servidor para que elas continuem acessíveis. O provedor recebe o contexto das solicitações, que pode incluir dados da empresa e trechos do edital.
+- **Verificação.** O painel de status informa se o serviço responde e se o modelo está disponível. Em caso de erro, verifique o endereço e o serviço local ou a URL, a chave e o modelo da conexão por API, conforme a mensagem apresentada.
 
 ### Conferir a configuração de IA
 
@@ -17,7 +17,7 @@ A integração com Ollama atende à triagem de elegibilidade, à extração estr
 | **Conexão disponível e modelo encontrado** | Abra um edital com texto e teste uma pergunta no chat ou execute a triagem. O teste de conexão verifica o serviço e a disponibilidade do modelo. |
 | **Serviço local indisponível** | Confira se o Ollama está em execução e se o endereço responde a partir da máquina do servidor. |
 | **Modelo local ausente** | Execute `ollama pull gemma2:latest` na máquina que hospeda o Ollama e repita **Testar**. |
-| **Chave em falta ou recusada** | Informe a chave do Ollama Cloud, clique em **Conferir chave** e confirme que a lista de modelos foi carregada. |
+| **Chave em falta ou recusada** | Confira a URL HTTPS e a chave da conexão por API e aguarde a lista de modelos. Selecione o modelo e salve a conexão. |
 | **Conexão funciona, mas a leitura falha** | Confira se o documento contém texto, se a URL abre a publicação e se o veredito mostra falha transitória. Uma configuração válida pode coexistir com problemas em um documento específico. |
 
 ## Base de dados

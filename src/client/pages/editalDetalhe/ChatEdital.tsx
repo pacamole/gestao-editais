@@ -6,7 +6,7 @@ import { TextoFormatado } from '../../components/TextoFormatado'
 import type { ErroChatDados, MensagemChat, SugestaoCorrecaoChat } from '../../../shared/tipos/chat'
 import type { CampoEditavel } from '../../../shared/tipos/edital'
 import { CAMPOS_EDITAL } from '../../../shared/rotulos'
-import { SEM_CONEXAO, mensagemDoServidor, type AoErro } from './util'
+import { SEM_CONEXAO, mensagemDoServidor } from './util'
 
 const SUGESTOES = [
   'Quais são os requisitos de elegibilidade deste edital?',
@@ -17,24 +17,24 @@ const SUGESTOES = [
 type Props = {
   id: string
   textoDisponivel: boolean
-  aoErro: AoErro
   aoAtualizar: () => Promise<void>
 }
 
 const valorTexto = (valor: unknown) => Array.isArray(valor) ? valor.join(', ') : valor == null ? 'Não localizado' : String(valor)
 
-export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) {
+export function ChatEdital({ id, textoDisponivel, aoAtualizar }: Props) {
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
   const [pergunta, setPergunta] = useState('')
   const [restantes, setRestantes] = useState(20)
   const [limiteDiario, setLimiteDiario] = useState(20)
   const [enviando, setEnviando] = useState(false)
+  const [erroChat, setErroChat] = useState('')
   const [respostaParcial, setRespostaParcial] = useState('')
   const [statusChat, setStatusChat] = useState('')
   const [sugestoes, setSugestoes] = useState<SugestaoCorrecaoChat[]>([])
   const [camposSelecionados, setCamposSelecionados] = useState<Set<CampoEditavel>>(new Set())
   const [aplicandoSugestoes, setAplicandoSugestoes] = useState(false)
-  const [feedbackSugestoes, setFeedbackSugestoes] = useState('')
+  const [feedbackSugestoes, setFeedbackSugestoes] = useState<{ texto: string; tipo: 'atencao' | 'sucesso' } | null>(null)
 
   // Histórico é opcional: se falhar, o chat começa vazio.
   useEffect(() => {
@@ -59,9 +59,9 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
     setRespostaParcial('')
     setSugestoes([])
     setCamposSelecionados(new Set())
-    setFeedbackSugestoes('')
+    setFeedbackSugestoes(null)
     setStatusChat('Iniciando o chat...')
-    aoErro('')
+    setErroChat('')
     let textoParcial = ''
     try {
       let concluido = false
@@ -69,7 +69,7 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
         if (evento.tipo === 'status') {
           setStatusChat(evento.mensagem)
         } else if (evento.tipo === 'trecho') {
-          setStatusChat('O Gemma está respondendo...')
+          setStatusChat('A IA está respondendo...')
           textoParcial += evento.conteudo
           setRespostaParcial(textoParcial)
         } else if (evento.tipo === 'erro') {
@@ -79,7 +79,9 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
           setRestantes((atual) => evento.restantes ?? atual)
           setSugestoes(evento.sugestoes ?? [])
           setCamposSelecionados(new Set())
-          setFeedbackSugestoes(evento.avisoSugestoes ? `Não foi possível verificar correções: ${evento.avisoSugestoes}` : '')
+          setFeedbackSugestoes(evento.avisoSugestoes
+            ? { tipo: 'atencao', texto: `Resposta enviada, mas não foi possível verificar sugestões de correção: ${evento.avisoSugestoes}` }
+            : null)
           setPergunta('')
           setRespostaParcial('')
           setStatusChat('')
@@ -96,11 +98,10 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
       const mensagem = mensagemDeErro(erroChat, SEM_CONEXAO)
       if (textoParcial) {
         setStatusChat(`A geração foi interrompida antes de concluir. Trecho parcial abaixo (não salvo): ${mensagem}`)
-        aoErro('')
       } else {
         setRespostaParcial('')
         setStatusChat('')
-        aoErro(mensagem)
+        setErroChat(mensagem)
       }
     } finally {
       setEnviando(false)
@@ -108,12 +109,12 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
   }
 
   async function limpar() {
-    aoErro('')
+    setErroChat('')
     try {
       await chat.limpar(id)
       setMensagens([])
     } catch (erro) {
-      aoErro(mensagemDoServidor(erro))
+      setErroChat(mensagemDoServidor(erro))
     }
   }
 
@@ -124,16 +125,16 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
     }
     if (!Object.keys(campos).length || aplicandoSugestoes) return
     setAplicandoSugestoes(true)
-    setFeedbackSugestoes('')
-    aoErro('')
+    setFeedbackSugestoes(null)
+    setErroChat('')
     try {
       const resultado = await apiEdital.salvarCampos(id, campos)
-      setFeedbackSugestoes(resultado.mensagem)
+      setFeedbackSugestoes({ tipo: 'sucesso', texto: resultado.mensagem })
       setSugestoes([])
       setCamposSelecionados(new Set())
       await aoAtualizar()
     } catch (erro) {
-      aoErro(mensagemDeErro(erro, SEM_CONEXAO))
+      setErroChat(mensagemDeErro(erro, SEM_CONEXAO))
     } finally {
       setAplicandoSugestoes(false)
     }
@@ -162,6 +163,7 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
         </button>
       </div>
       <div className="card__corpo">
+        {erroChat && <p className="aviso aviso--erro" role="alert">{erroChat}</p>}
         <div className="pilha">
           <div className="chat-historico">
             {!mensagens.length && (
@@ -243,8 +245,15 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
                 </div>
               </section>
             )}
-            {feedbackSugestoes && <p className="aviso" role="status">{feedbackSugestoes}</p>}
           </div>
+          {feedbackSugestoes && (
+            <p
+              className={`aviso aviso--${feedbackSugestoes.tipo}`}
+              role={feedbackSugestoes.tipo === 'atencao' ? 'alert' : 'status'}
+            >
+              {feedbackSugestoes.texto}
+            </p>
+          )}
 
           <form
             onSubmit={(evento) => {
