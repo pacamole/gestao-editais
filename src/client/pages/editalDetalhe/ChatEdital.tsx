@@ -34,7 +34,7 @@ export function ChatEdital({ id, textoDisponivel, aoAtualizar }: Props) {
   const [sugestoes, setSugestoes] = useState<SugestaoCorrecaoChat[]>([])
   const [camposSelecionados, setCamposSelecionados] = useState<Set<CampoEditavel>>(new Set())
   const [aplicandoSugestoes, setAplicandoSugestoes] = useState(false)
-  const [feedbackSugestoes, setFeedbackSugestoes] = useState('')
+  const [feedbackSugestoes, setFeedbackSugestoes] = useState<{ texto: string; tipo: 'atencao' | 'sucesso' } | null>(null)
 
   // Histórico é opcional: se falhar, o chat começa vazio.
   useEffect(() => {
@@ -59,7 +59,7 @@ export function ChatEdital({ id, textoDisponivel, aoAtualizar }: Props) {
     setRespostaParcial('')
     setSugestoes([])
     setCamposSelecionados(new Set())
-    setFeedbackSugestoes('')
+    setFeedbackSugestoes(null)
     setStatusChat('Iniciando o chat...')
     setErroChat('')
     let textoParcial = ''
@@ -79,7 +79,9 @@ export function ChatEdital({ id, textoDisponivel, aoAtualizar }: Props) {
           setRestantes((atual) => evento.restantes ?? atual)
           setSugestoes(evento.sugestoes ?? [])
           setCamposSelecionados(new Set())
-          setFeedbackSugestoes(evento.avisoSugestoes ? `Não foi possível verificar correções: ${evento.avisoSugestoes}` : '')
+          setFeedbackSugestoes(evento.avisoSugestoes
+            ? { tipo: 'atencao', texto: `Resposta enviada, mas não foi possível verificar sugestões de correção: ${evento.avisoSugestoes}` }
+            : null)
           setPergunta('')
           setRespostaParcial('')
           setStatusChat('')
@@ -123,11 +125,11 @@ export function ChatEdital({ id, textoDisponivel, aoAtualizar }: Props) {
     }
     if (!Object.keys(campos).length || aplicandoSugestoes) return
     setAplicandoSugestoes(true)
-    setFeedbackSugestoes('')
+    setFeedbackSugestoes(null)
     setErroChat('')
     try {
       const resultado = await apiEdital.salvarCampos(id, campos)
-      setFeedbackSugestoes(resultado.mensagem)
+      setFeedbackSugestoes({ tipo: 'sucesso', texto: resultado.mensagem })
       setSugestoes([])
       setCamposSelecionados(new Set())
       await aoAtualizar()
@@ -243,8 +245,15 @@ export function ChatEdital({ id, textoDisponivel, aoAtualizar }: Props) {
                 </div>
               </section>
             )}
-            {feedbackSugestoes && <p className="aviso" role="status">{feedbackSugestoes}</p>}
           </div>
+          {feedbackSugestoes && (
+            <p
+              className={`aviso aviso--${feedbackSugestoes.tipo}`}
+              role={feedbackSugestoes.tipo === 'atencao' ? 'alert' : 'status'}
+            >
+              {feedbackSugestoes.texto}
+            </p>
+          )}
 
           <form
             onSubmit={(evento) => {
