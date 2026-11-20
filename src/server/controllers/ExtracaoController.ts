@@ -1,12 +1,10 @@
 import { Router } from 'express'
-import { avaliacaoServico, processamentoEditalServico, triagemElegibilidadeServico } from '../composicao.js'
+import { processamentoEditalServico } from '../composicao.js'
 
 export const rotasExtracao = Router()
 
 rotasExtracao.post('/editais/:id/triagem-elegibilidade', async (req, res) => {
-  const analise = await triagemElegibilidadeServico.analisar(req.params.id)
-  const avaliacao = avaliacaoServico.registrarTriagem(req.params.id, analise.status)
-  res.json({ analise, avaliacao })
+  res.json(await processamentoEditalServico.triarSobDemanda(req.params.id))
 })
 
 rotasExtracao.post('/editais/:id/extrair-dados', async (req, res) => {
