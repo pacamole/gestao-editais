@@ -101,33 +101,33 @@ export function PainelStatus({ modo, modelo, verificacao, onVerificar }: Props) 
     switch (resultado.situacao) {
       case 'OK':
         titulo = 'Funcionando'
-        detalhe = `Ollama Cloud · modelo ${resultado.modelo}`
+        detalhe = `Conexão de IA por API · modelo ${resultado.modelo}`
         break
       case 'SEM_CHAVE':
         titulo = 'Falta a chave de API'
-        detalhe = 'Cole a chave de API da sua conta Ollama e escolha o modelo.'
+        detalhe = 'Cadastre uma chave de API e escolha o modelo da conexão de IA na nuvem.'
         break
       case 'ACESSO_NEGADO':
         titulo = 'Chave recusada'
-        detalhe = 'O Ollama Cloud recusou a chave de API. Confira se ela foi copiada inteira ou gere uma nova.'
+        detalhe = 'O provedor recusou a chave de API. Confira se ela foi copiada inteira ou gere uma nova.'
         break
       case 'SEM_CREDITO':
         titulo = 'Conta sem créditos'
-        detalhe = 'A chave foi aceita, mas a conta do Ollama Cloud está sem créditos de uso. Adicione créditos ou assine um plano em ollama.com/plans e clique em Verificar.'
+        detalhe = 'A chave foi aceita, mas a conta do provedor está sem créditos de uso. Confira o saldo e os planos disponíveis no painel do provedor.'
         break
       case 'LIMITE_USO':
         titulo = 'Limite de uso atingido'
-        detalhe = 'A chave foi aceita, mas a conta do Ollama Cloud atingiu o limite de uso. Aguarde um pouco ou amplie o plano em ollama.com/plans.'
+        detalhe = 'A chave foi aceita, mas a conta do provedor atingiu o limite de uso. Aguarde ou confira os limites no painel do provedor.'
         break
       case 'SEM_MODELO':
         titulo = 'Escolha o modelo'
         detalhe = resultado.modelo
-          ? `O modelo ${resultado.modelo} não está mais disponível no Ollama Cloud. Escolha outro na lista.`
+          ? `O modelo ${resultado.modelo} não está mais disponível no provedor. Escolha outro na lista.`
           : 'Escolha na lista qual modelo de IA usar.'
         break
       case 'SEM_CONEXAO':
         titulo = 'Não está funcionando'
-        detalhe = 'Não foi possível falar com o Ollama Cloud. Confira a internet e tente de novo.'
+        detalhe = 'Não foi possível conectar ao provedor de IA. Confira a URL e a conexão de rede.'
         break
     }
   } else if (resultado) {

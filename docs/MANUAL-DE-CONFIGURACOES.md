@@ -173,7 +173,8 @@ Para fechar com chave de ouro:
 
 1. **Inteligência Artificial (`Configurações › Inteligência artificial`):**
    * Se você usa o modelo instalado no seu computador, deixe marcado **"Neste computador (Ollama)"**.
-   * Se for usar pela nuvem, marque **"Ollama Cloud"** e cole a chave fornecida pela equipe.
+   * Para conectar uma IA por API, cadastre o nome do provedor, a URL base HTTPS compatível com OpenAI e a chave de API. O sistema busca os modelos automaticamente quando a URL ou a chave muda; selecione o modelo e clique em **"Salvar e usar esta IA"** para salvar e ativar a conexão de uma vez.
+   * As chaves são cifradas no banco e não voltam para a tela. O servidor precisa ter `IA_CHAVE_CRIPTOGRAFIA` configurada no ambiente; use 32 bytes aleatórios em hexadecimal e mantenha o mesmo valor após cadastrar conexões.
    * Em **Limite diário de perguntas no chat**, deixe o padrão de `20` perguntas por usuário por dia (isso serve para ninguém sobrecarregar o processador do servidor à toa).
 2. **Base de Dados (`Configurações › Base de dados`):**
    * Se você trabalha sozinho na máquina, pode deixar em **"Neste computador"**.

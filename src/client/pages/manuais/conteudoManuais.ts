@@ -92,8 +92,8 @@ O modelo padrão homologado para o sistema é o **\`gemma2:latest\`** (Gemma 2 9
 2. **Apple Silicon (Mac Mini / MacBook / Mac Studio):**
    - Dispositivos Apple Silicon (M1/M2/M3/M4) utilizam arquitetura de **Memória Unificada**. Um Mac com **16 GB ou 24 GB de memória unificada** roda o modelo \`gemma2:latest\` com desempenho excelente, utilizando aceleração via Metal e Neural Engine.
 
-3. **Alternativa em Máquinas Modestas (Ollama Cloud):**
-   - Caso um membro da equipe esteja utilizando um notebook ou computador sem 16 GB de RAM ou sem placa de vídeo, não é necessário fazer upgrade de hardware. Basta ativar o modo **Ollama Cloud** em \`Configurações › Inteligência Artificial\`, inserindo uma chave de API do serviço em nuvem.
+3. **Alternativa em Máquinas Modestas (IA por API):**
+   - Caso um membro da equipe esteja utilizando um notebook ou computador sem 16 GB de RAM ou sem placa de vídeo, não é necessário fazer upgrade de hardware. Cadastre uma conexão compatível com OpenAI em **Conexões de IA por API**, em \`Configurações › Inteligência Artificial\`.
 
 ### 2.3. Instalação e Inicialização do Ollama
 
@@ -118,7 +118,7 @@ O Gestor de Editais I9+ foi arquitetado em **Node.js (Express + TypeScript)** in
 A hospedagem em servidor corporativo pode ser estruturada em dois cenários principais:
 
 ### 3.1. Cenário A — Servidor de Aplicação Web (IA via Cloud ou Servidor de IA Separado)
-*Cenário recomendado caso a I9+ queira alocar um servidor menor para a aplicação e utilizar Ollama Cloud ou um servidor GPU dedicado para o modelo.*
+*Cenário recomendado caso a I9+ queira alocar um servidor menor para a aplicação e utilizar um provedor de IA por API ou um servidor GPU dedicado para o modelo.*
 
 | Recurso | Requisito Mínimo | Requisito Recomendado |
 | :--- | :--- | :--- |
@@ -322,7 +322,8 @@ Se você quer que tudo o que você cadastre apareça automaticamente no computad
 
 1. Acesse **Configurações › Inteligência artificial**.
 2. Se você tem um computador forte com placa de vídeo, escolha **"Neste computador (Ollama)"**.
-3. Se você está em um notebook mais modesto ou prefere não instalar nada pesado, escolha **"Ollama Cloud"**, cole a chave de acesso que a equipe possui e clique em **"Salvar"**.
+3. Para usar uma IA remota, cadastre uma conexão em **"Conexões de IA por API"** com o nome do provedor, a URL base HTTPS compatível com OpenAI e a chave de API. Os modelos são atualizados automaticamente quando a chave ou a URL muda.
+4. Selecione o modelo e clique em **"Salvar e usar esta IA"** para salvar e ativar a conexão. As chaves são cifradas no banco; o servidor deve ter \`IA_CHAVE_CRIPTOGRAFIA\` configurada.
 
 ---
 
@@ -547,7 +548,7 @@ Para fechar com chave de ouro:
 
 1. **Inteligência Artificial (\`Configurações › Inteligência artificial\`):**
    * Se você usa o modelo instalado no seu computador, deixe marcado **"Neste computador (Ollama)"**.
-   * Se for usar pela nuvem, marque **"Ollama Cloud"** e cole a chave fornecida pela equipe.
+   * Se for usar pela nuvem, cadastre uma conexão em **"Conexões de IA por API"**, selecione o modelo e clique em **"Salvar e usar esta IA"**.
    * Em **Limite diário de perguntas no chat**, deixe o padrão de \`20\` perguntas por usuário por dia (isso serve para ninguém sobrecarregar o processador do servidor à toa).
 2. **Base de Dados (\`Configurações › Base de dados\`):**
    * Se você trabalha sozinho na máquina, pode deixar em **"Neste computador"**.

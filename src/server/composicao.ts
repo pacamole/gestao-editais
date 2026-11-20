@@ -5,6 +5,8 @@ import path from 'node:path'
 import { EmailConfiguravel } from './adaptadores/email/EmailConfiguravel.js'
 import { SmtpAdaptador } from './adaptadores/email/SmtpAdaptador.js'
 import { OllamaAdaptador } from './adaptadores/ollama/OllamaAdaptador.js'
+import { ApiOpenAIAdaptador } from './adaptadores/ia/ApiOpenAIAdaptador.js'
+import { ModeloLinguagemSelecionado } from './adaptadores/ia/ModeloLinguagemSelecionado.js'
 import { GatilhosNotificacaoServico } from './servicos/GatilhosNotificacaoServico.js'
 import { NotificacaoServico } from './servicos/NotificacaoServico.js'
 import { arquivoBanco, arquivoSchema, root } from './config/paths.js'
@@ -42,7 +44,9 @@ export const configSistemaServico = new ConfigSistemaServico(repositorios, (conf
 
 // ---- Portas (adaptadores escolhidos) ----
 export const email = new EmailConfiguravel(() => configSistemaServico.configSmtp())
-export const modeloLinguagem = new OllamaAdaptador(() => configSistemaServico.conexaoOllama())
+const ollama = new OllamaAdaptador(() => configSistemaServico.conexaoOllama())
+const apiIa = new ApiOpenAIAdaptador(() => configSistemaServico.conexaoIaApi())
+export const modeloLinguagem = new ModeloLinguagemSelecionado(() => configSistemaServico.usaConexaoIaApi(), ollama, apiIa)
 
 // ---- Notificações ----
 export const notificacaoServico = new NotificacaoServico(email, repositorios)

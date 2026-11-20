@@ -6,7 +6,7 @@ import { TextoFormatado } from '../../components/TextoFormatado'
 import type { ErroChatDados, MensagemChat, SugestaoCorrecaoChat } from '../../../shared/tipos/chat'
 import type { CampoEditavel } from '../../../shared/tipos/edital'
 import { CAMPOS_EDITAL } from '../../../shared/rotulos'
-import { SEM_CONEXAO, mensagemDoServidor, type AoErro } from './util'
+import { SEM_CONEXAO, mensagemDoServidor } from './util'
 
 const SUGESTOES = [
   'Quais são os requisitos de elegibilidade deste edital?',
@@ -17,18 +17,18 @@ const SUGESTOES = [
 type Props = {
   id: string
   textoDisponivel: boolean
-  aoErro: AoErro
   aoAtualizar: () => Promise<void>
 }
 
 const valorTexto = (valor: unknown) => Array.isArray(valor) ? valor.join(', ') : valor == null ? 'Não localizado' : String(valor)
 
-export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) {
+export function ChatEdital({ id, textoDisponivel, aoAtualizar }: Props) {
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
   const [pergunta, setPergunta] = useState('')
   const [restantes, setRestantes] = useState(20)
   const [limiteDiario, setLimiteDiario] = useState(20)
   const [enviando, setEnviando] = useState(false)
+  const [erroChat, setErroChat] = useState('')
   const [respostaParcial, setRespostaParcial] = useState('')
   const [statusChat, setStatusChat] = useState('')
   const [sugestoes, setSugestoes] = useState<SugestaoCorrecaoChat[]>([])
@@ -61,7 +61,7 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
     setCamposSelecionados(new Set())
     setFeedbackSugestoes('')
     setStatusChat('Iniciando o chat...')
-    aoErro('')
+    setErroChat('')
     let textoParcial = ''
     try {
       let concluido = false
@@ -69,7 +69,7 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
         if (evento.tipo === 'status') {
           setStatusChat(evento.mensagem)
         } else if (evento.tipo === 'trecho') {
-          setStatusChat('O Gemma está respondendo...')
+          setStatusChat('A IA está respondendo...')
           textoParcial += evento.conteudo
           setRespostaParcial(textoParcial)
         } else if (evento.tipo === 'erro') {
@@ -96,11 +96,10 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
       const mensagem = mensagemDeErro(erroChat, SEM_CONEXAO)
       if (textoParcial) {
         setStatusChat(`A geração foi interrompida antes de concluir. Trecho parcial abaixo (não salvo): ${mensagem}`)
-        aoErro('')
       } else {
         setRespostaParcial('')
         setStatusChat('')
-        aoErro(mensagem)
+        setErroChat(mensagem)
       }
     } finally {
       setEnviando(false)
@@ -108,12 +107,12 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
   }
 
   async function limpar() {
-    aoErro('')
+    setErroChat('')
     try {
       await chat.limpar(id)
       setMensagens([])
     } catch (erro) {
-      aoErro(mensagemDoServidor(erro))
+      setErroChat(mensagemDoServidor(erro))
     }
   }
 
@@ -125,7 +124,7 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
     if (!Object.keys(campos).length || aplicandoSugestoes) return
     setAplicandoSugestoes(true)
     setFeedbackSugestoes('')
-    aoErro('')
+    setErroChat('')
     try {
       const resultado = await apiEdital.salvarCampos(id, campos)
       setFeedbackSugestoes(resultado.mensagem)
@@ -133,7 +132,7 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
       setCamposSelecionados(new Set())
       await aoAtualizar()
     } catch (erro) {
-      aoErro(mensagemDeErro(erro, SEM_CONEXAO))
+      setErroChat(mensagemDeErro(erro, SEM_CONEXAO))
     } finally {
       setAplicandoSugestoes(false)
     }
@@ -162,6 +161,7 @@ export function ChatEdital({ id, textoDisponivel, aoErro, aoAtualizar }: Props) 
         </button>
       </div>
       <div className="card__corpo">
+        {erroChat && <p className="aviso aviso--erro" role="alert">{erroChat}</p>}
         <div className="pilha">
           <div className="chat-historico">
             {!mensagens.length && (

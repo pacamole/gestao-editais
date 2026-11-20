@@ -18,3 +18,15 @@ rotasConfigSistema.post('/config/sistema/testar-email', async (req, res) => {
 rotasConfigSistema.post('/config/sistema/testar-ollama', async (req, res) => {
   res.json(await configSistemaServico.testarOllama(req.body))
 })
+
+rotasConfigSistema.post('/config/sistema/conexoes-ia', async (req, res) => {
+  res.json(await configSistemaServico.salvarConexaoIa(req.body))
+})
+
+rotasConfigSistema.delete('/config/sistema/conexoes-ia/:id', (req, res) => {
+  res.json(configSistemaServico.removerConexaoIa(req.params.id))
+})
+
+rotasConfigSistema.post('/config/sistema/modelos-ia', async (req, res) => {
+  res.json(await configSistemaServico.listarModelosIa(req.body))
+})
