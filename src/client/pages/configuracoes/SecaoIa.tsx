@@ -2,20 +2,17 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import type { ConfigSistema, ModoOllama, TestarOllamaEntrada } from '../../../shared/tipos/configSistema'
 import { mensagemDeErro } from '../../api/cliente'
 import { configSistema } from '../../api/configSistema'
-import { CardOllamaCloud, sugerirModelo } from './ia/CardOllamaCloud'
+import { CardConexoesIa } from './ia/CardConexoesIa'
 import { PainelStatus, type Verificacao } from './ia/PainelStatus'
 
 type Aviso = { tipo: 'sucesso' | 'atencao' | 'erro'; texto: string } | null
 
-const ROTULO_MODO: Record<ModoOllama, string> = { LOCAL: 'Neste computador', NUVEM: 'Ollama Cloud' }
+const ROTULO_MODO: Record<ModoOllama, string> = { LOCAL: 'Neste computador', NUVEM: 'Conexões por API' }
 
 export function SecaoIa() {
   const [config, setConfig] = useState<ConfigSistema | null>(null)
   const [modo, setModo] = useState<ModoOllama>('LOCAL') // aba escolhida; vale depois de salvar
   const [urlLocal, setUrlLocal] = useState('')
-  const [modeloNuvem, setModeloNuvem] = useState('')
-  const [modelosNuvem, setModelosNuvem] = useState<string[]>([]) // lista da última consulta ao Ollama Cloud
-  const [chave, setChave] = useState('')
   const [limiteChat, setLimiteChat] = useState('')
   const [verificacao, setVerificacao] = useState<Verificacao | null>(null)
   const [aviso, setAviso] = useState<Aviso>(null)
@@ -26,10 +23,6 @@ export function SecaoIa() {
     try {
       const resultado = await configSistema.testarOllama(entrada)
       setVerificacao({ estado: 'pronto', resultado, em: new Date() })
-      if (resultado.modo === 'NUVEM' && resultado.modelos.length) {
-        setModelosNuvem(resultado.modelos)
-        setModeloNuvem((atual) => atual || sugerirModelo(resultado.modelos))
-      }
     } catch (e) {
       setVerificacao({ estado: 'erro', mensagem: mensagemDeErro(e, 'Não foi possível verificar.') })
     }
@@ -38,8 +31,7 @@ export function SecaoIa() {
   function aplicar(c: ConfigSistema) {
     setConfig(c)
     setUrlLocal(c.ollama_url)
-    setModeloNuvem(c.ollama_modelo_nuvem)
-    setChave('')
+    setModo(c.ollama_modo)
     setLimiteChat(String(c.chat_limite_diario))
   }
 
@@ -49,8 +41,7 @@ export function SecaoIa() {
       .obter()
       .then(({ config }) => {
         aplicar(config)
-        setModo(config.ollama_modo)
-        if (config.ollama_modo === 'LOCAL' || config.ollama_chave_definida) verificar()
+        if (config.ollama_modo === 'LOCAL' || (config.ollama_chave_definida && !config.ia_api_selecionada)) verificar()
       })
       .catch((e) => setAviso({ tipo: 'erro', texto: mensagemDeErro(e, 'Não foi possível carregar a configuração.') }))
   }, [verificar])
@@ -71,15 +62,15 @@ export function SecaoIa() {
     }
   }
 
-  // Ollama Cloud com o que está na tela (chave digitada ou salva).
-  const testarNuvem = () => verificar({ modo: 'NUVEM', chave: chave || undefined, modelo: modeloNuvem || undefined })
+  const testarNuvem = () => verificar({ modo: 'NUVEM', modelo: config?.ollama_modelo_nuvem || undefined })
 
   // Trocar de aba só verifica; a escolha vale ao salvar (nuvem) ou ao clicar em "Usar este computador".
   function escolherModo(novo: ModoOllama) {
     setModo(novo)
     setAviso(null)
     if (novo === 'LOCAL') verificar({ modo: 'LOCAL' })
-    else if (chave || config?.ollama_chave_definida) testarNuvem()
+    else if (config?.ia_api_selecionada) setVerificacao(null)
+    else if (config?.ollama_chave_definida) testarNuvem()
     else setVerificacao(null)
   }
 
@@ -112,7 +103,7 @@ export function SecaoIa() {
 
       {modoPendente && modo === 'LOCAL' ? (
         <div className="aviso aviso--atencao linha linha--entre">
-          <span>Hoje a IA usa o Ollama Cloud.</span>
+          <span>Hoje a IA usa {config.ia_api_selecionada ? 'uma conexão por API' : 'o Ollama Cloud'}.</span>
           <button
             type="button"
             className="btn btn--sm btn--primario"
@@ -125,28 +116,25 @@ export function SecaoIa() {
       ) : null}
 
       {modo === 'NUVEM' ? (
-        <CardOllamaCloud
-          chaveDefinida={config.ollama_chave_definida}
-          chave={chave}
-          onChave={setChave}
-          modelo={modeloNuvem}
-          onModelo={setModeloNuvem}
-          modelos={modelosNuvem}
-          verificando={verificacao?.estado === 'verificando'}
-          onBuscarModelos={testarNuvem}
-          salvando={salvando}
-          modoPendente={modoPendente}
-          onSalvar={() =>
-            salvar(
-              { ollama_modo: 'NUVEM', ollama_modelo_nuvem: modeloNuvem, ollama_chave: chave || undefined },
-              modoPendente ? 'A IA agora usa o Ollama Cloud.' : 'Ollama Cloud salvo.',
-              { modo: 'NUVEM' },
-            )
-          }
-        />
+        <div className="pilha">
+          {config.ollama_chave_definida && !config.ia_api_selecionada ? (
+            <p className="aviso aviso--atencao">
+              A configuração anterior do Ollama Cloud continua ativa. Para gerenciá-la junto a outros provedores, cadastre uma conexão compatível com OpenAI abaixo.
+            </p>
+          ) : null}
+          <CardConexoesIa
+            config={config}
+            salvando={salvando}
+            onConfig={(atualizada) => {
+              setConfig(atualizada)
+              setModo(atualizada.ollama_modo)
+              if (atualizada.ia_api_selecionada) setVerificacao(null)
+            }}
+          />
+        </div>
       ) : null}
 
-      {modo === 'LOCAL' || verificacao ? (
+      {modo === 'LOCAL' || (verificacao && !config.ia_api_selecionada) ? (
         <PainelStatus
           modo={modo}
           modelo={config.ollama_modelo}
@@ -172,7 +160,9 @@ export function SecaoIa() {
           </ul>
           <p className="discreto">
             {nuvemAtiva
-              ? 'Com o Ollama Cloud, o texto dos editais é enviado ao ollama.com para ser analisado.'
+              ? config.ia_api_selecionada
+                ? `Com ${config.ia_api_conexoes.find((item) => item.id === config.ia_api_selecionada)?.nome ?? 'a conexão selecionada'}, os dados dos editais são enviados ao provedor para análise.`
+                : 'Com o Ollama Cloud, o texto dos editais é enviado ao ollama.com para ser analisado.'
               : 'Tudo roda neste computador: o texto dos editais não é enviado para serviços externos.'}
           </p>
         </div>

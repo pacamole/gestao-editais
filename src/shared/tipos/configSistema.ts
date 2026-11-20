@@ -11,6 +11,9 @@ export type ConfigSistema = {
   ollama_chave_definida: boolean // chave de API do Ollama Cloud
   ollama_url_padrao: string
   ollama_modelo: string
+  ia_api_conexoes: ConexaoIaApi[]
+  ia_api_selecionada: string
+  ia_api_modelo: string
   smtp_host: string // '' = SMTP desligado (e-mails só no terminal)
   smtp_porta: number
   smtp_usuario: string // e-mail da conta que envia os alertas
@@ -21,6 +24,8 @@ export type ConfigSistema = {
   dias_expirar_sem_prazo: number // dias sem atualização para expirar edital sem prazo
 }
 
+export type ConexaoIaApi = { id: string; nome: string; url: string }
+
 // smtp_senha ausente ou vazia mantém a senha atual.
 // ollama_chave ausente ou vazia mantém a atual; remover_ollama_chave apaga.
 export type SalvarConfigSistemaEntrada = {
@@ -29,6 +34,8 @@ export type SalvarConfigSistemaEntrada = {
   ollama_modelo_nuvem?: string
   ollama_chave?: string
   remover_ollama_chave?: boolean
+  ia_api_selecionada?: string
+  ia_api_modelo?: string
   smtp_host?: string
   smtp_porta?: number
   smtp_usuario?: string
@@ -56,3 +63,8 @@ export type TestarOllamaResposta = {
   modelo: string // o que foi testado
   modelos: string[] // disponíveis no servidor (vazio sem conexão)
 }
+
+export type SalvarConexaoIaEntrada = { id?: string; nome: string; url: string; chave?: string; modelo: string }
+export type SalvarConexaoIaResposta = ConfigSistemaResposta & { conexaoId: string }
+export type ListarModelosIaEntrada = { id?: string; url?: string; chave?: string }
+export type ListarModelosIaResposta = { modelos: string[] }

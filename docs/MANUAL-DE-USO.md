@@ -77,8 +77,8 @@ O modelo padrão homologado para o sistema é o **`gemma2:latest`** (Gemma 2 9B)
 2. **Apple Silicon (Mac Mini / MacBook / Mac Studio):**
    - Dispositivos Apple Silicon (M1/M2/M3/M4) utilizam arquitetura de **Memória Unificada**. Um Mac com **16 GB ou 24 GB de memória unificada** roda o modelo `gemma2:latest` com desempenho excelente, utilizando aceleração via Metal e Neural Engine.
 
-3. **Alternativa em Máquinas Modestas (Ollama Cloud):**
-   - Caso um membro da equipe esteja utilizando um notebook ou computador sem 16 GB de RAM ou sem placa de vídeo, não é necessário fazer upgrade de hardware. Basta ativar o modo **Ollama Cloud** em `Configurações › Inteligência Artificial`, inserindo uma chave de API do serviço em nuvem.
+3. **Alternativa em Máquinas Modestas (IA por API):**
+   - Caso um membro da equipe esteja utilizando um notebook ou computador sem 16 GB de RAM ou sem placa de vídeo, cadastre uma conexão compatível com OpenAI em **Conexões de IA por API**, em `Configurações › Inteligência Artificial`.
 
 ### 2.3. Instalação e Inicialização do Ollama
 
@@ -103,7 +103,7 @@ O Gestor de Editais I9+ foi arquitetado em **Node.js (Express + TypeScript)** in
 A hospedagem em servidor corporativo pode ser estruturada em dois cenários principais:
 
 ### 3.1. Cenário A — Servidor de Aplicação Web (IA via Cloud ou Servidor de IA Separado)
-*Cenário recomendado caso a I9+ queira alocar um servidor menor para a aplicação e utilizar Ollama Cloud ou um servidor GPU dedicado para o modelo.*
+*Cenário recomendado caso a I9+ queira alocar um servidor menor para a aplicação e utilizar um provedor de IA por API ou um servidor GPU dedicado para o modelo.*
 
 | Recurso | Requisito Mínimo | Requisito Recomendado |
 | :--- | :--- | :--- |

@@ -75,7 +75,9 @@ Se você quer que tudo o que você cadastre apareça automaticamente no computad
 
 1. Acesse **Configurações › Inteligência artificial**.
 2. Se você tem um computador forte com placa de vídeo, escolha **"Neste computador (Ollama)"**.
-3. Se você está em um notebook mais modesto ou prefere não instalar nada pesado, escolha **"Ollama Cloud"**, cole a chave de acesso que a equipe possui e clique em **"Salvar"**.
+3. Para usar um provedor remoto, cadastre uma conexão em **"Conexões de IA por API"**: informe o nome, a URL base HTTPS compatível com OpenAI e a chave. O sistema atualiza a lista de modelos automaticamente quando a chave ou a URL muda.
+4. Selecione o modelo e clique em **"Salvar e usar esta IA"**. A conexão e o modelo ficam salvos e ativos juntos. Para alternar depois entre conexões já cadastradas, selecione a IA e clique em **"Usar esta IA"**.
+5. As chaves são cifradas no banco e nunca são devolvidas à interface. Antes de cadastrar conexões, configure `IA_CHAVE_CRIPTOGRAFIA` no ambiente do servidor com 32 bytes aleatórios em hexadecimal; mantenha esse segredo e não o troque depois.
 
 ---
 
