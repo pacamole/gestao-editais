@@ -10,6 +10,13 @@ export const ehExecutavel = sea.isSea()
 // para os dados não dependerem de onde o .exe está nem se perderem ao movê-lo.
 export const pastaDadosExecutavel = path.join(os.homedir(), 'GestaoEditais')
 
+// ENV_PATH do .env do desenvolvedor, gravado no .exe pelo build (scripts/executavel.mjs).
+declare const __ENV_PATH__: string | undefined
+const envPath = typeof __ENV_PATH__ === 'string' ? __ENV_PATH__ : ''
+
+// O .env que o executável carrega: o caminho de ENV_PATH ou, vazio, o da pasta do usuário.
+export const arquivoEnvExecutavel = envPath ? path.resolve(envPath) : path.join(pastaDadosExecutavel, '.env')
+
 // O front-end, o db/schema.sql e o binário do libsql vêm embutidos no .exe e são extraídos para
 // uma pasta temporária, uma por versão do .exe (um .node em uso não pode ser sobrescrito no Windows).
 function extrairRecursos(): string {

@@ -46,6 +46,9 @@ Os valores padrão já funcionam. Ajuste se precisar:
 | --------------- | ----------------------- | ----------------------------------------------------------------------------------- |
 | `DATABASE_PATH` | `data/editais.db`       | Caminho do banco                                                                    |
 | `APP_URL`       | `http://localhost:3000` | Endereço do sistema: a porta do servidor vem daqui, e é usado nos links dos e-mails |
+| `IA_CHAVE_CRIPTOGRAFIA` | — | Chave mestra para cifrar as chaves de IA salvas no banco (32 bytes em hexadecimal) |
+
+Para gerar `IA_CHAVE_CRIPTOGRAFIA`, execute `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`, guarde o resultado em segredo e atribua o valor da `IA_CHAVE_CRIPTOGRAFIA` a esse resultado no arquivo .env. Não o troque depois de cadastrar conexões, pois as chaves salvas não poderão ser descriptografadas.
 
 ## 4. Criar o banco
 
@@ -73,7 +76,7 @@ ollama pull gemma2:latest
 ollama serve                 # se o serviço ainda não estiver rodando
 ```
 
-Para usar o Ollama Cloud em vez disso, informe a chave de API em **Configurações** no sistema.
+Para usar um provedor remoto, cadastre uma conexão compatível com a API OpenAI em **Configurações › Inteligência artificial**. As chaves são cifradas no banco; configure antes `IA_CHAVE_CRIPTOGRAFIA` no ambiente do servidor.
 
 ## Como testar as etapas de análise
 
@@ -105,7 +108,7 @@ Quem recebe o arquivo só precisa:
 Os dados ficam em `C:\Users\<nome>\GestaoEditais` (banco em `data/`, exportações em `exportacoes/`), não importa onde o `.exe` esteja.
 Para trocar a porta (padrão 3000), crie nessa pasta um `.env` com `APP_URL=http://localhost:3001`.
 O executável não leva o Chromium: para fontes cujo site é montado por JavaScript, ele usa o Microsoft Edge do computador (ou o Google Chrome). Sem nenhum dos dois, essas fontes não podem ser verificadas.
-A IA continua dependendo do Ollama na máquina ou da chave do Ollama Cloud em **Configurações**.
+A IA depende do Ollama local ou de uma conexão de API cadastrada em **Configurações**. No executável, configure `IA_CHAVE_CRIPTOGRAFIA` no arquivo `.env` da pasta de dados antes de salvar chaves.
 
 ## Comandos
 
@@ -122,6 +125,8 @@ A IA continua dependendo do Ollama na máquina ou da chave do Ollama Cloud em **
 | `npm run editais:reler`               | Relê com a IA os editais já analisados (preenche só campos vazios, sem e-mails) |
 
 ## Mais documentação
+
+- [Manuais](docs/MANUAIS.md) — uso do sistema, integrações e configuração.
 
 - [docs/BASE-DE-DADOS.md](docs/BASE-DE-DADOS.md) — base na nuvem (Turso), exportar e importar entre computadores
 - [docs/especificacao-gestao-editais.md](docs/especificacao-gestao-editais.md) — especificação completa gerada para o início do desenvolvimento

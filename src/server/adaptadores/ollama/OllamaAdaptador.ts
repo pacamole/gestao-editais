@@ -4,7 +4,7 @@ import {
   type ModeloLinguagemPorta,
   type OpcoesGeracao,
 } from '../../portas/ModeloLinguagemPorta.js'
-import { cabecalhosOllama, enderecoOllama, type ConexaoOllama } from './conexao.js'
+import { cabecalhosOllama, enderecoOllama, recusaDoStatus, type ConexaoOllama, type RecusaOllama } from './conexao.js'
 
 const TIMEOUT_MS = 600_000
 // O gemma2 do modo local tem janela de 8k tokens; os modelos do Ollama Cloud aceitam bem mais.
@@ -31,10 +31,16 @@ type Pedido = {
   sinal?: AbortSignal
 }
 
-// 401/403: o servidor recusou a chave de API (ou a falta dela).
-function erroDeAcesso(status: number): ErroModeloLinguagem | null {
-  if (status !== 401 && status !== 403) return null
-  return new ErroModeloLinguagem('O Ollama Cloud recusou a chave de API. Confira em Configurações › Inteligência artificial.', 503)
+const MENSAGENS_RECUSA: Record<RecusaOllama, string> = {
+  ACESSO_NEGADO: 'O provedor recusou a chave de API. Confira a conexão em Configurações › Inteligência artificial.',
+  SEM_CREDITO: 'A conta do provedor está sem créditos de uso. Confira o saldo e os planos disponíveis no painel do provedor.',
+  LIMITE_USO: 'A conta do provedor atingiu o limite de uso. Aguarde ou confira os limites no painel do provedor.',
+}
+
+// 401/403 (chave), 402 (sem créditos) e 429 (limite de uso): o Ollama recusou o pedido.
+function erroDeRecusa(status: number): ErroModeloLinguagem | null {
+  const recusa = recusaDoStatus(status)
+  return recusa ? new ErroModeloLinguagem(MENSAGENS_RECUSA[recusa], 503) : null
 }
 
 // Implementa a porta falando com o Ollama (local ou Cloud). A conexão é lida a cada uso,
@@ -195,7 +201,7 @@ export class OllamaAdaptador implements ModeloLinguagemPorta {
 
     if (!resposta.ok) {
       throw (
-        erroDeAcesso(resposta.status) ??
+        erroDeRecusa(resposta.status) ??
         new ErroModeloLinguagem(`O Ollama retornou HTTP ${resposta.status}. Confirme se o modelo ${conexao.modelo} está disponível.`, 503)
       )
     }
